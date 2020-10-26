@@ -1,0 +1,23 @@
+Package: treedist
+Title: trie-based string distances
+Version: 0.1.1
+Date: 2020-10-22
+Authors@R: c(
+    person("Travers", "Ching", email = "traversc@gmail.com", role = c("aut", "cre", "cph"))
+	)
+Maintainer: Travers Ching <traversc@gmail.com>
+Description: A colection of trie-based algorithms for calculating string distances
+License: GPL-3
+Biarch: true
+Encoding: UTF-8
+Depends: R (>= 3.4.0)
+SystemRequirements: C++14
+LinkingTo: 
+    Rcpp (>= 0.12.18.3), RcppParallel
+Imports: 
+    Rcpp, RcppParallel
+Suggests:
+    knitr, rmarkdown
+VignetteBuilder: knitr
+RoxygenNote: 7.1.0
+BugReports: https://github.com/traversc/stringfish/issues

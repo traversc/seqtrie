@@ -1,0 +1,4 @@
+importFrom(Rcpp,sourceCpp)
+importFrom(RcppParallel, RcppParallelLibs)
+useDynLib(treedist, .registration=TRUE)
+export("td_prefix_tree", "td_suffix_tree", "td_hamming", "td_levenshtein", "td_partial_hamming")
