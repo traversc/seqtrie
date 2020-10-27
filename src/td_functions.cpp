@@ -297,3 +297,105 @@ DataFrame c_td_partial_hamming(Rcpp::XPtr<SeqNode> tree,
   return DataFrame::create(_["query"] = query, _["target"] = target, _["distance"] = distance);
 }
 
+///////////////////////////////////////////////////////////////
+// Partial/anchored levenshtein
+enum class Direction {left, right};
+struct PartialLevenshteinWorker : public Worker {
+  SeqNode const * const root;
+  tbb::concurrent_vector<std::tuple<int, int, int>> & output;
+  const std::vector<std::string> & sequences;
+  const Direction anchor;
+  const int max_distance;
+  const bool symmetric;
+  PartialLevenshteinWorker(SeqNode const * const root, 
+                    tbb::concurrent_vector<std::tuple<int, int, int>> & output,
+                    const std::vector<std::string> & sequences, 
+                    const std::string & anchor,
+                    const int max_distance, const bool symmetric) :
+    root(root), output(output), sequences(sequences), anchor(get_direction(anchor)), max_distance(max_distance), symmetric(symmetric) {}
+  static Direction get_direction(const std::string & a) {
+    if(a == "left") {
+      return Direction::left;
+    } else if(a == "right") {
+      return Direction::right;
+    } else {
+      throw std::runtime_error("anchor must be left or right");
+    }
+  }
+  void operator()(std::size_t begin, std::size_t end) {
+    for(size_t i=begin; i<end; ++i) {
+      if(anchor == Direction::left) {
+        search(root, i, int_range(0, sequences[i].size()));
+      } else {
+        search(root, i, std::vector<int>(sequences[i].size(),0) );
+      }
+    }
+  }
+  void search(SeqNode const * const node, const int seqidx, const std::vector<int> previous_row) {
+    if( *std::min_element(previous_row.begin(), previous_row.end()) > max_distance ) {
+      return;
+    }
+    for(auto i : node->idx) {
+      int dist;
+      if(anchor == Direction::right) {
+        dist = previous_row.back();
+      } else {
+        dist = *std::min_element(previous_row.begin(), previous_row.end());
+      }
+
+      if( (dist <= max_distance) && ((i < seqidx) || !symmetric) ) {
+        output.push_back(std::make_tuple(seqidx, i, dist));
+      }
+    }
+    if(node->isLeaf()) {
+      return;
+    }
+    auto & seqmap = node->seqmap;
+    for (auto & x : seqmap) {
+      std::vector<int> current_row(sequences[seqidx].size() + 1);
+      for(size_t i=0; i<current_row.size(); ++i) {
+        if(i == 0) {
+          if(anchor == Direction::left) {
+            current_row[i] = previous_row[i] + 1;
+          } else {
+            current_row[i] = 0;
+          }
+        } else if(i == current_row.size() - 1) { // last column
+          int delete_cost;
+          if(anchor == Direction::right) {
+            delete_cost = previous_row[i] + 1;
+          } else {
+            delete_cost = previous_row[i];
+          }
+          int match_cost  = previous_row[i-1] + (sequences[seqidx][i-1] == x.first ? 0 : 1);
+          int insert_cost = current_row[i-1] + 1;
+          current_row[i] = std::min({delete_cost, match_cost, insert_cost});
+        } else {
+          int delete_cost = previous_row[i] + 1;
+          int match_cost  = previous_row[i-1] + (sequences[seqidx][i-1] == x.first ? 0 : 1);
+          int insert_cost = current_row[i-1] + 1;
+          current_row[i] = std::min({delete_cost, match_cost, insert_cost});
+        }
+      }
+      search(x.second.get(), seqidx, current_row);
+    }
+  }
+};
+
+// [[Rcpp::export(rng = false)]]
+DataFrame c_td_partial_levenshtein(Rcpp::XPtr<SeqNode> tree, 
+                           const std::vector<std::string> & sequences, const std::string anchor,
+                           const int max_distance, const bool symmetric, const int nthreads) {
+  tbb::concurrent_vector<std::tuple<int, int, int>> output;
+  PartialLevenshteinWorker w(tree.get(), output, sequences, anchor, max_distance, symmetric);
+  parallelFor2(symmetric ? 1 : 0, sequences.size(), w, 1, nthreads);
+  IntegerVector query(output.size());
+  IntegerVector target(output.size());
+  IntegerVector distance(output.size());
+  for(size_t i=0; i<output.size(); ++i) {
+    query[i] = std::get<0>(output[i]) + 1;
+    target[i] = std::get<1>(output[i]) + 1;
+    distance[i] = std::get<2>(output[i]);
+  }
+  return DataFrame::create(_["query"] = query, _["target"] = target, _["distance"] = distance);
+}

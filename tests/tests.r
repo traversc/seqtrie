@@ -1,6 +1,7 @@
 library(dplyr)
 library(tidyr)
 library(stringdist)
+library(stringr)
 library(data.table)
 library(treedist)
 library(stringfish)
@@ -58,6 +59,18 @@ res2 <- td_partial_hamming(s3, x, nthreads=8, max_distance = 100)
 res2 <- res2 %>% arrange(query, target, distance) %>% distinct(query, target, .keep_all=T)
 res <- partial_hamming_pairwise(s3, s2)
 stopifnot(all(res == res2))
+
+
+
+# partial levenshtein
+s2 <- random_strings(10, 20, charset = "GCAT", vector_mode = "normal")
+x <- td_prefix_tree(s2)
+s3 <- str_sub(s2, 2, -4)
+td_partial_levenshtein(s3, x, anchor = "right", max_distance=3, nthreads=1)
+td_partial_levenshtein(s3, x, anchor = "left", max_distance=3, nthreads=1)
+td_partial_levenshtein(s3, x, anchor = "none", max_distance=3, nthreads=1)
+
+
 
 
 #################################################

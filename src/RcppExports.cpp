@@ -69,6 +69,21 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// c_td_partial_levenshtein
+DataFrame c_td_partial_levenshtein(Rcpp::XPtr<SeqNode> tree, const std::vector<std::string>& sequences, const std::string anchor, const int max_distance, const bool symmetric, const int nthreads);
+RcppExport SEXP _treedist_c_td_partial_levenshtein(SEXP treeSEXP, SEXP sequencesSEXP, SEXP anchorSEXP, SEXP max_distanceSEXP, SEXP symmetricSEXP, SEXP nthreadsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< Rcpp::XPtr<SeqNode> >::type tree(treeSEXP);
+    Rcpp::traits::input_parameter< const std::vector<std::string>& >::type sequences(sequencesSEXP);
+    Rcpp::traits::input_parameter< const std::string >::type anchor(anchorSEXP);
+    Rcpp::traits::input_parameter< const int >::type max_distance(max_distanceSEXP);
+    Rcpp::traits::input_parameter< const bool >::type symmetric(symmetricSEXP);
+    Rcpp::traits::input_parameter< const int >::type nthreads(nthreadsSEXP);
+    rcpp_result_gen = Rcpp::wrap(c_td_partial_levenshtein(tree, sequences, anchor, max_distance, symmetric, nthreads));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_treedist_c_td_prefix_tree", (DL_FUNC) &_treedist_c_td_prefix_tree, 1},
@@ -76,6 +91,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_treedist_c_td_hamming", (DL_FUNC) &_treedist_c_td_hamming, 5},
     {"_treedist_c_td_levenshtein", (DL_FUNC) &_treedist_c_td_levenshtein, 5},
     {"_treedist_c_td_partial_hamming", (DL_FUNC) &_treedist_c_td_partial_hamming, 5},
+    {"_treedist_c_td_partial_levenshtein", (DL_FUNC) &_treedist_c_td_partial_levenshtein, 6},
     {NULL, NULL, 0}
 };
 

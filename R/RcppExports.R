@@ -21,3 +21,7 @@ c_td_partial_hamming <- function(tree, sequences, max_distance, symmetric, nthre
     .Call(`_treedist_c_td_partial_hamming`, tree, sequences, max_distance, symmetric, nthreads)
 }
 
+c_td_partial_levenshtein <- function(tree, sequences, anchor, max_distance, symmetric, nthreads) {
+    .Call(`_treedist_c_td_partial_levenshtein`, tree, sequences, anchor, max_distance, symmetric, nthreads)
+}
+

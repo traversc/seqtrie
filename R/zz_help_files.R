@@ -77,3 +77,20 @@ NULL
 NULL
 
 
+#' td_partial_levenshtein
+#' 
+#' Performs partial levenshtein matching using a suffix tree
+#' @usage td_partial_levenshtein(query, subject=NULL, anchor = "left", max_distance = NA_integer_, symmetric = FALSE, nthreads = 1L)
+#' @param query A character vector of strings as query
+#' @param subject A character vector of strings as subject, a suffix_tree or NULL. See details
+#' @param anchor "left" or "right". Determines whether the left or right side of an alignment's end gap should be penalized
+#' @param max_distance The max levenshtein distance to search for matches.
+#' @param symmetric Whether to treat query and subject as the same (i.e. pairwise matching)
+#' @param nthreads Number of threads to use in computation
+#' @return A data.frame containing query, subject and distance.
+#' @details 
+#' Subject parameter can be a character vector, a suffix_tree or NULL. If NULL, the function will perform a pairwise search on query. 
+#' @examples 
+#' x <- td_partial_levenshtein(query = "hell", subject = "hello", anchor = "left")
+#' @name td_partial_levenshtein
+NULL
