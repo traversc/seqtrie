@@ -7,8 +7,6 @@ treedist
 
 <!-- [![CRAN\_Downloads\_Total\_Badge](https://cranlogs.r-pkg.org/badges/grand-total/treedist)](https://cran.r-project.org/package=treedist) -->
 
-# treedist
-
 `treedist` is a A colection of Radix Tree and trie-based algorithms for
 calculating string distances (Hamming and Levenshtein distances).
 

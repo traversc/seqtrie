@@ -15,8 +15,6 @@ vignette: >
 <!-- [![CRAN\_Status\_Badge](http://www.r-pkg.org/badges/version/treedist)](https://cran.r-project.org/package=treedist) [![CRAN\_Downloads\_Badge](https://cranlogs.r-pkg.org/badges/treedist)](https://cran.r-project.org/package=treedist) -->
 <!-- [![CRAN\_Downloads\_Total\_Badge](https://cranlogs.r-pkg.org/badges/grand-total/treedist)](https://cran.r-project.org/package=treedist) -->
 
-# treedist
-
 `treedist` is a A colection of Radix Tree and trie-based algorithms for calculating string distances (Hamming and Levenshtein distances). 
 
 There are three `R6` classes in this package: 
