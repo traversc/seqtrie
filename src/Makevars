@@ -1,0 +1,5 @@
+PKG_CFLAGS=
+CXX_STD=CXX14
+PKG_CPPFLAGS=-DRCPP_USE_UNWIND_PROTECT -I. -I../inst/include
+PKG_LIBS=$(shell ${R_HOME}/bin/Rscript -e "RcppParallel::RcppParallelLibs()")
+

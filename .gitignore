@@ -23,4 +23,3 @@ config.status
 autom4te.cache/*
 .vscode
 /src/.vscode
-src/Makevars
