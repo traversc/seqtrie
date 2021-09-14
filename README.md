@@ -26,6 +26,12 @@ for inserting sequences on the tree, `$erase()` for erasing sequences
 from the tree and `$search()` for finding similar sequences stored on
 the tree.
 
+### Install
+
+``` r
+devtools::install_github("traversc/treedist")
+```
+
 ### Levenshtein “edit distance” search
 
 Below is an example using COVID19 T-cell data from Adaptive

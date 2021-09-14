@@ -27,6 +27,11 @@ All classes have exactly the same interface.
 
 The primary class functions for interacting with a tree are `$insert()` for inserting sequences on the tree, `$erase()` for erasing sequences from the tree and `$search()` for finding similar sequences stored on the tree. 
 
+### Install
+```{r, eval = FALSE}
+devtools::install_github("traversc/treedist")
+```
+
 ### Levenshtein "edit distance" search
 
 Below is an example using COVID19 T-cell data from Adaptive Biotechnologies. (https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7418738/. This data is licensed under CC 4.0.)
