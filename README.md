@@ -96,22 +96,12 @@ setting parameters for searching a large number of sequences
 
 #### Some additional examples using the `max_fraction` parameter.
 
-**max\_fraction = 0.035 takes several seconds**
+-----
 
 ``` r
-results <- tree$search(covid_cdr3, max_fraction = 0.035, mode = "levenshtein", nthreads=8)
-```
-
-**max\_fraction = 0.06 takes \~1 minute**
-
-``` r
-results <- tree$search(covid_cdr3, max_fraction = 0.06, mode = "levenshtein", nthreads=8)
-```
-
-**max\_fraction = 0.15 takes \~15 minutes**
-
-``` r
-results <- tree$search(covid_cdr3, max_fraction = 0.15, mode = "levenshtein", nthreads=8)
+results <- tree$search(covid_cdr3, max_fraction = 0.035, mode = "levenshtein", nthreads=8) # ~several seconds
+results <- tree$search(covid_cdr3, max_fraction = 0.060, mode = "levenshtein", nthreads=8) # ~1 minute
+results <- tree$search(covid_cdr3, max_fraction = 0.150, mode = "levenshtein", nthreads=8) # 15-20 minutes
 ```
 
 ### Hamming distance search
@@ -121,20 +111,8 @@ insertions or deletions. Sequences must be the same length.
 
 Because of this restriction, Hamming distance is generally a lot faster.
 
-**max\_fraction = 0.035 takes \~1 second**
-
 ``` r
-results <- tree$search(covid_cdr3, max_fraction = 0.035, mode = "hamming", nthreads=8)
-```
-
-**max\_fraction = 0.06 takes a few seconds**
-
-``` r
-results <- tree$search(covid_cdr3, max_fraction = 0.06, mode = "hamming", nthreads=8)
-```
-
-**max\_fraction = 0.15 takes \~1.5 minutes**
-
-``` r
-results <- tree$search(covid_cdr3, max_fraction = 0.15, mode = "hamming", nthreads=8)
+results <- tree$search(covid_cdr3, max_fraction = 0.035, mode = "hamming", nthreads=8) # ~1 second
+results <- tree$search(covid_cdr3, max_fraction = 0.060, mode = "hamming", nthreads=8) # ~ several seconds
+results <- tree$search(covid_cdr3, max_fraction = 0.150, mode = "hamming", nthreads=8) # ~ 1.5 minutes
 ```
