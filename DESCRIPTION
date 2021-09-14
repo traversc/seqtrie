@@ -1,23 +1,24 @@
 Package: treedist
-Title: trie-based string distances
+Title: Radix Tree and trie-based string distances
 Version: 0.1.1
 Date: 2020-10-22
 Authors@R: c(
     person("Travers", "Ching", email = "traversc@gmail.com", role = c("aut", "cre", "cph"))
 	)
 Maintainer: Travers Ching <traversc@gmail.com>
-Description: A colection of trie-based algorithms for calculating string distances
+Description: A colection of Radix Tree and trie-based algorithms for calculating string distances
 License: GPL-3
 Biarch: true
 Encoding: UTF-8
-Depends: R (>= 3.4.0)
+Depends: R (>= 3.5.0)
 SystemRequirements: C++14
+LazyData: true
 LinkingTo: 
-    Rcpp (>= 0.12.18.3), RcppParallel
+    Rcpp (>= 0.12.18.3), RcppProgress, RcppParallel
 Imports: 
-    Rcpp, RcppParallel
+    Rcpp, RcppParallel, R6
 Suggests:
-    knitr, rmarkdown
+    knitr, rmarkdown, stringdist, stringfish, qs, dplyr, triebeard
 VignetteBuilder: knitr
-RoxygenNote: 7.1.0
-BugReports: https://github.com/traversc/stringfish/issues
+RoxygenNote: 7.1.1
+BugReports: https://github.com/traversc/treedist/issues

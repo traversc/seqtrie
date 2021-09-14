@@ -1,401 +1,553 @@
 #include <Rcpp.h>
-#include <unordered_map>
+#include <set>
 #include <memory>
-#include <tbb/concurrent_vector.h>
-#include <boost/functional/hash.hpp>
-#include <RcppParallel.h>
 #include <tuple>
-#include <limits.h> // INT_MAX
 
-#include "treedist_types.h"
+// [[Rcpp::depends(RcppProgress)]]
+#include <progress.hpp>
+#include <progress_bar.hpp>
+
+// [[Rcpp::depends(RcppParallel)]]
+#include <RcppParallel.h>
+
+#include "treedist_types_impl.h"
 
 using namespace Rcpp;
 using namespace RcppParallel;
 
-// [[Rcpp::plugins(cpp14)]]
-// [[Rcpp::depends(RcppParallel)]]
-
-inline void parallelFor2(std::size_t begin, std::size_t end, Worker& worker, std::size_t grainSize = 1, int nthreads = 1) {
-  int max_threads = tbb::task_scheduler_init::default_num_threads();
-  if(nthreads > max_threads) nthreads = max_threads;
-  tbb::task_arena limited(nthreads);
-  tbb::task_group tg;
-  limited.execute([&]{
-    tg.run([&]{
-      parallelFor(begin, end, worker, grainSize);
-    });
-  });
-  limited.execute([&]{ tg.wait(); });
-}
-
-std::vector<int> int_range(int start, int end) {
-  if(end < start) {
-    throw std::runtime_error("end must be larger or equal start");
-  }
-  std::vector<int> ret(end - start + 1);
-  for(int i=0; i<end - start + 1; ++i) {
-    ret[i] = start + i;
-  }
-  return ret;
-}
-
-void update_prefix_tree(SeqNode * root, const std::string & sequence, const int seq_idx) {
-  SeqNode * current_hash_ref = root;
-  size_t i = 0;
-  for(; i<sequence.size(); ++i) {
-    if(current_hash_ref->seqmap.find(sequence[i]) == current_hash_ref->seqmap.end()) {
-      current_hash_ref->seqmap.insert(std::pair<char, SeqNodeUptr >(sequence[i], std::make_unique<SeqNode>() ));
-    }
-    current_hash_ref = current_hash_ref->seqmap[sequence[i]].get();
-  }
-  current_hash_ref->idx.insert(seq_idx);
-}
-
-void update_prefix_tree(SeqNode * root, const char * const sequence, const size_t seq_len, const int seq_idx) {
-  SeqNode * current_hash_ref = root;
-  size_t i = 0;
-  for(; i<seq_len; ++i) {
-    if(current_hash_ref->seqmap.find(sequence[i]) == current_hash_ref->seqmap.end()) {
-      current_hash_ref->seqmap.insert(std::pair<char, SeqNodeUptr >(sequence[i], std::make_unique<SeqNode>() ));
-    }
-    current_hash_ref = current_hash_ref->seqmap[sequence[i]].get();
-  }
-  current_hash_ref->idx.insert(seq_idx);
-}
-
-// same as above
-void update_suffix_tree(SeqNode * root, const char * const sequence, const size_t seq_len, const int seq_idx) {
-  SeqNode * current_hash_ref = root;
-  size_t i = 0;
-  for(; i<seq_len; ++i) {
-    if(current_hash_ref->seqmap.find(sequence[i]) == current_hash_ref->seqmap.end()) {
-      current_hash_ref->seqmap.insert(std::pair<char, SeqNodeUptr >(sequence[i], std::make_unique<SeqNode>() ));
-    }
-    current_hash_ref = current_hash_ref->seqmap[sequence[i]].get();
-  }
-  current_hash_ref->idx.insert(seq_idx);
-}
-
-/////////////////////////////////////////////////////////
-
+////////////////////////////////////////////////////////////////////////////////
+// create
 // [[Rcpp::export(rng = false)]]
-Rcpp::XPtr<SeqNode> c_td_prefix_tree(const std::vector<std::string> & sequences) {
-  auto * root = new SeqNode;
-  for(size_t i=0; i<sequences.size(); ++i) {
-    update_prefix_tree(root, sequences[i], i);
-  }
-  return Rcpp::XPtr<SeqNode> (root, true);
+SEXP DNATree_create() {
+  return Rcpp::XPtr<DNATree>(new DNATree, true);
 }
 
 // [[Rcpp::export(rng = false)]]
-Rcpp::XPtr<SeqNode> c_td_suffix_tree(const std::vector<std::string> & sequences, size_t min_length) {
-  auto * root = new SeqNode;
-  for(size_t i=0; i<sequences.size(); ++i) {
-    for(size_t j=0; sequences[i].size() - j >= min_length; ++j) {
-      update_suffix_tree(root, sequences[i].c_str() + j, sequences[i].size() - j, i);
-    }
-  }
-  return Rcpp::XPtr<SeqNode> (root, true);
+SEXP RadixTree_create() {
+  return Rcpp::XPtr<RadixTree>(new RadixTree, true);
 }
-
-///////////////////////////////////////////////////////////////
-// hamming
-
-struct HammingWorker : public Worker {
-  SeqNode const * const root;
-  tbb::concurrent_vector<std::tuple<int, int, int>> & output;
-  const std::vector<std::string> & sequences;
-  const int max_distance;
-  const bool symmetric;
-  HammingWorker(SeqNode const * const root, 
-                    tbb::concurrent_vector<std::tuple<int, int, int>> & output,
-                    const std::vector<std::string> & sequences, 
-                    const int max_distance, const bool symmetric) :
-    root(root), output(output), sequences(sequences), max_distance(max_distance), symmetric(symmetric) {}
-  void operator()(std::size_t begin, std::size_t end) {
-    for(size_t i=begin; i<end; ++i) {
-      search(root, i, sequences[i].c_str(), 0);
-    }
-  }
-  void search(const SeqNode * node, const int seqidx, const char * sequence, const int distance) {
-    // we've exceeded max_distance
-    if( distance > max_distance ) {
-      return;
-    }
-    // we've reached the end
-    if( (*sequence == 0) || node->isLeaf() ) {
-      for(auto i : node->idx) {
-        if( (distance <= max_distance) && ((i < seqidx) || !symmetric) ) {
-          output.push_back(std::make_tuple(seqidx, i, distance));
-        }
-      }
-      return;
-    }
-    auto & seqmap = node->seqmap;
-    for (auto & x : seqmap) {
-      if(*sequence == x.first) {
-        search(x.second.get(), seqidx, sequence+1, distance);
-      } else {
-        search(x.second.get(), seqidx, sequence+1, distance + 1);
-      }
-    }
-  }
-};
 
 // [[Rcpp::export(rng = false)]]
-DataFrame c_td_hamming(Rcpp::XPtr<SeqNode> tree, 
-                           const std::vector<std::string> & sequences, 
-                           const int max_distance, const bool symmetric, const int nthreads) {
-  tbb::concurrent_vector<std::tuple<int, int, int>> output;
-  HammingWorker w(tree.get(), output, sequences, max_distance, symmetric);
-  parallelFor2(symmetric ? 1 : 0, sequences.size(), w, 1, nthreads);
-  IntegerVector query(output.size());
-  IntegerVector target(output.size());
-  IntegerVector distance(output.size());
-  for(size_t i=0; i<output.size(); ++i) {
-    query[i] = std::get<0>(output[i]) + 1;
-    target[i] = std::get<1>(output[i]) + 1;
-    distance[i] = std::get<2>(output[i]);
-  }
-  return DataFrame::create(_["query"] = query, _["target"] = target, _["distance"] = distance);
+SEXP PrefixTree_create() {
+  return Rcpp::XPtr<PrefixTree>(new PrefixTree, true);
 }
 
-///////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+// size
+// [[Rcpp::export(rng = false)]]
+double DNATree_size(Rcpp::XPtr<DNATree> xp) {
+  return static_cast<double>(xp->size());
+}
+
+// [[Rcpp::export(rng = false)]]
+double RadixTree_size(Rcpp::XPtr<RadixTree> xp) {
+  return static_cast<double>(xp->size());
+}
+
+// [[Rcpp::export(rng = false)]]
+double PrefixTree_size(Rcpp::XPtr<PrefixTree> xp) {
+  return static_cast<double>(xp->size());
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// print
+// [[Rcpp::export(rng = false)]]
+std::string DNATree_print(Rcpp::XPtr<DNATree> xp) {
+  return xp->print();
+}
+
+// [[Rcpp::export(rng = false)]]
+std::string RadixTree_print(Rcpp::XPtr<RadixTree> xp) {
+  return xp->print();
+}
+
+// [[Rcpp::export(rng = false)]]
+std::string PrefixTree_print(Rcpp::XPtr<PrefixTree> xp) {
+  return xp->print();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// insert
+// [[Rcpp::export(rng = false)]]
+NumericVector DNATree_insert(Rcpp::XPtr<DNATree> xp, CharacterVector sequences) {
+  using tree_type = DNATree;
+  auto & tree = *xp.get();
+  SEXP * sp = STRING_PTR(sequences);
+  size_t nseqs = Rf_xlength(sequences);
+  NumericVector result(nseqs);
+  double * rp = REAL(result);
+  for(size_t i=0; i<nseqs; ++i) {
+    auto xi = tree.insert(cspan(CHAR(sp[i]), Rf_xlength(sp[i])));
+    rp[i] = xi == tree_type::value_type::nullidx ? NA_REAL : static_cast<double>(xi);
+  }
+  return result;
+}
+
+// [[Rcpp::export(rng = false)]]
+NumericVector RadixTree_insert(Rcpp::XPtr<RadixTree> xp, CharacterVector sequences) {
+  using tree_type = RadixTree;
+  auto & tree = *xp.get();
+  SEXP * sp = STRING_PTR(sequences);
+  size_t nseqs = Rf_xlength(sequences);
+  NumericVector result(nseqs);
+  double * rp = REAL(result);
+  for(size_t i=0; i<nseqs; ++i) {
+    auto xi = tree.insert(cspan(CHAR(sp[i]), Rf_xlength(sp[i])));
+    rp[i] = xi == tree_type::value_type::nullidx ? NA_REAL : static_cast<double>(xi);
+  }
+  return result;
+}
+
+// [[Rcpp::export(rng = false)]]
+NumericVector PrefixTree_insert(Rcpp::XPtr<PrefixTree> xp, CharacterVector sequences) {
+  using tree_type = PrefixTree;
+  auto & tree = *xp.get();
+  SEXP * sp = STRING_PTR(sequences);
+  size_t nseqs = Rf_xlength(sequences);
+  NumericVector result(nseqs);
+  double * rp = REAL(result);
+  for(size_t i=0; i<nseqs; ++i) {
+    auto xi = tree.insert(cspan(CHAR(sp[i]), Rf_xlength(sp[i])));
+    rp[i] = xi == tree_type::value_type::nullidx ? NA_REAL : static_cast<double>(xi);
+  }
+  return result;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// erase
+
+// [[Rcpp::export(rng = false)]]
+NumericVector DNATree_erase(Rcpp::XPtr<DNATree> xp, CharacterVector sequences) {
+  using tree_type = DNATree;
+  auto & tree = *xp.get();
+  size_t nseqs = Rf_xlength(sequences);
+  SEXP * sp = STRING_PTR(sequences);
+  NumericVector result(nseqs);
+  double * rp = REAL(result);
+  for(size_t i=0; i<nseqs; ++i) {
+    auto xi = tree.erase(cspan(CHAR(sp[i]), Rf_xlength(sp[i])));
+    rp[i] = xi == tree_type::value_type::get_null_idx() ? NA_REAL : static_cast<double>(xi);
+  }
+  return result;
+}
+
+// [[Rcpp::export(rng = false)]]
+NumericVector RadixTree_erase(Rcpp::XPtr<RadixTree> xp, CharacterVector sequences) {
+  using tree_type = RadixTree;
+  auto & tree = *xp.get();
+  size_t nseqs = Rf_xlength(sequences);
+  SEXP * sp = STRING_PTR(sequences);
+  NumericVector result(nseqs);
+  double * rp = REAL(result);
+  for(size_t i=0; i<nseqs; ++i) {
+    auto xi = tree.erase(cspan(CHAR(sp[i]), Rf_xlength(sp[i])));
+    rp[i] = xi == tree_type::value_type::get_null_idx() ? NA_REAL : static_cast<double>(xi);
+  }
+  return result;
+}
+
+// [[Rcpp::export(rng = false)]]
+NumericVector PrefixTree_erase(Rcpp::XPtr<PrefixTree> xp, CharacterVector sequences) {
+  using tree_type = PrefixTree;
+  auto & tree = *xp.get();
+  size_t nseqs = Rf_xlength(sequences);
+  SEXP * sp = STRING_PTR(sequences);
+  NumericVector result(nseqs);
+  double * rp = REAL(result);
+  for(size_t i=0; i<nseqs; ++i) {
+    auto xi = tree.erase(cspan(CHAR(sp[i]), Rf_xlength(sp[i])));
+    rp[i] = xi == tree_type::value_type::get_null_idx() ? NA_REAL : static_cast<double>(xi);
+  }
+  return result;
+}
+
+
+////////////////////////////////////////////////////////////////////////////////
+// find
+
+// [[Rcpp::export(rng = false)]]
+NumericVector DNATree_find(Rcpp::XPtr<DNATree> xp, CharacterVector sequences) {
+  using tree_type = DNATree;
+  auto & tree = *xp.get();
+  size_t nseqs = Rf_xlength(sequences);
+  SEXP * sp = STRING_PTR(sequences);
+  NumericVector result(nseqs);
+  double * rp = REAL(result);
+  for(size_t i=0; i<nseqs; ++i) {
+    auto xi = tree.find(cspan(CHAR(sp[i]), Rf_xlength(sp[i])));
+    rp[i] = xi == tree_type::value_type::get_null_idx() ? NA_REAL : static_cast<double>(xi);
+  }
+  return result;
+}
+
+// [[Rcpp::export(rng = false)]]
+NumericVector RadixTree_find(Rcpp::XPtr<RadixTree> xp, CharacterVector sequences) {
+  using tree_type = RadixTree;
+  auto & tree = *xp.get();
+  size_t nseqs = Rf_xlength(sequences);
+  SEXP * sp = STRING_PTR(sequences);
+  NumericVector result(nseqs);
+  double * rp = REAL(result);
+  for(size_t i=0; i<nseqs; ++i) {
+    auto xi = tree.find(cspan(CHAR(sp[i]), Rf_xlength(sp[i])));
+    rp[i] = xi == tree_type::value_type::get_null_idx() ? NA_REAL : static_cast<double>(xi);
+  }
+  return result;
+}
+
+// [[Rcpp::export(rng = false)]]
+NumericVector PrefixTree_find(Rcpp::XPtr<PrefixTree> xp, CharacterVector sequences) {
+  using tree_type = PrefixTree;
+  auto & tree = *xp.get();
+  size_t nseqs = Rf_xlength(sequences);
+  SEXP * sp = STRING_PTR(sequences);
+  NumericVector result(nseqs);
+  double * rp = REAL(result);
+  for(size_t i=0; i<nseqs; ++i) {
+    auto xi = tree.find(cspan(CHAR(sp[i]), Rf_xlength(sp[i])));
+    rp[i] = xi == tree_type::value_type::get_null_idx() ? NA_REAL : static_cast<double>(xi);
+  }
+  return result;
+}
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+// to_dataframe
+
+// [[Rcpp::export(rng = false)]]
+SEXP DNATree_to_dataframe(Rcpp::XPtr<DNATree> xp) {
+  return xp->to_dataframe();
+}
+
+// [[Rcpp::export(rng = false)]]
+SEXP RadixTree_to_dataframe(Rcpp::XPtr<RadixTree> xp) {
+  return xp->to_dataframe();
+}
+
+// [[Rcpp::export(rng = false)]]
+SEXP PrefixTree_to_dataframe(Rcpp::XPtr<PrefixTree> xp) {
+  return xp->to_dataframe();
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // levenshtein
 
-struct LevenshteinWorker : public Worker {
-  SeqNode const * const root;
-  tbb::concurrent_vector<std::tuple<int, int, int>> & output;
-  const std::vector<std::string> & sequences;
-  const int max_distance;
-  const bool symmetric;
-  LevenshteinWorker(SeqNode const * const root, 
-                    tbb::concurrent_vector<std::tuple<int, int, int>> & output,
-                    const std::vector<std::string> & sequences, 
-                    const int max_distance, const bool symmetric) :
-    root(root), output(output), sequences(sequences), max_distance(max_distance), symmetric(symmetric) {}
+template <class T> struct LevenshteinWorker : public Worker {
+  const T & tree;
+  const std::vector<cspan> & query;
+  int const * const max_distance_ptr;
+  std::vector<std::pair<std::vector<uint64_t>, std::vector<int>>> & output;
+  LevenshteinWorker(const T & tree,
+                    const std::vector<cspan> & query,
+                    int const * const max_distance_ptr,
+                    std::vector<std::pair<std::vector<uint64_t>, std::vector<int>>> & output) : 
+    tree(tree), query(query), max_distance_ptr(max_distance_ptr), output(output) {}
   void operator()(std::size_t begin, std::size_t end) {
     for(size_t i=begin; i<end; ++i) {
-      search(root, i, int_range(0, sequences[i].size()));
-    }
-  }
-  void search(SeqNode const * const node, const int seqidx, const std::vector<int> previous_row) {
-    if( *std::min_element(previous_row.begin(), previous_row.end()) > max_distance ) {
-      return;
-    }
-    for(auto i : node->idx) {
-      int dist = previous_row.back();
-      if( (dist <= max_distance) && ((i < seqidx) || !symmetric) ) {
-        output.push_back(std::make_tuple(seqidx, i, dist));
-      }
-    }
-    if(node->isLeaf()) {
-      return;
-    }
-    auto & seqmap = node->seqmap;
-    for (auto & x : seqmap) {
-      std::vector<int> current_row(sequences[seqidx].size() + 1);
-      for(size_t i=0; i<current_row.size(); ++i) {
-        int delete_cost = previous_row[i] + 1;
-        if(i > 0) {
-          int match_cost  = previous_row[i-1] + (sequences[seqidx][i-1] == x.first ? 0 : 1);
-          int insert_cost = current_row[i-1] + 1;
-          current_row[i] = std::min(std::min(delete_cost, match_cost), insert_cost);
-        } else {
-          current_row[i] = delete_cost;
-        }
-      }
-      search(x.second.get(), seqidx, current_row);
+      output[i] = tree.levenshtein(query[i], max_distance_ptr[i]);
+      // progress_bar.increment();
     }
   }
 };
 
 // [[Rcpp::export(rng = false)]]
-DataFrame c_td_levenshtein(Rcpp::XPtr<SeqNode> tree, 
-                           const std::vector<std::string> & sequences, 
-                           const int max_distance, const bool symmetric, const int nthreads) {
-  tbb::concurrent_vector<std::tuple<int, int, int>> output;
-  LevenshteinWorker w(tree.get(), output, sequences, max_distance, symmetric);
-  parallelFor2(symmetric ? 1 : 0, sequences.size(), w, 1, nthreads);
-  IntegerVector query(output.size());
-  IntegerVector target(output.size());
-  IntegerVector distance(output.size());
-  for(size_t i=0; i<output.size(); ++i) {
-    query[i] = std::get<0>(output[i]) + 1;
-    target[i] = std::get<1>(output[i]) + 1;
-    distance[i] = std::get<2>(output[i]);
+SEXP DNATree_levenshtein(Rcpp::XPtr<DNATree> xp, CharacterVector sequences, IntegerVector max_distance, const int nthreads, const bool display_progress) {
+  using tree_type = DNATree;
+  auto & tree = *xp.get();
+  size_t nseqs = Rf_xlength(sequences);
+  if(Rf_xlength(max_distance) != nseqs) throw std::runtime_error("sequences and max_distance must be same length (or length 1)");
+  SEXP * sp = STRING_PTR(sequences);
+  int * max_distance_ptr = INTEGER(max_distance);
+  
+  if(nseqs == 0) return R_NilValue;
+  
+  std::vector<cspan> query(nseqs);
+  for(size_t i=0; i<nseqs; ++i) { query[i] = cspan(CHAR(sp[i]), Rf_xlength(sp[i])); }
+  std::vector<std::pair<std::vector<uint64_t>, std::vector<int>>> output(nseqs);
+  if(nthreads == 1) {
+    Progress progress_bar(nseqs, display_progress);
+    for(size_t i=0; i<nseqs; ++i) {
+      output[i] = tree.levenshtein(query[i], max_distance_ptr[i]);
+      progress_bar.increment();
+    }
+  } else {
+    LevenshteinWorker<tree_type> w(tree, query, max_distance_ptr, output);
+    parallelFor(0, nseqs, w, 1, nthreads);
   }
-  return DataFrame::create(_["query"] = query, _["target"] = target, _["distance"] = distance);
+  
+  size_t nresults = 0;
+  for(size_t i=0; i<nseqs; ++i) { nresults += output[i].first.size(); }
+  CharacterVector query_results(nresults);
+  CharacterVector target_results(nresults);
+  IntegerVector distance_results(nresults);
+  int * distance_results_ptr = INTEGER(distance_results);
+  size_t q = 0;
+  for(size_t i=0; i<nseqs; ++i) {
+    auto & targets = output[i].first;
+    auto & distances = output[i].second;
+    for(size_t j=0; j<targets.size(); ++j) {
+      SET_STRING_ELT(query_results, q, STRING_ELT(sequences, i));
+      cspan tj = tree.index_to_sequence(targets[j]);
+      SET_STRING_ELT(target_results, q, Rf_mkCharLen(tj.data(), tj.size()));
+      distance_results_ptr[q] = distances[j];
+      q++;
+    }
+  }
+  return DataFrame::create(_["query"] = query_results, _["target"] = target_results, _["distance"] = distance_results);
 }
 
-///////////////////////////////////////////////////////////////
-// partial hamming
-
-struct PartialHammingWorker : public Worker {
-  SeqNode const * const root;
-  tbb::concurrent_vector<std::tuple<int, int, int>> & output;
-  const std::vector<std::string> & sequences;
-  const int max_distance;
-  const bool symmetric;
-  PartialHammingWorker(SeqNode const * const root, 
-                       tbb::concurrent_vector<std::tuple<int, int, int>> & output,
-                       const std::vector<std::string> & sequences, 
-                       const int max_distance, const bool symmetric) :
-    root(root), output(output), sequences(sequences), max_distance(max_distance), symmetric(symmetric) {}
-  void operator()(std::size_t begin, std::size_t end) {
-    for(size_t i=begin; i<end; ++i) {
-      search(root, i, sequences[i].c_str(), 0, true);
+// [[Rcpp::export(rng = false)]]
+SEXP RadixTree_levenshtein(Rcpp::XPtr<RadixTree> xp, CharacterVector sequences, IntegerVector max_distance, const int nthreads, const bool display_progress) {
+  using tree_type = RadixTree;
+  auto & tree = *xp.get();
+  size_t nseqs = Rf_xlength(sequences);
+  if(Rf_xlength(max_distance) != nseqs) throw std::runtime_error("sequences and max_distance must be same length (or length 1)");
+  SEXP * sp = STRING_PTR(sequences);
+  int * max_distance_ptr = INTEGER(max_distance);
+  
+  if(nseqs == 0) return R_NilValue;
+  
+  std::vector<cspan> query(nseqs);
+  for(size_t i=0; i<nseqs; ++i) { query[i] = cspan(CHAR(sp[i]), Rf_xlength(sp[i])); }
+  std::vector<std::pair<std::vector<uint64_t>, std::vector<int>>> output(nseqs);
+  if(nthreads == 1) {
+    Progress progress_bar(nseqs, display_progress);
+    for(size_t i=0; i<nseqs; ++i) {
+      output[i] = tree.levenshtein(query[i], max_distance_ptr[i]);
+      progress_bar.increment();
+    }
+  } else {
+    LevenshteinWorker<tree_type> w(tree, query, max_distance_ptr, output);
+    parallelFor(0, nseqs, w, 1, nthreads);
+  }
+  
+  size_t nresults = 0;
+  for(size_t i=0; i<nseqs; ++i) { nresults += output[i].first.size(); }
+  CharacterVector query_results(nresults);
+  CharacterVector target_results(nresults);
+  IntegerVector distance_results(nresults);
+  int * distance_results_ptr = INTEGER(distance_results);
+  size_t q = 0;
+  for(size_t i=0; i<nseqs; ++i) {
+    auto & targets = output[i].first;
+    auto & distances = output[i].second;
+    for(size_t j=0; j<targets.size(); ++j) {
+      SET_STRING_ELT(query_results, q, STRING_ELT(sequences, i));
+      cspan tj = tree.index_to_sequence(targets[j]);
+      SET_STRING_ELT(target_results, q, Rf_mkCharLen(tj.data(), tj.size()));
+      distance_results_ptr[q] = distances[j];
+      q++;
     }
   }
-  void search(const SeqNode * node, const int seqidx, const char * sequence, const int distance, bool opening) {
-    // we've exceeded max_distance
-    if( distance > max_distance ) {
-      return;
+  return DataFrame::create(_["query"] = query_results, _["target"] = target_results, _["distance"] = distance_results);
+}
+
+// [[Rcpp::export(rng = false)]]
+SEXP PrefixTree_levenshtein(Rcpp::XPtr<PrefixTree> xp, CharacterVector sequences, IntegerVector max_distance, const int nthreads, const bool display_progress) {
+  using tree_type = PrefixTree;
+  auto & tree = *xp.get();
+  size_t nseqs = Rf_xlength(sequences);
+  if(Rf_xlength(max_distance) != nseqs) throw std::runtime_error("sequences and max_distance must be same length (or length 1)");
+  SEXP * sp = STRING_PTR(sequences);
+  int * max_distance_ptr = INTEGER(max_distance);
+  
+  if(nseqs == 0) return R_NilValue;
+  
+  std::vector<cspan> query(nseqs);
+  for(size_t i=0; i<nseqs; ++i) { query[i] = cspan(CHAR(sp[i]), Rf_xlength(sp[i])); }
+  std::vector<std::pair<std::vector<uint64_t>, std::vector<int>>> output(nseqs);
+  if(nthreads == 1) {
+    Progress progress_bar(nseqs, display_progress);
+    for(size_t i=0; i<nseqs; ++i) {
+      output[i] = tree.levenshtein(query[i], max_distance_ptr[i]);
+      progress_bar.increment();
     }
-    // we've reached the end of the sequence
-    if( (*sequence == 0) ) {
-      std::set<int> idxs = node->allChildIdx();
-      for(auto i : idxs) {
-        if( (distance <= max_distance) && ((i < seqidx) || !symmetric) ) {
-          output.push_back(std::make_tuple(seqidx, i, distance));
-        }
-      }
-      return;
-    // we've reached the end of the tree without finishing the sequence
-    } else if(node->isLeaf()) {
-      return;
+  } else {
+    LevenshteinWorker<tree_type> w(tree, query, max_distance_ptr, output);
+    parallelFor(0, nseqs, w, 1, nthreads);
+  }
+  
+  size_t nresults = 0;
+  for(size_t i=0; i<nseqs; ++i) { nresults += output[i].first.size(); }
+  CharacterVector query_results(nresults);
+  CharacterVector target_results(nresults);
+  IntegerVector distance_results(nresults);
+  int * distance_results_ptr = INTEGER(distance_results);
+  size_t q = 0;
+  for(size_t i=0; i<nseqs; ++i) {
+    auto & targets = output[i].first;
+    auto & distances = output[i].second;
+    for(size_t j=0; j<targets.size(); ++j) {
+      SET_STRING_ELT(query_results, q, STRING_ELT(sequences, i));
+      cspan tj = tree.index_to_sequence(targets[j]);
+      SET_STRING_ELT(target_results, q, Rf_mkCharLen(tj.data(), tj.size()));
+      distance_results_ptr[q] = distances[j];
+      q++;
     }
-    auto & seqmap = node->seqmap;
-    for (auto & x : seqmap) {
-      if(*sequence == x.first) {
-        search(x.second.get(), seqidx, sequence+1, distance, false);
-      } else {
-        search(x.second.get(), seqidx, sequence+1, distance+1, false);
-      }
-      if(opening) {
-        search(x.second.get(), seqidx, sequence, distance, true); // search next tree element without incrementing sequence; opening gap
-      }
+  }
+  return DataFrame::create(_["query"] = query_results, _["target"] = target_results, _["distance"] = distance_results);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// hamming
+template <class T> struct HammingWorker : public Worker {
+  const T & tree;
+  const std::vector<cspan> & query;
+  int const * const max_distance_ptr;
+  std::vector<std::pair<std::vector<uint64_t>, std::vector<int>>> & output;
+  HammingWorker(const T & tree,
+                    const std::vector<cspan> & query,
+                    int const * const max_distance_ptr,
+                    std::vector<std::pair<std::vector<uint64_t>, std::vector<int>>> & output) : 
+    tree(tree), query(query), max_distance_ptr(max_distance_ptr), output(output) {}
+  void operator()(std::size_t begin, std::size_t end) {
+    for(size_t i=begin; i<end; ++i) {
+      output[i] = tree.hamming(query[i], max_distance_ptr[i]);
+      // progress_bar.increment();
     }
   }
 };
 
 // [[Rcpp::export(rng = false)]]
-DataFrame c_td_partial_hamming(Rcpp::XPtr<SeqNode> tree, 
-                               const std::vector<std::string> & sequences, 
-                               const int max_distance, const bool symmetric, const int nthreads) {
-  tbb::concurrent_vector<std::tuple<int, int, int>> output;
-  PartialHammingWorker w(tree.get(), output, sequences, max_distance, symmetric);
-  parallelFor2(symmetric ? 1 : 0, sequences.size(), w, 1, nthreads);
-  IntegerVector query(output.size());
-  IntegerVector target(output.size());
-  IntegerVector distance(output.size());
-  for(size_t i=0; i<output.size(); ++i) {
-    query[i] = std::get<0>(output[i]) + 1;
-    target[i] = std::get<1>(output[i]) + 1;
-    distance[i] = std::get<2>(output[i]);
+SEXP DNATree_hamming(Rcpp::XPtr<DNATree> xp, CharacterVector sequences, IntegerVector max_distance, const int nthreads, const bool display_progress) {
+  using tree_type = DNATree;
+  auto & tree = *xp.get();
+  size_t nseqs = Rf_xlength(sequences);
+  if(Rf_xlength(max_distance) != nseqs) throw std::runtime_error("sequences and max_distance must be same length (or length 1)");
+  SEXP * sp = STRING_PTR(sequences);
+  int * max_distance_ptr = INTEGER(max_distance);
+  
+  if(nseqs == 0) return R_NilValue;
+  
+  std::vector<cspan> query(nseqs);
+  for(size_t i=0; i<nseqs; ++i) { query[i] = cspan(CHAR(sp[i]), Rf_xlength(sp[i])); }
+  std::vector<std::pair<std::vector<uint64_t>, std::vector<int>>> output(nseqs);
+  if(nthreads == 1) {
+    Progress progress_bar(nseqs, display_progress);
+    for(size_t i=0; i<nseqs; ++i) {
+      output[i] = tree.hamming(query[i], max_distance_ptr[i]);
+      progress_bar.increment();
+    }
+  } else {
+    HammingWorker<tree_type> w(tree, query, max_distance_ptr, output);
+    parallelFor(0, nseqs, w, 1, nthreads);
   }
-  return DataFrame::create(_["query"] = query, _["target"] = target, _["distance"] = distance);
+  
+  size_t nresults = 0;
+  for(size_t i=0; i<nseqs; ++i) { nresults += output[i].first.size(); }
+  CharacterVector query_results(nresults);
+  CharacterVector target_results(nresults);
+  IntegerVector distance_results(nresults);
+  int * distance_results_ptr = INTEGER(distance_results);
+  size_t q = 0;
+  for(size_t i=0; i<nseqs; ++i) {
+    auto & targets = output[i].first;
+    auto & distances = output[i].second;
+    for(size_t j=0; j<targets.size(); ++j) {
+      SET_STRING_ELT(query_results, q, STRING_ELT(sequences, i));
+      cspan tj = tree.index_to_sequence(targets[j]);
+      SET_STRING_ELT(target_results, q, Rf_mkCharLen(tj.data(), tj.size()));
+      distance_results_ptr[q] = distances[j];
+      q++;
+    }
+  }
+  return DataFrame::create(_["query"] = query_results, _["target"] = target_results, _["distance"] = distance_results);
 }
-
-///////////////////////////////////////////////////////////////
-// Partial/anchored levenshtein
-enum class Direction {left, right};
-struct PartialLevenshteinWorker : public Worker {
-  SeqNode const * const root;
-  tbb::concurrent_vector<std::tuple<int, int, int>> & output;
-  const std::vector<std::string> & sequences;
-  const Direction anchor;
-  const int max_distance;
-  const bool symmetric;
-  PartialLevenshteinWorker(SeqNode const * const root, 
-                    tbb::concurrent_vector<std::tuple<int, int, int>> & output,
-                    const std::vector<std::string> & sequences, 
-                    const std::string & anchor,
-                    const int max_distance, const bool symmetric) :
-    root(root), output(output), sequences(sequences), anchor(get_direction(anchor)), max_distance(max_distance), symmetric(symmetric) {}
-  static Direction get_direction(const std::string & a) {
-    if(a == "left") {
-      return Direction::left;
-    } else if(a == "right") {
-      return Direction::right;
-    } else {
-      throw std::runtime_error("anchor must be left or right");
-    }
-  }
-  void operator()(std::size_t begin, std::size_t end) {
-    for(size_t i=begin; i<end; ++i) {
-      if(anchor == Direction::left) {
-        search(root, i, int_range(0, sequences[i].size()));
-      } else {
-        search(root, i, std::vector<int>(sequences[i].size(),0) );
-      }
-    }
-  }
-  void search(SeqNode const * const node, const int seqidx, const std::vector<int> previous_row) {
-    if( *std::min_element(previous_row.begin(), previous_row.end()) > max_distance ) {
-      return;
-    }
-    for(auto i : node->idx) {
-      int dist;
-      if(anchor == Direction::right) {
-        dist = previous_row.back();
-      } else {
-        dist = *std::min_element(previous_row.begin(), previous_row.end());
-      }
-
-      if( (dist <= max_distance) && ((i < seqidx) || !symmetric) ) {
-        output.push_back(std::make_tuple(seqidx, i, dist));
-      }
-    }
-    if(node->isLeaf()) {
-      return;
-    }
-    auto & seqmap = node->seqmap;
-    for (auto & x : seqmap) {
-      std::vector<int> current_row(sequences[seqidx].size() + 1);
-      for(size_t i=0; i<current_row.size(); ++i) {
-        if(i == 0) {
-          if(anchor == Direction::left) {
-            current_row[i] = previous_row[i] + 1;
-          } else {
-            current_row[i] = 0;
-          }
-        } else if(i == current_row.size() - 1) { // last column
-          int delete_cost;
-          if(anchor == Direction::right) {
-            delete_cost = previous_row[i] + 1;
-          } else {
-            delete_cost = previous_row[i];
-          }
-          int match_cost  = previous_row[i-1] + (sequences[seqidx][i-1] == x.first ? 0 : 1);
-          int insert_cost = current_row[i-1] + 1;
-          current_row[i] = std::min({delete_cost, match_cost, insert_cost});
-        } else {
-          int delete_cost = previous_row[i] + 1;
-          int match_cost  = previous_row[i-1] + (sequences[seqidx][i-1] == x.first ? 0 : 1);
-          int insert_cost = current_row[i-1] + 1;
-          current_row[i] = std::min({delete_cost, match_cost, insert_cost});
-        }
-      }
-      search(x.second.get(), seqidx, current_row);
-    }
-  }
-};
 
 // [[Rcpp::export(rng = false)]]
-DataFrame c_td_partial_levenshtein(Rcpp::XPtr<SeqNode> tree, 
-                           const std::vector<std::string> & sequences, const std::string anchor,
-                           const int max_distance, const bool symmetric, const int nthreads) {
-  tbb::concurrent_vector<std::tuple<int, int, int>> output;
-  PartialLevenshteinWorker w(tree.get(), output, sequences, anchor, max_distance, symmetric);
-  parallelFor2(symmetric ? 1 : 0, sequences.size(), w, 1, nthreads);
-  IntegerVector query(output.size());
-  IntegerVector target(output.size());
-  IntegerVector distance(output.size());
-  for(size_t i=0; i<output.size(); ++i) {
-    query[i] = std::get<0>(output[i]) + 1;
-    target[i] = std::get<1>(output[i]) + 1;
-    distance[i] = std::get<2>(output[i]);
+SEXP RadixTree_hamming(Rcpp::XPtr<RadixTree> xp, CharacterVector sequences, IntegerVector max_distance, const int nthreads, const bool display_progress) {
+  using tree_type = RadixTree;
+  auto & tree = *xp.get();
+  size_t nseqs = Rf_xlength(sequences);
+  if(Rf_xlength(max_distance) != nseqs) throw std::runtime_error("sequences and max_distance must be same length (or length 1)");
+  SEXP * sp = STRING_PTR(sequences);
+  int * max_distance_ptr = INTEGER(max_distance);
+  
+  if(nseqs == 0) return R_NilValue;
+  
+  std::vector<cspan> query(nseqs);
+  for(size_t i=0; i<nseqs; ++i) { query[i] = cspan(CHAR(sp[i]), Rf_xlength(sp[i])); }
+  std::vector<std::pair<std::vector<uint64_t>, std::vector<int>>> output(nseqs);
+  if(nthreads == 1) {
+    Progress progress_bar(nseqs, display_progress);
+    for(size_t i=0; i<nseqs; ++i) {
+      output[i] = tree.hamming(query[i], max_distance_ptr[i]);
+      progress_bar.increment();
+    }
+  } else {
+    HammingWorker<tree_type> w(tree, query, max_distance_ptr, output);
+    parallelFor(0, nseqs, w, 1, nthreads);
   }
-  return DataFrame::create(_["query"] = query, _["target"] = target, _["distance"] = distance);
+  
+  size_t nresults = 0;
+  for(size_t i=0; i<nseqs; ++i) { nresults += output[i].first.size(); }
+  CharacterVector query_results(nresults);
+  CharacterVector target_results(nresults);
+  IntegerVector distance_results(nresults);
+  int * distance_results_ptr = INTEGER(distance_results);
+  size_t q = 0;
+  for(size_t i=0; i<nseqs; ++i) {
+    auto & targets = output[i].first;
+    auto & distances = output[i].second;
+    for(size_t j=0; j<targets.size(); ++j) {
+      SET_STRING_ELT(query_results, q, STRING_ELT(sequences, i));
+      cspan tj = tree.index_to_sequence(targets[j]);
+      SET_STRING_ELT(target_results, q, Rf_mkCharLen(tj.data(), tj.size()));
+      distance_results_ptr[q] = distances[j];
+      q++;
+    }
+  }
+  return DataFrame::create(_["query"] = query_results, _["target"] = target_results, _["distance"] = distance_results);
 }
+
+// [[Rcpp::export(rng = false)]]
+SEXP PrefixTree_hamming(Rcpp::XPtr<PrefixTree> xp, CharacterVector sequences, IntegerVector max_distance, const int nthreads, const bool display_progress) {
+  using tree_type = PrefixTree;
+  auto & tree = *xp.get();
+  size_t nseqs = Rf_xlength(sequences);
+  if(Rf_xlength(max_distance) != nseqs) throw std::runtime_error("sequences and max_distance must be same length (or length 1)");
+  SEXP * sp = STRING_PTR(sequences);
+  int * max_distance_ptr = INTEGER(max_distance);
+  
+  if(nseqs == 0) return R_NilValue;
+  
+  std::vector<cspan> query(nseqs);
+  for(size_t i=0; i<nseqs; ++i) { query[i] = cspan(CHAR(sp[i]), Rf_xlength(sp[i])); }
+  std::vector<std::pair<std::vector<uint64_t>, std::vector<int>>> output(nseqs);
+  if(nthreads == 1) {
+    Progress progress_bar(nseqs, display_progress);
+    for(size_t i=0; i<nseqs; ++i) {
+      output[i] = tree.hamming(query[i], max_distance_ptr[i]);
+      progress_bar.increment();
+    }
+  } else {
+    HammingWorker<tree_type> w(tree, query, max_distance_ptr, output);
+    parallelFor(0, nseqs, w, 1, nthreads);
+  }
+  
+  size_t nresults = 0;
+  for(size_t i=0; i<nseqs; ++i) { nresults += output[i].first.size(); }
+  CharacterVector query_results(nresults);
+  CharacterVector target_results(nresults);
+  IntegerVector distance_results(nresults);
+  int * distance_results_ptr = INTEGER(distance_results);
+  size_t q = 0;
+  for(size_t i=0; i<nseqs; ++i) {
+    auto & targets = output[i].first;
+    auto & distances = output[i].second;
+    for(size_t j=0; j<targets.size(); ++j) {
+      SET_STRING_ELT(query_results, q, STRING_ELT(sequences, i));
+      cspan tj = tree.index_to_sequence(targets[j]);
+      SET_STRING_ELT(target_results, q, Rf_mkCharLen(tj.data(), tj.size()));
+      distance_results_ptr[q] = distances[j];
+      q++;
+    }
+  }
+  return DataFrame::create(_["query"] = query_results, _["target"] = target_results, _["distance"] = distance_results);
+}
+
+
+
+

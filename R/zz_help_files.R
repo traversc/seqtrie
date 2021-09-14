@@ -1,96 +1,209 @@
-#' td_suffix_tree
+#' DNATree
+#'
+#' This class is a Radix Tree class specialization for DNA sequences
+#'
+#' @section Usage:
+#' \preformatted{tree <- DNATree$new()
 #' 
-#' Creates a suffix tree
-#' @usage td_suffix_tree(subject, min_length)
-#' @param subject A character vector
-#' @param min_length Minimum suffix length in the tree
-#' @return A suffix tree: a list of class "suffix_tree" containing an external pointer
-#' @details 
-#' A suffix tree can be used to perform partial hamming matching. 
-#' @examples 
-#' x <- td_suffix_tree("hello")
-#' @name td_suffix_tree
-NULL
+#' tree$print()
+#' 
+#' tree$to_string()
+#' 
+#' tree$to_dataframe()
+#' 
+#' tree$size()
+#' 
+#' tree$insert(sequences)
+#' 
+#' tree$erase(sequences)
+#' 
+#' tree$find(sequences)
+#' 
+#' tree$search(sequences, max_distance = NULL, max_fraction = NULL, mode = "levenshtein", nthreads = 1, display_progress = FALSE)
+#' }
+#'
+#' @section Arguments:
+#' \describe{
+#'   \item{sequences}{- The sequences to operate on.}
+#'   \item{max_distance}{- For the search method, how far to search for similar sequences, in units of absolute distance. See details.}
+#'   \item{max_fraction}{- For the search method, how far to search for similar sequences, relative to the sequence length. See details.}
+#'   \item{mode}{- Either Levenshtein or Hamming. Levenshtein will allows for insertions and deletions and calculates "edit distance". Hamming does not allow for insertions or deletions.}
+#'   \item{nthreads}{- How many threads to use in the search.}
+#'   \item{display_progress}{- Display search progress (only for nthreads = 1).}
+#' }
+#'
+#' @section Details:
+#' \code{$new()} creates a new Tree object, which holds the pointer to the underlying C++ implentation. The DNATree class only accepts strings with "ACGT" characters, but is more memory efficient. 
+#'
+#' \code{$print()} and \code{$to_string()} prints to screen or outputs the tree to a string representation.
+#' 
+#' \code{$to_dataframe()} outputs all sequences held by the tree. 
+#' 
+#' \code{$size()} outputs the size of the tree (i.e. how many sequences are contained). 
+#' 
+#' \code{$insert()}, \code{$erase()} and \code{$find()} insert, erase and find sequences in the tree, respectively.
+#' 
+#' \code{$search()} This function searches for similar sequences within a threshold (given by max_distance or max_fraction) based on Levenshtein or Hamming algorithms. 
+#' The output of this function is a data.frame of all matches with columns "query" (the sequences input to the search function), "target" (the sequences inserted into the tree) and "distance" the absolute distance between query and target sequences. 
+#' 
+#' @seealso 
+#' https://en.wikipedia.org/wiki/Radix_tree
+#' 
+#' @examples
+#' # Plot Data: x,y,r
+#' tree <- DNATree$new()
+#' tree$insert(c("ACGT", "AAAA"))
+#' tree$erase("AAAA")
+#' tree$search("ACG", max_distance = 1, mode = "levenshtein")
+#'  #   query target distance
+#'  # 1   ACG   ACGT        1
+#'  
+#' tree$search("ACG", max_distance = 1, mode = "hamming")
+#' query    target   distance
+#' <0 rows> (or 0-length row.names)
 
-#' td_prefix_tree
-#' 
-#' Creates a prefix tree
-#' @usage td_prefix_tree(subject)
-#' @param subject A character vector
-#' @return A prefix tree: a list of class "prefix_tree" containing an external pointer
-#' @details 
-#' A prefix tree can be used to perform levenshtein and hamming calculations. 
-#' @examples 
-#' x <- td_prefix_tree("hello")
-#' @name td_prefix_tree
-NULL
-
-#' td_partial_hamming
-#' 
-#' Performs partial hamming matching using a suffix tree
-#' @usage td_partial_hamming(query, subject=NULL, max_distance = NA_integer_, symmetric = FALSE, nthreads = 1L)
-#' @param query A character vector of strings as query
-#' @param subject A character vector of strings as subject, a suffix_tree or NULL. See details
-#' @param max_distance The max hamming distance to search for matches.
-#' @param symmetric Whether to treat query and subject as the same (i.e. pairwise matching)
-#' @param nthreads Number of threads to use in computation
-#' @return A data.frame containing query, subject and distance.
-#' @details 
-#' Subject parameter can be a character vector, a suffix_tree or NULL. If NULL, the function will perform a pairwise search on query. 
-#' @examples 
-#' x <- td_partial_hamming(query = "ell", subject = "hello")
-#' @name td_partial_hamming
-NULL
-
-#' td_hamming
-#' 
-#' Performs hamming matching using a prefix tree
-#' @usage td_hamming(query, subject=NULL, max_distance = NA_integer_, symmetric = FALSE, nthreads = 1L)
-#' @param query A character vector of strings as query
-#' @param subject A character vector of strings as subject, a prefix_tree or NULL. See details
-#' @param max_distance The max hamming distance to search for matches.
-#' @param symmetric Whether to treat query and subject as the same (i.e. pairwise matching)
-#' @param nthreads Number of threads to use in computation
-#' @return A data.frame containing query, subject and distance.
-#' @details 
-#' Subject parameter can be a character vector, a prefix_tree or NULL. If NULL, the function will perform a pairwise search on query. 
-#' @examples 
-#' x <- td_hamming(query = "heloo", subject = "hello")
-#' @name td_hamming
-NULL
-
-#' td_levenshtein
-#' 
-#' Performs levenshtein matching using a prefix tree
-#' @usage td_levenshtein(query, subject=NULL, max_distance = NA_integer_, symmetric = FALSE, nthreads = 1L)
-#' @param query A character vector of strings as query
-#' @param subject A character vector of strings as subject, a prefix_tree or NULL. See details
-#' @param max_distance The max levenshtein distance to search for matches.
-#' @param symmetric Whether to treat query and subject as the same (i.e. pairwise matching)
-#' @param nthreads Number of threads to use in computation
-#' @return A data.frame containing query, subject and distance.
-#' @details 
-#' Subject parameter can be a character vector, a prefix_tree or NULL. If NULL, the function will perform a pairwise search on query. 
-#' @examples 
-#' x <- td_levenshtein(query = "helo", subject = "hello")
-#' @name td_levenshtein
+#' @name DNATree
 NULL
 
 
-#' td_partial_levenshtein
+#' RadixTree
+#'
+#' This class is a generic Radix Tree class
+#'
+#' @section Usage:
+#' \preformatted{tree <- RadixTree$new()
 #' 
-#' Performs partial levenshtein matching using a suffix tree
-#' @usage td_partial_levenshtein(query, subject=NULL, anchor = "left", max_distance = NA_integer_, symmetric = FALSE, nthreads = 1L)
-#' @param query A character vector of strings as query
-#' @param subject A character vector of strings as subject, a suffix_tree or NULL. See details
-#' @param anchor "left" or "right". Determines whether the left or right side of an alignment's end gap should be penalized
-#' @param max_distance The max levenshtein distance to search for matches.
-#' @param symmetric Whether to treat query and subject as the same (i.e. pairwise matching)
-#' @param nthreads Number of threads to use in computation
-#' @return A data.frame containing query, subject and distance.
-#' @details 
-#' Subject parameter can be a character vector, a suffix_tree or NULL. If NULL, the function will perform a pairwise search on query. 
-#' @examples 
-#' x <- td_partial_levenshtein(query = "hell", subject = "hello", anchor = "left")
-#' @name td_partial_levenshtein
+#' tree$print()
+#' 
+#' tree$to_string()
+#' 
+#' tree$to_dataframe()
+#' 
+#' tree$size()
+#' 
+#' tree$insert(sequences)
+#' 
+#' tree$erase(sequences)
+#' 
+#' tree$find(sequences)
+#' 
+#' tree$search(sequences, max_distance = NULL, max_fraction = NULL, mode = "levenshtein", nthreads = 1, display_progress = FALSE)
+#' }
+#'
+#' @section Arguments:
+#' \describe{
+#'   \item{sequences}{- The sequences to operate on.}
+#'   \item{max_distance}{- For the search method, how far to search for similar sequences, in units of absolute distance. See details.}
+#'   \item{max_fraction}{- For the search method, how far to search for similar sequences, relative to the sequence length. See details.}
+#'   \item{mode}{- Either Levenshtein or Hamming. Levenshtein will allows for insertions and deletions and calculates "edit distance". Hamming does not allow for insertions or deletions.}
+#'   \item{nthreads}{- How many threads to use in the search.}
+#'   \item{display_progress}{- Display search progress (only for nthreads = 1).}
+#' }
+#'
+#' @section Details:
+#' \code{$new()} creates a new Tree object, which holds the pointer to the underlying C++ implentation. The RadixTree class accepts any strings of single-width characters. 
+#'
+#' \code{$print()} and \code{$to_string()} prints to screen or outputs the tree to a string representation.
+#' 
+#' \code{$to_dataframe()} outputs all sequences held by the tree. 
+#' 
+#' \code{$size()} outputs the size of the tree (i.e. how many sequences are contained). 
+#' 
+#' \code{$insert()}, \code{$erase()} and \code{$find()} insert, erase and find sequences in the tree, respectively.
+#' 
+#' \code{$search()} This function searches for similar sequences within a threshold (given by max_distance or max_fraction) based on Levenshtein or Hamming algorithms. 
+#' The output of this function is a data.frame of all matches with columns "query" (the sequences input to the search function), 
+#' "target" (the sequences inserted into the tree) and "distance" the absolute distance between query and target sequences. 
+#' 
+#' @seealso 
+#' https://en.wikipedia.org/wiki/Radix_tree
+#' 
+#' @examples
+#' # Plot Data: x,y,r
+#' tree <- RadixTree$new()
+#' tree$insert(c("ACGT", "AAAA"))
+#' tree$erase("AAAA")
+#' tree$search("ACG", max_distance = 1, mode = "levenshtein")
+#'  #   query target distance
+#'  # 1   ACG   ACGT        1
+#'  
+#' tree$search("ACG", max_distance = 1, mode = "hamming")
+#' query    target   distance
+#' <0 rows> (or 0-length row.names)
+
+#' @name RadixTree
 NULL
+
+
+
+
+#' PrefixTree
+#'
+#' This class is a generic Prefix Tree class
+#'
+#' @section Usage:
+#' \preformatted{tree <- PrefixTree$new()
+#' 
+#' tree$print()
+#' 
+#' tree$to_string()
+#' 
+#' tree$to_dataframe()
+#' 
+#' tree$size()
+#' 
+#' tree$insert(sequences)
+#' 
+#' tree$erase(sequences)
+#' 
+#' tree$find(sequences)
+#' 
+#' tree$search(sequences, max_distance = NULL, max_fraction = NULL, mode = "levenshtein", nthreads = 1, display_progress = FALSE)
+#' }
+#'
+#' @section Arguments:
+#' \describe{
+#'   \item{sequences}{- The sequences to operate on.}
+#'   \item{max_distance}{- For the search method, how far to search for similar sequences, in units of absolute distance. See details.}
+#'   \item{max_fraction}{- For the search method, how far to search for similar sequences, relative to the sequence length. See details.}
+#'   \item{mode}{- Either Levenshtein or Hamming. Levenshtein will allows for insertions and deletions and calculates "edit distance". Hamming does not allow for insertions or deletions.}
+#'   \item{nthreads}{- How many threads to use in the search.}
+#'   \item{display_progress}{- Display search progress (only for nthreads = 1).}
+#' }
+#'
+#' @section Details:
+#' \code{$new()} creates a new Tree object, which holds the pointer to the underlying C++ implentation. The PrefixTree class accepts any strings of single-width characters. 
+#' Generally speaking, the PrefixTree is a less efficient data structure than the RadixTree. This class is provided for comparison and completeness. 
+#'
+#' \code{$print()} and \code{$to_string()} prints to screen or outputs the tree to a string representation.
+#' 
+#' \code{$to_dataframe()} outputs all sequences held by the tree. 
+#' 
+#' \code{$size()} outputs the size of the tree (i.e. how many sequences are contained). 
+#' 
+#' \code{$insert()}, \code{$erase()} and \code{$find()} insert, erase and find sequences in the tree, respectively.
+#' 
+#' \code{$search()} This function searches for similar sequences within a threshold (given by max_distance or max_fraction) based on Levenshtein or Hamming algorithms. 
+#' The output of this function is a data.frame of all matches with columns "query" (the sequences input to the search function), 
+#' "target" (the sequences inserted into the tree) and "distance" the absolute distance between query and target sequences. 
+#' 
+#' @seealso 
+#' https://en.wikipedia.org/wiki/Trie
+#' 
+#' @examples
+#' # Plot Data: x,y,r
+#' tree <- PrefixTree$new()
+#' tree$insert(c("ACGT", "AAAA"))
+#' tree$erase("AAAA")
+#' tree$search("ACG", max_distance = 1, mode = "levenshtein")
+#'  #   query target distance
+#'  # 1   ACG   ACGT        1
+#'  
+#' tree$search("ACG", max_distance = 1, mode = "hamming")
+#' query    target   distance
+#' <0 rows> (or 0-length row.names)
+
+#' @name PrefixTree
+NULL
+
+

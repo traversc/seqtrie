@@ -1,4 +1,13 @@
 importFrom(Rcpp,sourceCpp)
 importFrom(RcppParallel, RcppParallelLibs)
+importFrom(R6, R6Class)
 useDynLib(treedist, .registration=TRUE)
-export("td_prefix_tree", "td_suffix_tree", "td_hamming", "td_levenshtein", "td_partial_hamming", "td_partial_levenshtein")
+export("DNATree", "RadixTree", "PrefixTree")
+# export("DNATree_create", "RadixTree_create", "PrefixTree_create", 
+#        "DNATree_size", "RadixTree_size", "PrefixTree_size",
+#        "DNATree_print", "RadixTree_print", "PrefixTree_print",
+#        "DNATree_insert", "RadixTree_insert", "PrefixTree_insert",
+#        "DNATree_erase", "RadixTree_erase", "PrefixTree_erase",
+#        "DNATree_find", "RadixTree_find", "PrefixTree_find",
+#        "DNATree_levenshtein", "RadixTree_levenshtein", "PrefixTree_levenshtein",
+#        "DNATree_hamming", "RadixTree_hamming", "PrefixTree_hamming")

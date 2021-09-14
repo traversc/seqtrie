@@ -1,120 +1,208 @@
-library(dplyr)
-library(tidyr)
-library(stringdist)
-library(stringr)
-library(data.table)
+# export("DNATree_create", "RadixTree_create", "PrefixTree_create", 
+#        "DNATree_size", "RadixTree_size", "PrefixTree_size",
+#        "DNATree_insert", "RadixTree_insert", "PrefixTree_insert",
+#        "DNATree_erase", "RadixTree_erase", "PrefixTree_erase",
+#        "DNATree_levenshtein", "RadixTree_levenshtein", "PrefixTree_levenshtein",
+#        "DNATree_hamming", "RadixTree_hamming", "PrefixTree_hamming")
+
+
 library(treedist)
+library(stringdist)
 library(stringfish)
-library(Biostrings)
+library(Rcpp)
+library(dplyr)
+
+NSEQS     <- 10000
+NITER     <- 3
+MAXSEQLEN <- 200
+MAXDIST   <- MAXSEQLEN * 0.05
+MAXFRAC   <- 0.05
+
+tic <- function() { .time <<- Sys.time() }
+toc <- function() { as.numeric(Sys.time() - .time, units = "secs") }
 
 
-x <- td_prefix_tree(c("ABCDEF", "ABDEF", "ABCZF"))
-td_levenshtein(c("ABCDEF", "ABDEF", "ABCZF"), x, symmetric=F, max_distance = 10)
-
-s2 <- c("", random_strings(1e3, 40, charset = "GCAT", vector_mode = "normal"))
-
-mat2df <- function(res) {
-  colnames(res) <- colnames(res) <- 1:nrow(res)
-  res %>% 
-    as.data.frame %>%
-    tibble::rownames_to_column("target") %>% 
-    pivot_longer(cols = -target, names_to = "query", values_to = "distance") %>%
-    mutate(query = as.integer(query), target = as.integer(target)) %>%
-    filter(query > target) %>% 
-    dplyr::select(query, target, distance) %>%
-    arrange(query, target) %>% as.data.frame
+n_distinct <- function(x) {
+  length(unique(x))
 }
 
-partial_hamming_pairwise <- function(query, target) {
-  smat <- nucleotideSubstitutionMatrix(match = 0, mismatch = -1, baseOnly = TRUE)
-  results <- list()
-  for(i in 1:length(target)) {
-    dist <- pairwiseAlignment(query, target[i], scoreOnly=T, substitutionMatrix=smat, gapOpening=1000, gapExtension=1000, type = "global-local")
-    results[[i]] <- data.frame(query = 1:length(query), target = i, distance = -as.integer(dist))
+tree_equal <- function(x, y) {
+  xs <- gsub("[0-9]+", "#", x$to_string())
+  ys <- gsub("[0-9]+", "#", y$to_string())
+  if(xs != ys) return(FALSE)
+  if(x$size() != y$size()) return(FALSE)
+  return(TRUE)
+}
+
+random_strings <- function(N, charset = "abcdefghijklmnopqrstuvwxyz") {
+  len <- sample(0:MAXSEQLEN, N, replace=T)
+  result <- lapply(0:MAXSEQLEN, function(x) {
+    nx <- sum(len == x)
+    stringfish::random_strings(nx, x, charset = charset, vector_mode = "normal")
+  })
+  sample(unlist(result))
+}
+
+mutate_strings <- function(x, prob = 0.025, indel_prob = 0.025, charset = "abcdefghijklmnopqrstuvwxyz") {
+  charset <- unlist(strsplit(charset, ""))
+  x <- strsplit(x, "")
+  sapply(x, function(a) {
+    r <- runif(length(a)) < prob
+    a[r] <- sample(charset, sum(r), replace=T)
+    ins <- runif(length(a) < indel_prob)
+    a[ins] <- paste0(sample(charset, sum(ins), replace=T), sample(charset, sum(ins), replace=T))
+    del <- runif(length(a) < indel_prob)
+    a[del] <- ""
+    paste0(a, collapse = "")
+  })
+}
+
+sd_search <- function(query, target, method = "lv") {
+  results <- stringdist::stringdistmatrix(query, target, method = method, nthread=1)
+  results <- data.frame(query = rep(query, times=length(target)), 
+                        target = rep(target, each=length(query)), 
+                        distance = as.vector(results))
+  results <- dplyr::filter(results, is.finite(distance))
+  results$distance <- as.integer(results$distance)
+  dplyr::arrange(results, query, target)
+}
+
+
+tree_types <- c("DNATree", "RadixTree", "PrefixTree")
+# tt <- "DNATree"
+for(tt in tree_types) {
+  print(paste0("Checking correct insert/erase methods for ", tt))
+  for(. in 1:NITER) {
+    if(tt == "DNATree") {
+      x <- DNATree$new()
+      y <- DNATree$new()
+    } else if(tt == "RadixTree") {
+      x <- RadixTree$new()
+      y <- RadixTree$new()
+    } else if(tt == "PrefixTree") {
+      x <- PrefixTree$new()
+      y <- PrefixTree$new()
+    }
+    ins <- c(random_strings(NSEQS, "ACGT"),"")
+    era <- c(sample(c(sample(ins, NSEQS/10), random_strings(NSEQS/10, "ACGT"))),"")
+    x$insert(ins)
+    stopifnot(x$size() == n_distinct(ins))
+    x$erase(era)
+    stopifnot(x$size() == n_distinct(ins[!ins %in% era]))
+
+    y$insert(ins[!ins %in% era])
+    stopifnot(tree_equal(x, y))
   }
-  rbindlist(results) %>% arrange(query, target) %>% as.data.frame
+  
+  print(paste0("Checking levenshtein search correctness for ", tt))
+  for(. in 1:NITER) {
+    print(.)
+    if(tt == "DNATree") {
+      x <- DNATree$new()
+    } else if(tt == "RadixTree") {
+      x <- RadixTree$new()
+    } else if(tt == "PrefixTree") {
+      x <- PrefixTree$new()
+    }
+    target <- c(random_strings(NSEQS, "ACGT"),"") %>% unique
+    query <- sample(c(sample(target, NSEQS/1000), random_strings(NSEQS/1000, "ACGT")))
+    query <- c(mutate_strings(query, charset = "ACGT"), "") %>% unique
+    x$insert(target)
+    results_dist <- x$search(query, max_distance = MAXDIST, mode = "levenshtein") %>% dplyr::arrange(query, target)
+    results_frac <- x$search(query, max_fraction = MAXFRAC, mode = "levenshtein") %>% dplyr::arrange(query, target)
+    sd_results <- sd_search(query, target, method = "lv")
+    sd_dist <- dplyr::filter(sd_results, distance <= MAXDIST)
+    sd_frac <- dplyr::filter(sd_results, distance <= nchar(query) * MAXFRAC)
+    stopifnot(identical(results_dist, sd_dist))
+    stopifnot(identical(results_frac, sd_frac))
+  }
+  
+  print(paste0("Checking hamming search correctness for ", tt))
+  for(. in 1:NITER) {
+    print(.)
+    if(tt == "DNATree") {
+      x <- DNATree$new()
+    } else if(tt == "RadixTree") {
+      x <- RadixTree$new()
+    } else if(tt == "PrefixTree") {
+      x <- PrefixTree$new()
+    }
+    target <- c(random_strings(NSEQS, "ACGT"),"") %>% unique
+    query <- sample(c(sample(target, NSEQS/1000), random_strings(NSEQS/1000, "ACGT")))
+    query <- c(mutate_strings(query, indel_prob=0, charset = "ACGT"), "") %>% unique
+    x$insert(target)
+    results_dist <- x$search(query, max_distance = MAXDIST, mode = "hamming") %>% dplyr::arrange(query, target)
+    results_frac <- x$search(query, max_fraction = MAXFRAC, mode = "hamming") %>% dplyr::arrange(query, target)
+    sd_results <- sd_search(query, target, method = "hamming")
+    sd_dist <- dplyr::filter(sd_results, distance <= MAXDIST)
+    sd_frac <- dplyr::filter(sd_results, distance <= nchar(query) * MAXFRAC)
+    stopifnot(identical(results_dist, sd_dist))
+    stopifnot(identical(results_frac, sd_frac))
+  }
+  
+  print(paste0("Checking multithreaded levenshtein search correctness for ", tt))
+  for(. in 1:NITER) {
+    print(.)
+    if(tt == "DNATree") {
+      x <- DNATree$new()
+    } else if(tt == "RadixTree") {
+      x <- RadixTree$new()
+    } else if(tt == "PrefixTree") {
+      x <- PrefixTree$new()
+    }
+    target <- c(random_strings(NSEQS, "ACGT"),"") %>% unique
+    query <- sample(c(sample(target, NSEQS/1000), random_strings(NSEQS/1000, "ACGT")))
+    query <- c(mutate_strings(query, charset = "ACGT"), "") %>% unique
+    x$insert(target)
+    results_dist <- x$search(query, max_distance = MAXDIST, mode = "levenshtein", nthreads=4) %>% dplyr::arrange(query, target)
+    results_frac <- x$search(query, max_fraction = MAXFRAC, mode = "levenshtein", nthreads=4) %>% dplyr::arrange(query, target)
+    sd_results <- sd_search(query, target, method = "lv")
+    sd_dist <- dplyr::filter(sd_results, distance <= MAXDIST)
+    sd_frac <- dplyr::filter(sd_results, distance <= nchar(query) * MAXFRAC)
+    stopifnot(identical(results_dist, sd_dist))
+    stopifnot(identical(results_frac, sd_frac))
+  }
+  
+  print(paste0("Checking multithreaded hamming search correctness for ", tt))
+  for(. in 1:NITER) {
+    print(.)
+    if(tt == "DNATree") {
+      x <- DNATree$new()
+    } else if(tt == "RadixTree") {
+      x <- RadixTree$new()
+    } else if(tt == "PrefixTree") {
+      x <- PrefixTree$new()
+    }
+    target <- c(random_strings(NSEQS, "ACGT"),"") %>% unique
+    query <- sample(c(sample(target, NSEQS/1000), random_strings(NSEQS/1000, "ACGT")))
+    query <- c(mutate_strings(query, indel_prob=0, charset = "ACGT"), "") %>% unique
+    x$insert(target)
+    results_dist <- x$search(query, max_distance = MAXDIST, mode = "hamming", nthreads=4) %>% dplyr::arrange(query, target)
+    results_frac <- x$search(query, max_fraction = MAXFRAC, mode = "hamming", nthreads=4) %>% dplyr::arrange(query, target)
+    sd_results <- sd_search(query, target, method = "hamming")
+    sd_dist <- dplyr::filter(sd_results, distance <= MAXDIST)
+    sd_frac <- dplyr::filter(sd_results, distance <= nchar(query) * MAXFRAC)
+    stopifnot(identical(results_dist, sd_dist))
+    stopifnot(identical(results_frac, sd_frac))
+  }
+  
 }
 
-# levenshtein
-res <- stringdistmatrix(s2, method = "lv", nthread = 8)
-res <- mat2df(as.matrix(res)) %>% arrange(query, target)
-x <- td_prefix_tree(s2)
-res2 <- td_levenshtein(s2, x, nthreads=8, symmetric = T, max_distance = .Machine$integer.max)
-res2 <- res2 %>% arrange(query, target)
-stopifnot(all(res == res2))
+print("Checking DNATree not accepting non-ACGT")
+x <- DNATree$new()
+if(tryCatch({x$insert("Z")}, error = function(e) return(e))$message != "sequence must have only A, C, G or T") {
+  stop("DNATree accepting non-ACGT sequence")
+}
 
-# hamming
-res <- stringdistmatrix(s2, method = "hamming", nthread = 8)
-res <- mat2df(as.matrix(res)) %>% arrange(query, target) %>% filter(is.finite(distance))
-x <- td_prefix_tree(s2)
-res2 <- td_hamming(s2, x, nthreads=8, symmetric = T, max_distance = .Machine$integer.max)
-res2 <- res2 %>% arrange(query, target)
-stopifnot(all(res == res2))
+print("Checking RadixTree does accept non-ACGT")
+x <- RadixTree$new()
+x$insert("Z")
+stopifnot(x$find("Z"))
 
-# partial hamming
-s2 <- random_strings(1e3, 40, charset = "GCAT", vector_mode = "normal")
-x <- td_prefix_tree(s2)
-s3 <- random_strings(100, 20, charset = "GCAT", vector_mode = "normal")
-res2 <- td_partial_hamming(s3, x, nthreads=8, max_distance = 100)
-res2 <- res2 %>% arrange(query, target, distance) %>% distinct(query, target, .keep_all=T)
-res <- partial_hamming_pairwise(s3, s2)
-stopifnot(all(res == res2))
+print("Checking PrefixTree does accept non-ACGT")
+x <- PrefixTree$new()
+x$insert("Z")
+stopifnot(x$find("Z"))
 
 
 
-# partial levenshtein
-s2 <- random_strings(10, 20, charset = "GCAT", vector_mode = "normal")
-x <- td_prefix_tree(s2)
-s3 <- str_sub(s2, 2, -4)
-td_partial_levenshtein(s3, x, anchor = "right", max_distance=3, nthreads=1)
-td_partial_levenshtein(s3, x, anchor = "left", max_distance=3, nthreads=1)
-td_partial_levenshtein(s3, x, anchor = "none", max_distance=3, nthreads=1)
-
-
-
-
-#################################################
-
-# grid <- expand.grid(test_size = c(100,300,1000,3000,10000), 
-#                     method = c("levenshtein pairwise", "levenshtein trie max_dist=Inf", "levenshtein trie max_dist=3", "levenshtein trie max_dist=5", "levenshtein trie max_dist=1"), 
-#                     nthread = 8, rep = 1:3)
-# grid$time <- NA_real_
-# for(i in 1:nrow(grid)) {
-#   print(i)
-#   z <- sample(seqs, grid$test_size[i])
-#   if(grid$method[i] == "levenshtein pairwise") {
-#     time <- Sys.time()
-#     res <- stringdistmatrix(seqs[1:grid$test_size[i]], method = "lv", nthread = grid$nthread[i])
-#     res <- as.matrix(res)
-#     grid$time[i] <- as.numeric(Sys.time() - time, units = "secs")
-#   } else if(grid$method[i] == "levenshtein trie max_dist=Inf") {
-#     time <- Sys.time()
-#     x <- create_trie(seqs[1:grid$test_size[i]])
-#     res <- trie_levenshtein_matrix(x, seqs[1:grid$test_size[i]], nthreads = grid$nthread[i])
-#     grid$time[i] <- as.numeric(Sys.time() - time, units = "secs")
-#   } else if(grid$method[i] == "levenshtein trie max_dist=3") {
-#     time <- Sys.time()
-#     x <- create_trie(seqs[1:grid$test_size[i]])
-#     res <- trie_levenshtein_sparse(x, seqs[1:grid$test_size[i]], max_distance = 3, nthreads = grid$nthread[i])
-#     grid$time[i] <- as.numeric(Sys.time() - time, units = "secs")
-#   } else if(grid$method[i] == "levenshtein trie max_dist=5") {
-#     time <- Sys.time()
-#     x <- create_trie(seqs[1:grid$test_size[i]])
-#     res <- trie_levenshtein_sparse(x, seqs[1:grid$test_size[i]], max_distance = 5, nthreads = grid$nthread[i])
-#     grid$time[i] <- as.numeric(Sys.time() - time, units = "secs")
-#   } else if(grid$method[i] == "levenshtein trie max_dist=1") {
-#     time <- Sys.time()
-#     x <- create_trie(seqs[1:grid$test_size[i]])
-#     res <- trie_levenshtein_sparse(x, seqs[1:grid$test_size[i]], max_distance = 1, nthreads = grid$nthread[i])
-#     grid$time[i] <- as.numeric(Sys.time() - time, units = "secs")
-#   }
-#   rm(res)
-#   gc()
-# }
-# 
-# 
-# ggplot(grid, aes(x = test_size, y = time, color = method, lty = ifelse(method == "levenshtein pairwise", 1, 3))) + 
-#   geom_point() + geom_smooth(method = "lm", fill = NA, lwd=0.6) + theme_bw() +
-#   scale_linetype_identity() + 
-#   scale_x_log10() + scale_y_log10() + 
-#   labs(x = "# of CDR3 sequences", y = "Time (s)", subtitle = "levenshtein distance, nthreads = 8")
