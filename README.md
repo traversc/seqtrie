@@ -90,9 +90,10 @@ logarithmically increasing with tree size and linearly increasing with
 the number of query sequences and the length of each sequence.
 
 Overall, the algorithm is significantly faster than a pairwise edit
-distance calculation. However, *care still needs to be taken when
-setting parameters for searching a large number of sequences
-(\~100,000+).*
+distance calculation for finding similar sequences.
+
+However, *care still needs to be taken when setting parameters for
+searching a large number of sequences (\~100,000+).*
 
 #### Some additional examples using the `max_fraction` parameter.
 
