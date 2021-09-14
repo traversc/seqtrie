@@ -607,14 +607,15 @@ body {
 
 <!-- [![CRAN\_Downloads\_Total\_Badge](https://cranlogs.r-pkg.org/badges/grand-total/treedist)](https://cran.r-project.org/package=treedist) -->
 
-<p><code>treedist</code> is a A colection of Radix Tree and trie-based algorithms for calculating string distances (Hamming and Levenshtein distances).</p>
+<p><code>treedist</code> is a collection of Radix Tree and Trie-based algorithms for calculating string distances (Hamming and Levenshtein distances).</p>
 <p>There are three <code>R6</code> classes in this package:</p>
 <ul>
 <li><code>RadixTree</code> a Radix Tree implementation. See: <a href="https://en.wikipedia.org/wiki/Radix_tree">https://en.wikipedia.org/wiki/Radix_tree</a></li>
 <li><code>PrefixTree</code> a Prefix Tree implementation (aka Trie). See: <a href="https://en.wikipedia.org/wiki/Trie">https://en.wikipedia.org/wiki/Trie</a></li>
 <li><code>DNATree</code> a Radix Tree specialization for DNA sequences (ACGT characters). More memory efficient.</li>
 </ul>
-<p>All classes have exactly the same interface. The primary class functions for interacting with a tree are <code>$insert()</code> for inserting sequences, <code>$erase()</code> for erasing sequences and <code>$search()</code> for finding similar sequences stored on the tree.</p>
+<p>All classes have exactly the same interface.</p>
+<p>The primary class functions for interacting with a tree are <code>$insert()</code> for inserting sequences on the tree, <code>$erase()</code> for erasing sequences from the tree and <code>$search()</code> for finding similar sequences stored on the tree.</p>
 <h3 id="levenshtein-edit-distance-search">Levenshtein “edit distance” search</h3>
 <p>Below is an example using COVID19 T-cell data from Adaptive Biotechnologies. (<a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7418738/">https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7418738/</a>. This data is licensed under CC 4.0.)</p>
 <p>Here, we find highly similar sequences within a fixed edit distance.</p>
@@ -648,8 +649,8 @@ body {
 <p>The <code>$search()</code> function contains two mutually exclusive parameters: <code>max_distance</code> and <code>max_fraction</code>.</p>
 <p>The former parameter sets an absolute threshold for finding similar sequences, and the latter parameter sets a threshold relative to the query sequence length.</p>
 <p>The search time is monotonically increasing with the distance threshold, logarithmically increasing with tree size and linearly increasing with the number of query sequences and the length of each sequence.</p>
-<p><strong>Care needs to be taken when setting parameters for searching a large number of sequences (~100,000+).</strong></p>
-<p>Some additional examples using the <code>max_fraction</code> parameter.</p>
+<p>Overall, the algorithm is significantly faster than a pairwise edit distance calculation. However, <em>care still needs to be taken when setting parameters for searching a large number of sequences (~100,000+).</em></p>
+<h4 id="some-additional-examples-using-the-max_fraction-parameter">Some additional examples using the <code>max_fraction</code> parameter.</h4>
 <p><strong>max_fraction = 0.035 takes several seconds</strong></p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb3-1" title="1">results &lt;-<span class="st"> </span>tree<span class="op">$</span><span class="kw">search</span>(covid_cdr3, <span class="dt">max_fraction =</span> <span class="fl">0.035</span>, <span class="dt">mode =</span> <span class="st">&quot;levenshtein&quot;</span>, <span class="dt">nthreads=</span><span class="dv">8</span>)</a></code></pre></div>
 <p><strong>max_fraction = 0.06 takes ~1 minute</strong></p>

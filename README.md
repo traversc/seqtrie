@@ -7,7 +7,7 @@ treedist
 
 <!-- [![CRAN\_Downloads\_Total\_Badge](https://cranlogs.r-pkg.org/badges/grand-total/treedist)](https://cran.r-project.org/package=treedist) -->
 
-`treedist` is a A colection of Radix Tree and trie-based algorithms for
+`treedist` is a collection of Radix Tree and Trie-based algorithms for
 calculating string distances (Hamming and Levenshtein distances).
 
 There are three `R6` classes in this package:
@@ -19,10 +19,12 @@ There are three `R6` classes in this package:
   - `DNATree` a Radix Tree specialization for DNA sequences (ACGT
     characters). More memory efficient.
 
-All classes have exactly the same interface. The primary class functions
-for interacting with a tree are `$insert()` for inserting sequences,
-`$erase()` for erasing sequences and `$search()` for finding similar
-sequences stored on the tree.
+All classes have exactly the same interface.
+
+The primary class functions for interacting with a tree are `$insert()`
+for inserting sequences on the tree, `$erase()` for erasing sequences
+from the tree and `$search()` for finding similar sequences stored on
+the tree.
 
 ### Levenshtein “edit distance” search
 
@@ -81,10 +83,12 @@ The search time is monotonically increasing with the distance threshold,
 logarithmically increasing with tree size and linearly increasing with
 the number of query sequences and the length of each sequence.
 
-**Care needs to be taken when setting parameters for searching a large
-number of sequences (\~100,000+).**
+Overall, the algorithm is significantly faster than a pairwise edit
+distance calculation. However, *care still needs to be taken when
+setting parameters for searching a large number of sequences
+(\~100,000+).*
 
-Some additional examples using the `max_fraction` parameter.
+#### Some additional examples using the `max_fraction` parameter.
 
 **max\_fraction = 0.035 takes several seconds**
 
