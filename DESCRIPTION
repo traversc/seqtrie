@@ -15,9 +15,9 @@ Depends: R (>= 3.5.0)
 SystemRequirements: C++14
 LazyData: true
 LinkingTo: 
-    Rcpp (>= 0.12.18.3), RcppProgress, RcppParallel
+    Rcpp, RcppParallel, RcppProgress
 Imports: 
-    Rcpp, RcppParallel, R6
+    Rcpp (>= 0.12.18.3), RcppParallel (>= 5.1.3), R6
 Suggests:
     knitr, rmarkdown, stringdist, stringfish, qs, dplyr, triebeard
 VignetteBuilder: knitr
