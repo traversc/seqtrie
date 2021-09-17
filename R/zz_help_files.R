@@ -59,8 +59,8 @@
 #'  # 1   ACG   ACGT        1
 #'  
 #' tree$search("ACG", max_distance = 1, mode = "hamming")
-#' query    target   distance
-#' <0 rows> (or 0-length row.names)
+#'  # query    target   distance
+#'  # <0 rows> (or 0-length row.names)
 
 #' @name DNATree
 NULL
@@ -128,8 +128,8 @@ NULL
 #'  # 1   ACG   ACGT        1
 #'  
 #' tree$search("ACG", max_distance = 1, mode = "hamming")
-#' query    target   distance
-#' <0 rows> (or 0-length row.names)
+#'  # query    target   distance
+#'  # <0 rows> (or 0-length row.names)
 
 #' @name RadixTree
 NULL
@@ -200,8 +200,8 @@ NULL
 #'  # 1   ACG   ACGT        1
 #'  
 #' tree$search("ACG", max_distance = 1, mode = "hamming")
-#' query    target   distance
-#' <0 rows> (or 0-length row.names)
+#'  # query    target   distance
+#'  # <0 rows> (or 0-length row.names)
 
 #' @name PrefixTree
 NULL

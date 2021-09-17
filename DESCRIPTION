@@ -12,7 +12,7 @@ License: GPL-3
 Biarch: true
 Encoding: UTF-8
 Depends: R (>= 3.5.0)
-SystemRequirements: C++14
+SystemRequirements: C++14, GNU make
 LazyData: true
 LinkingTo: 
     Rcpp, RcppParallel, RcppProgress
