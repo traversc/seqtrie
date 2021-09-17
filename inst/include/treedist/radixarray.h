@@ -81,7 +81,7 @@ public:
   const index_type & get_terminal_idx() const { return terminal_idx; }
   const map_type & get_child_nodes() const { return child_nodes; }
   size_type size() const { // number of direct children of current node
-    size_t result;
+    size_t result = 0;
     for(size_t i=0; i<N; ++i) {
       if(child_nodes[i]) ++result;
     }

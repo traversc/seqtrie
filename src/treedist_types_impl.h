@@ -99,10 +99,6 @@ template <class T> struct HammingWorker : public Worker {
 };
 
 
-static std::string cspan_to_string(const cspan x) {
-  return std::string(x.data(), x.size());
-}
-
 inline SEXP cspan_to_charsxp(const cspan x) {
   return Rf_mkCharLen(x.data(), x.size());
 }
