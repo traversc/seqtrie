@@ -68,8 +68,8 @@ tree$search("ACG", max_distance = 1, mode = "levenshtein")
  # 1   ACG   ACGT        1
  
 tree$search("ACG", max_distance = 1, mode = "hamming")
-query    target   distance
-<0 rows> (or 0-length row.names)
+ # query    target   distance
+ # <0 rows> (or 0-length row.names)
 }
 \seealso{
 https://en.wikipedia.org/wiki/Trie
