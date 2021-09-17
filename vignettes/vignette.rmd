@@ -40,35 +40,27 @@ Here, we find highly similar sequences within a fixed edit distance.
 
 ```{r eval = FALSE}
 library(treedist)
-library(dplyr)
 
-data(covid_cdr3) # ~130,000 "CDR3" sequences
-
-# average CDR3 length
-nchar(covid_cdr3) %>% mean
-# [1] 43.56821
-
+# create a new tree and insert 130,000 "CDR3" sequences
+data(covid_cdr3) 
 tree <- DNATree$new()
-
-# insert sequences into the tree
 tree$insert(covid_cdr3)
 
-# search for sequences within an edit distance of 3 -- this takes a few minutes
-results <- tree$search(covid_cdr3, max_distance = 3, mode = "levenshtein", nthreads=8)
-
+# search for similar sequences within an edit distance of 2 ~ this may take a minute or two
+results <- tree$search(covid_cdr3, max_distance=2, mode="levenshtein", nthreads=8)
 ```
 ### The output
 
 The output is a data.frame mapping query (search sequences) and target (sequences inserted into the tree). 
 ```{r eval = FALSE}
-head(results)
-                                          # query                                        target distance
-# 1          TGTGCCAGCGGGCGTCATAATTCACCCCTCCACTTT             TGTGCCAGCGGCTATAATTCACCCCTCCACTTT        3
-# 2          TGTGCCAGCGGGCGTCATAATTCACCCCTCCACTTT          TGTGCCAGCGGGCGTCATAATTCACCCCTCCACTTT        0
-# 3          TGTGCCAGCGGGCGTCATAATTCACCCCTCCACTTT          TGTGCCAGCGGGGACAGTAATTCACCCCTCCACTTT        3
-# 4    TGTGCCAGCAGGCCAGCGGGAGTCAGGAATGAGCAGTTCTTC    TGTGCCAGCAGGCCAGCGGGAGTCAGGAATGAGCAGTTCTTC        0
-# 5    TGCAGTGCTAGCCCTAGGACCTTATGGGGGGAGCAGTTCTTC    TGCAGTGCTAGCCCTAGGACCTTATGGGGGGAGCAGTTCTTC        0
-# 6 TGCGCCAGCAGCTTGGTAACTAGCGTTAAAGATACGCAGTATTTT TGCGCCAGCAGCTTGGTAACTAGCGTTAAAGATACGCAGTATTTT        0
+tail(results)
+#                                                query                                        target distance
+# 262287          TGTGCCAGCAGCCCCGGGGACAATGAGCAGTTCTTC          TGTGCCAGCAGCCCGGGGACAATTGAGCAGTTCTTC        2
+# 262288          TGTGCCAGCAGCCCCGGGGACAATGAGCAGTTCTTC          TGTGCCAGCAGCCCGGGGACTAATGAGCAGTTCTTC        2
+# 262289          TGTGCCAGCAGCCCCGGGGACAATGAGCAGTTCTTC          TGTGCCAGCAGCCTCGGGTACAATGAGCAGTTCTTC        2
+# 262290          TGTGCCAGCAGCCCCGGGGACAATGAGCAGTTCTTC          TGTGCCAGCAGCGCCCGGGACAATGAGCAGTTCTTC        2
+# 262291 TGTGCCAGCAGCCCTCGACTAGTCTCCTACAATGAGCAGTTCTTC TGTGCCAGCAGCCCTCGACTAGTCTCCTACAATGAGCAGTTCTTC        0
+# 262292 TGTGCCAGCAGCCTCGACAGGGGAAACGCCTACGAGCAGTACTTC TGTGCCAGCAGCCTCGACAGGGGAAACGCCTACGAGCAGTACTTC        0
 ```
 
 ### Search parameters
@@ -79,7 +71,7 @@ The former parameter sets an absolute threshold for finding similar sequences, a
 
 The search time is monotonically increasing with the distance threshold, logarithmically increasing with tree size and linearly increasing with the number of query sequences and the length of each sequence. 
 
-Overall, the algorithm is significantly faster than a pairwise edit distance calculation for finding similar sequences. 
+Overall, the algorithm is significantly faster than a pairwise/matrix edit distance calculation for finding similar sequences. 
 
 However, *care still needs to be taken when setting parameters for searching a large number of sequences (~100,000+).*
 
@@ -87,12 +79,9 @@ However, *care still needs to be taken when setting parameters for searching a l
 
 ****
 ```{r eval = FALSE}
-results <- tree$search(covid_cdr3, max_fraction = 0.035, 
-                       mode = "levenshtein", nthreads=8) # ~several seconds
-results <- tree$search(covid_cdr3, max_fraction = 0.060, 
-                       mode = "levenshtein", nthreads=8) # ~1 minute
-results <- tree$search(covid_cdr3, max_fraction = 0.150, 
-                       mode = "levenshtein", nthreads=8) # 15-20 minutes
+results <- tree$search(covid_cdr3, max_fraction=0.035, mode="levenshtein", nthreads=8) # ~several seconds
+results <- tree$search(covid_cdr3, max_fraction=0.06, mode="levenshtein", nthreads=8) # ~1 minute
+results <- tree$search(covid_cdr3, max_fraction=0.15, mode="levenshtein", nthreads=8) # ~15-20 minutes
 ```
 
 ### Hamming distance search
@@ -102,12 +91,25 @@ Hamming distance is similar to Levenshtein distance, but does not allow insertio
 Because of this restriction, Hamming distance is generally a lot faster. 
 
 ```{r eval = FALSE}
-results <- tree$search(covid_cdr3, max_fraction = 0.035, 
-                       mode = "hamming", nthreads=8) # ~1 second
-results <- tree$search(covid_cdr3, max_fraction = 0.060, 
-                       mode = "hamming", nthreads=8) # ~ several seconds
-results <- tree$search(covid_cdr3, max_fraction = 0.150, 
-                       mode = "hamming", nthreads=8) # ~ 1.5 minutes
+results <- tree$search(covid_cdr3, max_fraction=0.035, mode="hamming", nthreads=8) # ~1 second
+results <- tree$search(covid_cdr3, max_fraction=0.06, mode="hamming", nthreads=8) # ~ several seconds
+results <- tree$search(covid_cdr3, max_fraction=0.15, mode="hamming", nthreads=8) # ~ 1.5 minutes
 ```
 
+### Finding strings that start with a pattern
+
+The `$find_prefix()` function can be used to find similar sequences. 
+
+```{r eval = FALSE}
+tree <- RadixTree$new()
+tree$insert(c("cargo", "cart", "carburetor", "carbuncle", "bar"))
+tree$find_prefix("car")
+
+#   query     target
+# 1   car  carbuncle
+# 2   car carburetor
+# 3   car       cart
+# 4   car      cargo
+
+```
 

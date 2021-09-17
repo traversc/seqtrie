@@ -7,6 +7,8 @@
 #include <treedist/radixarray.h>
 #include <treedist/radixmap.h>
 
+using namespace Rcpp;
+
 // #include <boost/bimap.hpp>
 // #include <boost/bimap/unordered_set_of.hpp>
 
@@ -23,8 +25,8 @@ public:
   typedef typename T::value_type value_type;
   typedef typename T::pointer_type pointer_type;
   typedef typename T::index_type index_type;
-  typedef typename T::template Levenshtein<std::vector> levenshtein_type;
-  typedef typename T::template Hamming<std::vector> hamming_type;
+  typedef typename T::Levenshtein levenshtein_type;
+  typedef typename T::Hamming hamming_type;
   typedef trqwe::nullable_array<char> ncstring; // nullable string to store sequences; NOT null terminated
   typedef std::vector<ncstring> seqmap_type;
   typedef typename seqmap_type::value_type seqmap_value_type;
@@ -34,11 +36,13 @@ private:
 public:
   rtree();
   index_type size() const;
-  index_type insert(const cspan sequence);
-  index_type erase(const cspan sequence);
-  index_type find(const cspan sequence) const;
-  auto levenshtein(const cspan sequence, const int max_distance) const;
-  auto hamming(const cspan sequence, const int max_distance) const;
+  NumericVector insert(CharacterVector sequences);
+  NumericVector erase(CharacterVector sequences);
+  NumericVector find(CharacterVector sequences) const;
+  SEXP find_prefix(CharacterVector sequences) const;
+  SEXP levenshtein_search(CharacterVector sequences, IntegerVector max_distance, const int nthreads, const bool show_progress) const;
+  SEXP hamming_search(CharacterVector sequences, IntegerVector max_distance, const int nthreads, const bool show_progress) const;
+  SEXP prefix_search(CharacterVector sequences, const int nthreads, const bool show_progress) const;
   cspan index_to_sequence(const index_type idx) const;
   std::string print() const;
   SEXP to_dataframe() const;

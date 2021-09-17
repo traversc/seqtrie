@@ -73,6 +73,18 @@ PrefixTree_find <- function(xp, sequences) {
     .Call(`_treedist_PrefixTree_find`, xp, sequences)
 }
 
+DNATree_find_prefix <- function(xp, sequences) {
+    .Call(`_treedist_DNATree_find_prefix`, xp, sequences)
+}
+
+RadixTree_find_prefix <- function(xp, sequences) {
+    .Call(`_treedist_RadixTree_find_prefix`, xp, sequences)
+}
+
+PrefixTree_find_prefix <- function(xp, sequences) {
+    .Call(`_treedist_PrefixTree_find_prefix`, xp, sequences)
+}
+
 DNATree_to_dataframe <- function(xp) {
     .Call(`_treedist_DNATree_to_dataframe`, xp)
 }
@@ -85,27 +97,27 @@ PrefixTree_to_dataframe <- function(xp) {
     .Call(`_treedist_PrefixTree_to_dataframe`, xp)
 }
 
-DNATree_levenshtein <- function(xp, sequences, max_distance, nthreads, display_progress) {
-    .Call(`_treedist_DNATree_levenshtein`, xp, sequences, max_distance, nthreads, display_progress)
+DNATree_levenshtein <- function(xp, sequences, max_distance, nthreads, show_progress) {
+    .Call(`_treedist_DNATree_levenshtein`, xp, sequences, max_distance, nthreads, show_progress)
 }
 
-RadixTree_levenshtein <- function(xp, sequences, max_distance, nthreads, display_progress) {
-    .Call(`_treedist_RadixTree_levenshtein`, xp, sequences, max_distance, nthreads, display_progress)
+RadixTree_levenshtein <- function(xp, sequences, max_distance, nthreads, show_progress) {
+    .Call(`_treedist_RadixTree_levenshtein`, xp, sequences, max_distance, nthreads, show_progress)
 }
 
-PrefixTree_levenshtein <- function(xp, sequences, max_distance, nthreads, display_progress) {
-    .Call(`_treedist_PrefixTree_levenshtein`, xp, sequences, max_distance, nthreads, display_progress)
+PrefixTree_levenshtein <- function(xp, sequences, max_distance, nthreads, show_progress) {
+    .Call(`_treedist_PrefixTree_levenshtein`, xp, sequences, max_distance, nthreads, show_progress)
 }
 
-DNATree_hamming <- function(xp, sequences, max_distance, nthreads, display_progress) {
-    .Call(`_treedist_DNATree_hamming`, xp, sequences, max_distance, nthreads, display_progress)
+DNATree_hamming <- function(xp, sequences, max_distance, nthreads, show_progress) {
+    .Call(`_treedist_DNATree_hamming`, xp, sequences, max_distance, nthreads, show_progress)
 }
 
-RadixTree_hamming <- function(xp, sequences, max_distance, nthreads, display_progress) {
-    .Call(`_treedist_RadixTree_hamming`, xp, sequences, max_distance, nthreads, display_progress)
+RadixTree_hamming <- function(xp, sequences, max_distance, nthreads, show_progress) {
+    .Call(`_treedist_RadixTree_hamming`, xp, sequences, max_distance, nthreads, show_progress)
 }
 
-PrefixTree_hamming <- function(xp, sequences, max_distance, nthreads, display_progress) {
-    .Call(`_treedist_PrefixTree_hamming`, xp, sequences, max_distance, nthreads, display_progress)
+PrefixTree_hamming <- function(xp, sequences, max_distance, nthreads, show_progress) {
+    .Call(`_treedist_PrefixTree_hamming`, xp, sequences, max_distance, nthreads, show_progress)
 }
 

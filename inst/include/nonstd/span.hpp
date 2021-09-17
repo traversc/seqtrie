@@ -934,18 +934,18 @@ public:
         : data_( to_address( first ) )
         , size_( count )
     {
-        // span_EXPECTS(
-        //     ( data_ == span_nullptr && count == 0 ) ||
-        //     ( data_ != span_nullptr && detail::is_positive( count ) )
-        // );
-        if(            ( data_ == span_nullptr && count == 0 ) ||
-                       ( data_ != span_nullptr && detail::is_positive( count ) )) {
-            
-        } else {
-            std::cout << (void*)data_ << std::endl;
-            std::cout << count << std::endl;
-            throw std::runtime_error(":(");
-        }
+        span_EXPECTS(
+            ( data_ == span_nullptr && count == 0 ) ||
+            ( data_ != span_nullptr && detail::is_positive( count ) )
+        );
+        // if(            ( data_ == span_nullptr && count == 0 ) ||
+        //                ( data_ != span_nullptr && detail::is_positive( count ) )) {
+        //     
+        // } else {
+        //     std::cout << (void*)data_ << std::endl;
+        //     std::cout << count << std::endl;
+        //     throw std::runtime_error(":(");
+        // }
 
         
     }

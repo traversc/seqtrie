@@ -24,7 +24,7 @@ tree$erase(sequences)
 
 tree$find(sequences)
 
-tree$search(sequences, max_distance = NULL, max_fraction = NULL, mode = "levenshtein", nthreads = 1, display_progress = FALSE)
+tree$search(sequences, max_distance = NULL, max_fraction = NULL, mode = "levenshtein", nthreads = 1, show_progress = FALSE)
 }
 }
 
@@ -36,7 +36,7 @@ tree$search(sequences, max_distance = NULL, max_fraction = NULL, mode = "levensh
   \item{max_fraction}{- For the search method, how far to search for similar sequences, relative to the sequence length. See details.}
   \item{mode}{- Either Levenshtein or Hamming. Levenshtein will allows for insertions and deletions and calculates "edit distance". Hamming does not allow for insertions or deletions.}
   \item{nthreads}{- How many threads to use in the search.}
-  \item{display_progress}{- Display search progress (only for nthreads = 1).}
+  \item{show_progress}{- Display search progress.}
 }
 }
 

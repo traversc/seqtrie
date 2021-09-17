@@ -197,6 +197,39 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// DNATree_find_prefix
+SEXP DNATree_find_prefix(Rcpp::XPtr<DNATree> xp, CharacterVector sequences);
+RcppExport SEXP _treedist_DNATree_find_prefix(SEXP xpSEXP, SEXP sequencesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< Rcpp::XPtr<DNATree> >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< CharacterVector >::type sequences(sequencesSEXP);
+    rcpp_result_gen = Rcpp::wrap(DNATree_find_prefix(xp, sequences));
+    return rcpp_result_gen;
+END_RCPP
+}
+// RadixTree_find_prefix
+SEXP RadixTree_find_prefix(Rcpp::XPtr<RadixTree> xp, CharacterVector sequences);
+RcppExport SEXP _treedist_RadixTree_find_prefix(SEXP xpSEXP, SEXP sequencesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< Rcpp::XPtr<RadixTree> >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< CharacterVector >::type sequences(sequencesSEXP);
+    rcpp_result_gen = Rcpp::wrap(RadixTree_find_prefix(xp, sequences));
+    return rcpp_result_gen;
+END_RCPP
+}
+// PrefixTree_find_prefix
+SEXP PrefixTree_find_prefix(Rcpp::XPtr<PrefixTree> xp, CharacterVector sequences);
+RcppExport SEXP _treedist_PrefixTree_find_prefix(SEXP xpSEXP, SEXP sequencesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< Rcpp::XPtr<PrefixTree> >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< CharacterVector >::type sequences(sequencesSEXP);
+    rcpp_result_gen = Rcpp::wrap(PrefixTree_find_prefix(xp, sequences));
+    return rcpp_result_gen;
+END_RCPP
+}
 // DNATree_to_dataframe
 SEXP DNATree_to_dataframe(Rcpp::XPtr<DNATree> xp);
 RcppExport SEXP _treedist_DNATree_to_dataframe(SEXP xpSEXP) {
@@ -228,86 +261,86 @@ BEGIN_RCPP
 END_RCPP
 }
 // DNATree_levenshtein
-SEXP DNATree_levenshtein(Rcpp::XPtr<DNATree> xp, CharacterVector sequences, IntegerVector max_distance, const int nthreads, const bool display_progress);
-RcppExport SEXP _treedist_DNATree_levenshtein(SEXP xpSEXP, SEXP sequencesSEXP, SEXP max_distanceSEXP, SEXP nthreadsSEXP, SEXP display_progressSEXP) {
+SEXP DNATree_levenshtein(Rcpp::XPtr<DNATree> xp, CharacterVector sequences, IntegerVector max_distance, const int nthreads, const bool show_progress);
+RcppExport SEXP _treedist_DNATree_levenshtein(SEXP xpSEXP, SEXP sequencesSEXP, SEXP max_distanceSEXP, SEXP nthreadsSEXP, SEXP show_progressSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::traits::input_parameter< Rcpp::XPtr<DNATree> >::type xp(xpSEXP);
     Rcpp::traits::input_parameter< CharacterVector >::type sequences(sequencesSEXP);
     Rcpp::traits::input_parameter< IntegerVector >::type max_distance(max_distanceSEXP);
     Rcpp::traits::input_parameter< const int >::type nthreads(nthreadsSEXP);
-    Rcpp::traits::input_parameter< const bool >::type display_progress(display_progressSEXP);
-    rcpp_result_gen = Rcpp::wrap(DNATree_levenshtein(xp, sequences, max_distance, nthreads, display_progress));
+    Rcpp::traits::input_parameter< const bool >::type show_progress(show_progressSEXP);
+    rcpp_result_gen = Rcpp::wrap(DNATree_levenshtein(xp, sequences, max_distance, nthreads, show_progress));
     return rcpp_result_gen;
 END_RCPP
 }
 // RadixTree_levenshtein
-SEXP RadixTree_levenshtein(Rcpp::XPtr<RadixTree> xp, CharacterVector sequences, IntegerVector max_distance, const int nthreads, const bool display_progress);
-RcppExport SEXP _treedist_RadixTree_levenshtein(SEXP xpSEXP, SEXP sequencesSEXP, SEXP max_distanceSEXP, SEXP nthreadsSEXP, SEXP display_progressSEXP) {
+SEXP RadixTree_levenshtein(Rcpp::XPtr<RadixTree> xp, CharacterVector sequences, IntegerVector max_distance, const int nthreads, const bool show_progress);
+RcppExport SEXP _treedist_RadixTree_levenshtein(SEXP xpSEXP, SEXP sequencesSEXP, SEXP max_distanceSEXP, SEXP nthreadsSEXP, SEXP show_progressSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::traits::input_parameter< Rcpp::XPtr<RadixTree> >::type xp(xpSEXP);
     Rcpp::traits::input_parameter< CharacterVector >::type sequences(sequencesSEXP);
     Rcpp::traits::input_parameter< IntegerVector >::type max_distance(max_distanceSEXP);
     Rcpp::traits::input_parameter< const int >::type nthreads(nthreadsSEXP);
-    Rcpp::traits::input_parameter< const bool >::type display_progress(display_progressSEXP);
-    rcpp_result_gen = Rcpp::wrap(RadixTree_levenshtein(xp, sequences, max_distance, nthreads, display_progress));
+    Rcpp::traits::input_parameter< const bool >::type show_progress(show_progressSEXP);
+    rcpp_result_gen = Rcpp::wrap(RadixTree_levenshtein(xp, sequences, max_distance, nthreads, show_progress));
     return rcpp_result_gen;
 END_RCPP
 }
 // PrefixTree_levenshtein
-SEXP PrefixTree_levenshtein(Rcpp::XPtr<PrefixTree> xp, CharacterVector sequences, IntegerVector max_distance, const int nthreads, const bool display_progress);
-RcppExport SEXP _treedist_PrefixTree_levenshtein(SEXP xpSEXP, SEXP sequencesSEXP, SEXP max_distanceSEXP, SEXP nthreadsSEXP, SEXP display_progressSEXP) {
+SEXP PrefixTree_levenshtein(Rcpp::XPtr<PrefixTree> xp, CharacterVector sequences, IntegerVector max_distance, const int nthreads, const bool show_progress);
+RcppExport SEXP _treedist_PrefixTree_levenshtein(SEXP xpSEXP, SEXP sequencesSEXP, SEXP max_distanceSEXP, SEXP nthreadsSEXP, SEXP show_progressSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::traits::input_parameter< Rcpp::XPtr<PrefixTree> >::type xp(xpSEXP);
     Rcpp::traits::input_parameter< CharacterVector >::type sequences(sequencesSEXP);
     Rcpp::traits::input_parameter< IntegerVector >::type max_distance(max_distanceSEXP);
     Rcpp::traits::input_parameter< const int >::type nthreads(nthreadsSEXP);
-    Rcpp::traits::input_parameter< const bool >::type display_progress(display_progressSEXP);
-    rcpp_result_gen = Rcpp::wrap(PrefixTree_levenshtein(xp, sequences, max_distance, nthreads, display_progress));
+    Rcpp::traits::input_parameter< const bool >::type show_progress(show_progressSEXP);
+    rcpp_result_gen = Rcpp::wrap(PrefixTree_levenshtein(xp, sequences, max_distance, nthreads, show_progress));
     return rcpp_result_gen;
 END_RCPP
 }
 // DNATree_hamming
-SEXP DNATree_hamming(Rcpp::XPtr<DNATree> xp, CharacterVector sequences, IntegerVector max_distance, const int nthreads, const bool display_progress);
-RcppExport SEXP _treedist_DNATree_hamming(SEXP xpSEXP, SEXP sequencesSEXP, SEXP max_distanceSEXP, SEXP nthreadsSEXP, SEXP display_progressSEXP) {
+SEXP DNATree_hamming(Rcpp::XPtr<DNATree> xp, CharacterVector sequences, IntegerVector max_distance, const int nthreads, const bool show_progress);
+RcppExport SEXP _treedist_DNATree_hamming(SEXP xpSEXP, SEXP sequencesSEXP, SEXP max_distanceSEXP, SEXP nthreadsSEXP, SEXP show_progressSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::traits::input_parameter< Rcpp::XPtr<DNATree> >::type xp(xpSEXP);
     Rcpp::traits::input_parameter< CharacterVector >::type sequences(sequencesSEXP);
     Rcpp::traits::input_parameter< IntegerVector >::type max_distance(max_distanceSEXP);
     Rcpp::traits::input_parameter< const int >::type nthreads(nthreadsSEXP);
-    Rcpp::traits::input_parameter< const bool >::type display_progress(display_progressSEXP);
-    rcpp_result_gen = Rcpp::wrap(DNATree_hamming(xp, sequences, max_distance, nthreads, display_progress));
+    Rcpp::traits::input_parameter< const bool >::type show_progress(show_progressSEXP);
+    rcpp_result_gen = Rcpp::wrap(DNATree_hamming(xp, sequences, max_distance, nthreads, show_progress));
     return rcpp_result_gen;
 END_RCPP
 }
 // RadixTree_hamming
-SEXP RadixTree_hamming(Rcpp::XPtr<RadixTree> xp, CharacterVector sequences, IntegerVector max_distance, const int nthreads, const bool display_progress);
-RcppExport SEXP _treedist_RadixTree_hamming(SEXP xpSEXP, SEXP sequencesSEXP, SEXP max_distanceSEXP, SEXP nthreadsSEXP, SEXP display_progressSEXP) {
+SEXP RadixTree_hamming(Rcpp::XPtr<RadixTree> xp, CharacterVector sequences, IntegerVector max_distance, const int nthreads, const bool show_progress);
+RcppExport SEXP _treedist_RadixTree_hamming(SEXP xpSEXP, SEXP sequencesSEXP, SEXP max_distanceSEXP, SEXP nthreadsSEXP, SEXP show_progressSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::traits::input_parameter< Rcpp::XPtr<RadixTree> >::type xp(xpSEXP);
     Rcpp::traits::input_parameter< CharacterVector >::type sequences(sequencesSEXP);
     Rcpp::traits::input_parameter< IntegerVector >::type max_distance(max_distanceSEXP);
     Rcpp::traits::input_parameter< const int >::type nthreads(nthreadsSEXP);
-    Rcpp::traits::input_parameter< const bool >::type display_progress(display_progressSEXP);
-    rcpp_result_gen = Rcpp::wrap(RadixTree_hamming(xp, sequences, max_distance, nthreads, display_progress));
+    Rcpp::traits::input_parameter< const bool >::type show_progress(show_progressSEXP);
+    rcpp_result_gen = Rcpp::wrap(RadixTree_hamming(xp, sequences, max_distance, nthreads, show_progress));
     return rcpp_result_gen;
 END_RCPP
 }
 // PrefixTree_hamming
-SEXP PrefixTree_hamming(Rcpp::XPtr<PrefixTree> xp, CharacterVector sequences, IntegerVector max_distance, const int nthreads, const bool display_progress);
-RcppExport SEXP _treedist_PrefixTree_hamming(SEXP xpSEXP, SEXP sequencesSEXP, SEXP max_distanceSEXP, SEXP nthreadsSEXP, SEXP display_progressSEXP) {
+SEXP PrefixTree_hamming(Rcpp::XPtr<PrefixTree> xp, CharacterVector sequences, IntegerVector max_distance, const int nthreads, const bool show_progress);
+RcppExport SEXP _treedist_PrefixTree_hamming(SEXP xpSEXP, SEXP sequencesSEXP, SEXP max_distanceSEXP, SEXP nthreadsSEXP, SEXP show_progressSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::traits::input_parameter< Rcpp::XPtr<PrefixTree> >::type xp(xpSEXP);
     Rcpp::traits::input_parameter< CharacterVector >::type sequences(sequencesSEXP);
     Rcpp::traits::input_parameter< IntegerVector >::type max_distance(max_distanceSEXP);
     Rcpp::traits::input_parameter< const int >::type nthreads(nthreadsSEXP);
-    Rcpp::traits::input_parameter< const bool >::type display_progress(display_progressSEXP);
-    rcpp_result_gen = Rcpp::wrap(PrefixTree_hamming(xp, sequences, max_distance, nthreads, display_progress));
+    Rcpp::traits::input_parameter< const bool >::type show_progress(show_progressSEXP);
+    rcpp_result_gen = Rcpp::wrap(PrefixTree_hamming(xp, sequences, max_distance, nthreads, show_progress));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -331,6 +364,9 @@ static const R_CallMethodDef CallEntries[] = {
     {"_treedist_DNATree_find", (DL_FUNC) &_treedist_DNATree_find, 2},
     {"_treedist_RadixTree_find", (DL_FUNC) &_treedist_RadixTree_find, 2},
     {"_treedist_PrefixTree_find", (DL_FUNC) &_treedist_PrefixTree_find, 2},
+    {"_treedist_DNATree_find_prefix", (DL_FUNC) &_treedist_DNATree_find_prefix, 2},
+    {"_treedist_RadixTree_find_prefix", (DL_FUNC) &_treedist_RadixTree_find_prefix, 2},
+    {"_treedist_PrefixTree_find_prefix", (DL_FUNC) &_treedist_PrefixTree_find_prefix, 2},
     {"_treedist_DNATree_to_dataframe", (DL_FUNC) &_treedist_DNATree_to_dataframe, 1},
     {"_treedist_RadixTree_to_dataframe", (DL_FUNC) &_treedist_RadixTree_to_dataframe, 1},
     {"_treedist_PrefixTree_to_dataframe", (DL_FUNC) &_treedist_PrefixTree_to_dataframe, 1},

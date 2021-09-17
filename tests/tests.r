@@ -12,7 +12,7 @@ library(stringfish)
 library(Rcpp)
 library(dplyr)
 
-NSEQS     <- 10000
+NSEQS     <- 10000 # must be larger than 1000
 NITER     <- 3
 MAXSEQLEN <- 200
 MAXDIST   <- MAXSEQLEN * 0.05
@@ -89,10 +89,57 @@ for(tt in tree_types) {
     stopifnot(x$size() == n_distinct(ins))
     x$erase(era)
     stopifnot(x$size() == n_distinct(ins[!ins %in% era]))
-
+    
     y$insert(ins[!ins %in% era])
     stopifnot(tree_equal(x, y))
   }
+  
+  print(paste0('Checking find for ', tt))
+  for(. in 1:NITER) {
+    if(tt == "DNATree") {
+      x <- DNATree$new()
+    } else if(tt == "RadixTree") {
+      x <- RadixTree$new()
+    } else if(tt == "PrefixTree") {
+      x <- PrefixTree$new()
+    }
+    ins <- c(random_strings(NSEQS, "ACGT"),"")
+    era <- c(sample(c(sample(ins, NSEQS/10), random_strings(NSEQS/10, "ACGT"))))
+    fin <- c(sample(c(sample(ins, NSEQS/10), random_strings(NSEQS/10, "ACGT"))),"")
+    expected <- fin %in% setdiff(ins, era)
+    x$insert(ins)
+    x$erase(era)
+    results <- x$find(fin)
+    stopifnot(identical(results, expected))
+  }
+  
+  print(paste0('Checking find_prefix for ', tt))
+  for(. in 1:NITER) {
+    if(tt == "DNATree") {
+      x <- DNATree$new()
+    } else if(tt == "RadixTree") {
+      x <- RadixTree$new()
+    } else if(tt == "PrefixTree") {
+      x <- PrefixTree$new()
+    }
+    ins <- c(random_strings(NSEQS, "ACGT"),"")
+    era <- c(sample(c(sample(ins, NSEQS/10), random_strings(NSEQS/10, "ACGT"))))
+    fin <- c(sample(c(sample(ins, NSEQS/1000), random_strings(NSEQS/1000, "ACGT"))),"") %>% substr(1,5)
+    fin <- c(fin, paste0(fin, substr(fin,1,1)))
+    ins2 <- setdiff(ins, era)
+    expected <- lapply(fin, function(f) {
+      ex <- grep(paste0("^", f), ins2, value=T)
+      if(length(ex) == 0) return(NULL)
+      data.frame(query = f, target = ex, stringsAsFactors = F)
+    })
+    expected <- do.call(rbind, expected)
+    expected <- dplyr::arrange(expected, query, target)
+    x$insert(ins)
+    x$erase(era)
+    results <- x$find_prefix(fin) %>% dplyr::arrange(query, target)
+    stopifnot(identical(results, expected))
+  }
+  
   
   print(paste0("Checking levenshtein search correctness for ", tt))
   for(. in 1:NITER) {
@@ -108,8 +155,8 @@ for(tt in tree_types) {
     query <- sample(c(sample(target, NSEQS/1000), random_strings(NSEQS/1000, "ACGT")))
     query <- c(mutate_strings(query, charset = "ACGT"), "") %>% unique
     x$insert(target)
-    results_dist <- x$search(query, max_distance = MAXDIST, mode = "levenshtein") %>% dplyr::arrange(query, target)
-    results_frac <- x$search(query, max_fraction = MAXFRAC, mode = "levenshtein") %>% dplyr::arrange(query, target)
+    results_dist <- x$search(query, max_distance = MAXDIST, mode = "levenshtein", show_progress=TRUE) %>% dplyr::arrange(query, target)
+    results_frac <- x$search(query, max_fraction = MAXFRAC, mode = "levenshtein", show_progress=TRUE) %>% dplyr::arrange(query, target)
     sd_results <- sd_search(query, target, method = "lv")
     sd_dist <- dplyr::filter(sd_results, distance <= MAXDIST)
     sd_frac <- dplyr::filter(sd_results, distance <= nchar(query) * MAXFRAC)
@@ -131,8 +178,8 @@ for(tt in tree_types) {
     query <- sample(c(sample(target, NSEQS/1000), random_strings(NSEQS/1000, "ACGT")))
     query <- c(mutate_strings(query, indel_prob=0, charset = "ACGT"), "") %>% unique
     x$insert(target)
-    results_dist <- x$search(query, max_distance = MAXDIST, mode = "hamming") %>% dplyr::arrange(query, target)
-    results_frac <- x$search(query, max_fraction = MAXFRAC, mode = "hamming") %>% dplyr::arrange(query, target)
+    results_dist <- x$search(query, max_distance = MAXDIST, mode = "hamming", show_progress=TRUE) %>% dplyr::arrange(query, target)
+    results_frac <- x$search(query, max_fraction = MAXFRAC, mode = "hamming", show_progress=TRUE) %>% dplyr::arrange(query, target)
     sd_results <- sd_search(query, target, method = "hamming")
     sd_dist <- dplyr::filter(sd_results, distance <= MAXDIST)
     sd_frac <- dplyr::filter(sd_results, distance <= nchar(query) * MAXFRAC)
@@ -154,8 +201,8 @@ for(tt in tree_types) {
     query <- sample(c(sample(target, NSEQS/1000), random_strings(NSEQS/1000, "ACGT")))
     query <- c(mutate_strings(query, charset = "ACGT"), "") %>% unique
     x$insert(target)
-    results_dist <- x$search(query, max_distance = MAXDIST, mode = "levenshtein", nthreads=4) %>% dplyr::arrange(query, target)
-    results_frac <- x$search(query, max_fraction = MAXFRAC, mode = "levenshtein", nthreads=4) %>% dplyr::arrange(query, target)
+    results_dist <- x$search(query, max_distance = MAXDIST, mode = "levenshtein", nthreads=4, show_progress=TRUE) %>% dplyr::arrange(query, target)
+    results_frac <- x$search(query, max_fraction = MAXFRAC, mode = "levenshtein", nthreads=4, show_progress=TRUE) %>% dplyr::arrange(query, target)
     sd_results <- sd_search(query, target, method = "lv")
     sd_dist <- dplyr::filter(sd_results, distance <= MAXDIST)
     sd_frac <- dplyr::filter(sd_results, distance <= nchar(query) * MAXFRAC)
@@ -177,8 +224,8 @@ for(tt in tree_types) {
     query <- sample(c(sample(target, NSEQS/1000), random_strings(NSEQS/1000, "ACGT")))
     query <- c(mutate_strings(query, indel_prob=0, charset = "ACGT"), "") %>% unique
     x$insert(target)
-    results_dist <- x$search(query, max_distance = MAXDIST, mode = "hamming", nthreads=4) %>% dplyr::arrange(query, target)
-    results_frac <- x$search(query, max_fraction = MAXFRAC, mode = "hamming", nthreads=4) %>% dplyr::arrange(query, target)
+    results_dist <- x$search(query, max_distance = MAXDIST, mode = "hamming", nthreads=4, show_progress=TRUE) %>% dplyr::arrange(query, target)
+    results_frac <- x$search(query, max_fraction = MAXFRAC, mode = "hamming", nthreads=4, show_progress=TRUE) %>% dplyr::arrange(query, target)
     sd_results <- sd_search(query, target, method = "hamming")
     sd_dist <- dplyr::filter(sd_results, distance <= MAXDIST)
     sd_frac <- dplyr::filter(sd_results, distance <= nchar(query) * MAXFRAC)
@@ -203,6 +250,7 @@ print("Checking PrefixTree does accept non-ACGT")
 x <- PrefixTree$new()
 x$insert("Z")
 stopifnot(x$find("Z"))
+
 
 
 

@@ -1,7 +1,7 @@
 Package: treedist
 Title: Radix Tree and trie-based string distances
 Version: 0.2.1
-Date: 2021-9-14
+Date: 2021-9-17
 Authors@R: c(
     person("Travers", "Ching", email = "traversc@gmail.com", role = c("aut", "cre", "cph")),
     person("Martin", "Moene", role = c("ctb", "cph"))

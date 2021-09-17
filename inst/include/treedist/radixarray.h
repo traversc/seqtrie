@@ -8,6 +8,34 @@
 
 namespace treedist {
 
+/* interface (to do: put in virtual class?)
+private:
+ static inline bool map_exists(const map_type & map, const uint8_t key);
+ static inline void map_erase(map_type & map, const uint8_t key);
+ static std::vector<index_type> all_idx(weak_pointer_type node, size_t max_depth = -1);
+public:
+ TRIECLASS() : terminal_idx(nullidx) {}
+ static constexpr index_type get_null_idx() { return nullidx; }
+ const branch_type & get_branch() const { return branch; }
+ const index_type & get_terminal_idx() const { return terminal_idx; }
+ const map_type & get_child_nodes() const { return child_nodes; }
+ size_type size() const;
+ static std::string print(const pointer_type & node, size_t depth, const std::string & alphabet);
+ static index_type find(const pointer_type & root, const uspan sequence);
+ static std::vector<index_type> find_prefix(const pointer_type & root, const uspan sequence);
+ static index_type insert(pointer_type & node, const uspan sequence, index_type idx);
+ static index_type erase(pointer_type & node, const uspan sequence);
+public:
+ Levenshtein
+public:
+ Levenshtein(const pointer_type & root, const uspan sequence, const int max_distance);
+ result_type search();
+ Hamming
+public:
+ Hamming(const pointer_type & root, const uspan sequence, const int max_distance);
+ result_type search();
+ */
+
 // templates: N = Alphabet size, B = branch vector type e.g. std::vector, I = index type
 template <uint8_t N, template<typename...> class B = trqwe::small_array, typename I=uint64_t> class RadixArray;
 template <uint8_t N, template<typename...> class B = trqwe::small_array, typename I=uint64_t> using RadixArrayUPtr = std::unique_ptr<RadixArray<N,B,I>>;
@@ -19,6 +47,7 @@ public:
   typedef size_t size_type;
   typedef RadixArray<N,B,I> value_type;
   typedef RadixArrayUPtr<N,B,I> pointer_type;
+  typedef RadixArray<N,B,I>* weak_pointer_type;
   typedef std::array<RadixArrayUPtr<N,B,I>,N> map_type;
   static constexpr I nullidx = std::numeric_limits<I>::max();
 private:
@@ -31,6 +60,20 @@ private:
   static inline void map_erase(map_type & map, const uint8_t key) {
     map[key].reset();
   }
+  static std::vector<index_type> all_idx(const weak_pointer_type node, size_t max_depth = -1) {
+    std::vector<index_type> result;
+    if(node->terminal_idx != nullidx) {
+      result.push_back(node->terminal_idx);
+    }
+    if(max_depth == 0) return result;
+    for(size_t i=0; i<N; ++i) {
+      if(map_exists(node->child_nodes, i)) {
+        std::vector<index_type> x = all_idx(node->child_nodes[i].get(), --max_depth);
+        result.insert(result.end(), x.begin(), x.end());
+      }
+    }
+    return result;
+  }
 public:
   RadixArray() : terminal_idx(nullidx) {}
   static constexpr index_type get_null_idx() { return nullidx; }
@@ -41,20 +84,6 @@ public:
     size_t result;
     for(size_t i=0; i<N; ++i) {
       if(child_nodes[i]) ++result;
-    }
-    return result;
-  }
-  static std::vector<index_type> children(pointer_type & node, size_t max_depth = -1) {
-    std::vector<index_type> result;
-    if(max_depth == 0) return result;
-    if(node->terminal_idx != nullidx) {
-      result.push_back(node->terminal_idx);
-    }
-    for(size_t i=0; i<N; ++i) {
-      if(map_exists(node->child_nodes, i)) {
-        std::vector<index_type> & x = children(node->child_nodes[i], --max_depth);
-        result.insert(result.end(), x.begin(), x.end());
-      }
     }
     return result;
   }
@@ -87,8 +116,6 @@ public:
     }
     return result;
   }
-////////////////////////////////////////////////////////////////////////////////
-// everything below is exactly the same for radixarray and radixmap
   static index_type find(const pointer_type & root, const uspan sequence) {
     value_type * node = root.get();
     size_t position=0;
@@ -105,6 +132,28 @@ public:
       }
     }
     return node->terminal_idx;
+  }
+  static std::vector<index_type> find_prefix(const pointer_type & root, const uspan sequence) {
+    value_type * node = root.get();
+    size_t sequence_position = 0;
+    size_t branch_position = 0;
+    while(sequence_position < sequence.size()) {
+      if(branch_position >= node->branch.size()) {
+        if(map_exists(node->child_nodes, sequence[sequence_position])) {
+          node = node->child_nodes[sequence[sequence_position]].get();
+          branch_position = 0;
+        } else {
+          return std::vector<index_type>(0);
+        }
+      }
+      if(node->branch[branch_position] == sequence[sequence_position]) {
+        branch_position++;
+        sequence_position++;
+      } else {
+        return std::vector<index_type>(0);
+      }
+    }
+    return all_idx(node);
   }
   static index_type insert(pointer_type & node, const uspan sequence, index_type idx) {
     if(sequence.size() == 0) {
@@ -233,16 +282,18 @@ private:
 ////////////////////////////////////////////////////////////////////////////////
 // levenshtein; type T is a vector type, e.g. std::vector or tbb:concurrent_vector
 public:
-  template <template <typename...> class T> class Levenshtein {
+  class Levenshtein {
+  public:
+    typedef std::pair<std::vector<index_type>, std::vector<int>> result_type;
   private:
     const pointer_type & root;
-    T<index_type> output_index;
-    T<int> output_distance;
+    std::vector<index_type> output_index;
+    std::vector<int> output_distance;
     const uspan sequence;
     const int max_distance;
   public:
     Levenshtein(const pointer_type & root, const uspan sequence, const int max_distance) : root(root), sequence(sequence), max_distance(max_distance) {}
-    std::pair<T<index_type>, T<int>> search() {
+    result_type search() {
       std::vector<int> start_row(sequence.size() + 1);
       std::iota(start_row.begin(), start_row.end(), 0);
       search(root, start_row);
@@ -261,7 +312,6 @@ public:
         if(! map_exists(node->child_nodes, i)) continue;
         std::vector<int> current_row = previous_row;
         branch_type & branch = node->child_nodes[i]->branch;
-        // update_row(branch[0], previous_row, current_row);
         for(size_t u=0; u<branch.size(); ++u) {
           int current_dist = update_row(branch[u], current_row);
           if(current_dist > max_distance) goto continue_outer_loop;
@@ -270,15 +320,6 @@ public:
         continue_outer_loop:;
       }
     }
-    // inline void update_row(const uint8_t branchval, const std::vector<int> & previous_row, std::vector<int> & current_row) {
-    //   current_row[0] = previous_row[0] + 1;
-    //   for(size_t i=1; i<current_row.size(); ++i) {
-    //     int match_cost  = previous_row[i-1] + (sequence[i-1] == branchval ? 0 : 1);
-    //     int insert_cost = current_row[i-1] + 1;
-    //     int delete_cost = previous_row[i] + 1;
-    //     current_row[i] = std::min({match_cost, insert_cost, delete_cost});
-    //   }
-    // }
     inline int update_row(const uint8_t branchval, std::vector<int> & row) {
       int previous_row_i_minus_1 = row[0];
       row[0] = row[0] + 1;
@@ -296,16 +337,18 @@ public:
   };
 ////////////////////////////////////////////////////////////////////////////////
 // hamming; same interface as levenshtein
-  template <template <typename...> class T> class Hamming {
+  class Hamming {
+  public:
+    typedef std::pair<std::vector<index_type>, std::vector<int>> result_type;
   private:
     const pointer_type & root;
-    T<index_type> output_index;
-    T<int> output_distance;
+    std::vector<index_type> output_index;
+    std::vector<int> output_distance;
     const uspan sequence;
     const int max_distance;
   public:
     Hamming(const pointer_type & root, const uspan sequence, const int max_distance) : root(root), sequence(sequence), max_distance(max_distance) {}
-    std::pair<T<index_type>, T<int>> search() {
+    result_type search() {
       if(sequence.size() == 0) { // corner case
         if(root->terminal_idx != nullidx) {
           output_index.push_back(root->terminal_idx);

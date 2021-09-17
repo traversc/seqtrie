@@ -37,7 +37,15 @@ DNATree <- R6::R6Class("DNATree", list(
   find = function(sequences) {
     !is.na(DNATree_find(self$xp, sequences))
   },
-  search = function(sequences, max_distance = NULL, max_fraction = NULL, mode = "levenshtein", nthreads = 1, display_progress = FALSE) {
+  find_prefix = function(sequences) {
+    result <- DNATree_find_prefix(self$xp, sequences)
+    if(is.null(result)) {
+      data.frame(query = character(0), target = character(0), stringsAsFactors=F)
+    } else {
+      result
+    }
+  },
+  search = function(sequences, max_distance = NULL, max_fraction = NULL, mode = "levenshtein", nthreads = 1, show_progress = FALSE) {
     if(!is.null(max_distance)) {
       if(length(max_distance) == 1) {
         max_distance <- rep(max_distance, length(sequences))
@@ -48,9 +56,9 @@ DNATree <- R6::R6Class("DNATree", list(
       stop("Either max_distance or max_fraction must be non-null")
     }
     if(mode == "levenshtein") {
-      result <- DNATree_levenshtein(self$xp, sequences, max_distance, nthreads, display_progress)
+      result <- DNATree_levenshtein(self$xp, sequences, max_distance, nthreads, show_progress)
     } else if(mode == "hamming") {
-      result <- DNATree_hamming(self$xp, sequences, max_distance, nthreads, display_progress)
+      result <- DNATree_hamming(self$xp, sequences, max_distance, nthreads, show_progress)
     } else {
       stop("mode should be levenshtein or hamming")
     }
@@ -92,7 +100,15 @@ RadixTree <- R6::R6Class("RadixTree", list(
   find = function(sequences) {
     !is.na(RadixTree_find(self$xp, sequences))
   },
-  search = function(sequences, max_distance = NULL, max_fraction = NULL, mode = "levenshtein", nthreads = 1, display_progress = FALSE) {
+  find_prefix = function(sequences) {
+    result <- RadixTree_find_prefix(self$xp, sequences)
+    if(is.null(result)) {
+      data.frame(query = character(0), target = character(0), stringsAsFactors=F)
+    } else {
+      result
+    }
+  },
+  search = function(sequences, max_distance = NULL, max_fraction = NULL, mode = "levenshtein", nthreads = 1, show_progress = FALSE) {
     if(!is.null(max_distance)) {
       if(length(max_distance) == 1) {
         max_distance <- rep(max_distance, length(sequences))
@@ -103,9 +119,9 @@ RadixTree <- R6::R6Class("RadixTree", list(
       stop("Either max_distance or max_fraction must be non-null")
     }
     if(mode == "levenshtein") {
-      result <- RadixTree_levenshtein(self$xp, sequences, max_distance, nthreads, display_progress)
+      result <- RadixTree_levenshtein(self$xp, sequences, max_distance, nthreads, show_progress)
     } else if(mode == "hamming") {
-      result <- RadixTree_hamming(self$xp, sequences, max_distance, nthreads, display_progress)
+      result <- RadixTree_hamming(self$xp, sequences, max_distance, nthreads, show_progress)
     } else {
       stop("mode should be levenshtein or hamming")
     }
@@ -146,7 +162,15 @@ PrefixTree <- R6::R6Class("PrefixTree", list(
   find = function(sequences) {
     !is.na(PrefixTree_find(self$xp, sequences))
   },
-  search = function(sequences, max_distance = NULL, max_fraction = NULL, mode = "levenshtein", nthreads = 1, display_progress = FALSE) {
+  find_prefix = function(sequences) {
+    result <- PrefixTree_find_prefix(self$xp, sequences)
+    if(is.null(result)) {
+      data.frame(query = character(0), target = character(0), stringsAsFactors=F)
+    } else {
+      result
+    }
+  },
+  search = function(sequences, max_distance = NULL, max_fraction = NULL, mode = "levenshtein", nthreads = 1, show_progress = FALSE) {
     if(!is.null(max_distance)) {
       if(length(max_distance) == 1) {
         max_distance <- rep(max_distance, length(sequences))
@@ -157,9 +181,9 @@ PrefixTree <- R6::R6Class("PrefixTree", list(
       stop("Either max_distance or max_fraction must be non-null")
     }
     if(mode == "levenshtein") {
-      result <- PrefixTree_levenshtein(self$xp, sequences, max_distance, nthreads, display_progress)
+      result <- PrefixTree_levenshtein(self$xp, sequences, max_distance, nthreads, show_progress)
     } else if(mode == "hamming") {
-      result <- PrefixTree_hamming(self$xp, sequences, max_distance, nthreads, display_progress)
+      result <- PrefixTree_hamming(self$xp, sequences, max_distance, nthreads, show_progress)
     } else {
       stop("mode should be levenshtein or hamming")
     }

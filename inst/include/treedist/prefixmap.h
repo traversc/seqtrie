@@ -17,6 +17,7 @@ public:
   typedef size_t size_type;
   typedef PrefixMap<M,I> value_type;
   typedef PrefixMapUPtr<M,I> pointer_type;
+  typedef PrefixMap<M,I>* weak_pointer_type;
   typedef M<uint8_t, PrefixMapUPtr<M,I>> map_type;
   static constexpr I nullidx = std::numeric_limits<index_type>::max();
 private:
@@ -27,6 +28,18 @@ private:
   }
   static inline void map_erase(map_type & map, const uint8_t key) {
     map.erase(key);
+  }
+  static std::vector<index_type> all_idx(const weak_pointer_type node, size_t max_depth = -1) {
+    std::vector<index_type> result;
+    if(node->terminal_idx != nullidx) {
+      result.push_back(node->terminal_idx);
+    }
+    if(max_depth == 0) return result;
+    for(auto & ch : node->child_nodes) {
+      std::vector<index_type> x = all_idx(ch.second.get(), --max_depth);
+      result.insert(result.end(), x.begin(), x.end());
+    }
+    return result;
   }
 public:
   PrefixMap() : terminal_idx(nullidx) {}
@@ -75,7 +88,6 @@ public:
     }
     return result;
   }
-////////////////////////////////////////////////////////////////////////////////
   static index_type find(const pointer_type & root, const uspan sequence) {
     value_type * node = root.get();
     size_t position=0;
@@ -87,6 +99,18 @@ public:
       }
     }
     return node->terminal_idx;
+  }
+  static std::vector<index_type> find_prefix(const pointer_type & root, const uspan sequence) {
+    value_type * node = root.get();
+    size_t position=0;
+    while(position < sequence.size()) {
+      if(map_exists(node->child_nodes, sequence[position])) {
+        node = node->child_nodes[sequence[position++]].get();
+      } else {
+        return std::vector<index_type>(0);
+      }
+    }
+    return all_idx(node);
   }
   static index_type insert(pointer_type & root, const uspan sequence, index_type idx) {
     value_type * node = root.get();
@@ -147,18 +171,18 @@ private:
 ////////////////////////////////////////////////////////////////////////////////
 // type T is a vector type, e.g. std::vector or tbb:concurrent_vector
 public:
-  template <template <typename...> class T> class Levenshtein {
+  class Levenshtein {
   public:
-    typedef std::pair<T<index_type>, T<int>> result_type;
+    typedef std::pair<std::vector<index_type>, std::vector<int>> result_type;
   private:
     const pointer_type & root;
-    T<index_type> output_index;
-    T<int> output_distance;
+    std::vector<index_type> output_index;
+    std::vector<int> output_distance;
     const uspan sequence;
     const int max_distance;
   public:
     Levenshtein(const pointer_type & root, const uspan sequence, const int max_distance) : root(root), sequence(sequence), max_distance(max_distance) {}
-    std::pair<T<index_type>, T<int>> search() {
+    result_type search() {
       std::vector<int> start_row(sequence.size() + 1);
       std::iota(start_row.begin(), start_row.end(), 0);
       search(root, start_row);
@@ -191,16 +215,18 @@ public:
   };
 ////////////////////////////////////////////////////////////////////////////////
 // hamming; same interface as levenshtein
-  template <template <typename...> class T> class Hamming {
+  class Hamming {
+  public:
+    typedef std::pair<std::vector<index_type>, std::vector<int>> result_type;
   private:
     const pointer_type & root;
-    T<index_type> output_index;
-    T<int> output_distance;
+    std::vector<index_type> output_index;
+    std::vector<int> output_distance;
     const uspan sequence;
     const int max_distance;
   public:
     Hamming(const pointer_type & root, const uspan sequence, const int max_distance) : root(root), sequence(sequence), max_distance(max_distance) {}
-    std::pair<T<index_type>, T<int>> search() {
+    result_type search() {
       if(sequence.size() == 0) { // corner case
         if(root->terminal_idx != nullidx) {
           output_index.push_back(root->terminal_idx);
