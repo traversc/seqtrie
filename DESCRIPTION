@@ -11,7 +11,7 @@ Description: A colection of Radix Tree and trie-based algorithms for calculating
 License: GPL-3
 Biarch: true
 Encoding: UTF-8
-Depends: R (>= 3.5.0)
+Depends: R (>= 3.3.0)
 SystemRequirements: C++14, GNU make
 LazyData: true
 LinkingTo: 

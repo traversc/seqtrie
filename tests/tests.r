@@ -61,7 +61,7 @@ sd_search <- function(query, target, method = "lv") {
   results <- stringdist::stringdistmatrix(query, target, method = method, nthread=1)
   results <- data.frame(query = rep(query, times=length(target)), 
                         target = rep(target, each=length(query)), 
-                        distance = as.vector(results))
+                        distance = as.vector(results), stringsAsFactors = F)
   results <- dplyr::filter(results, is.finite(distance))
   results$distance <- as.integer(results$distance)
   dplyr::arrange(results, query, target)
