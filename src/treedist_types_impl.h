@@ -18,42 +18,41 @@
 using namespace Rcpp;
 using namespace RcppParallel;
 
-template <typename T> struct dispatch {};
-template<> struct dispatch<RadixTree::value_type>{
-  static inline uspan sequence_convert(const cspan sequence) { 
-    return uspan{reinterpret_cast<const uint8_t*>(sequence.data()), sequence.size()};
-  };
-};
-template<> struct dispatch<DNATree::value_type>{
-  static inline trqwe::simple_array<uint8_t> sequence_convert(const cspan sequence) {
-    trqwe::simple_array<uint8_t> result(sequence.size());
-    for(size_t i=0; i<sequence.size(); ++i) {
-      switch(sequence[i]) {
-      case 'A':
-        result[i] = 0;
-        break;
-      case 'C':
-        result[i] = 1;
-        break;
-      case 'G':
-        result[i] = 2;
-        break;
-      case 'T':
-        result[i] = 3;
-        break;
-      default:
-        throw std::runtime_error("sequence must have only A, C, G or T");
-      }
-    }
-    return result;
-  }
-};
-
-template<> struct dispatch<PrefixTree::value_type>{
-  static inline uspan sequence_convert(const cspan sequence) { 
-    return uspan{reinterpret_cast<const uint8_t*>(sequence.data()), sequence.size()};
-  };
-};
+// template <typename T> struct dispatch {};
+// template<> struct dispatch<RadixTree::value_type>{
+//   static inline uspan sequence_convert(const cspan sequence) { 
+//     return uspan{reinterpret_cast<const uint8_t*>(sequence.data()), sequence.size()};
+//   };
+// };
+// template<> struct dispatch<DNATree::value_type>{
+//   static inline trqwe::simple_array<uint8_t> sequence_convert(const cspan sequence) {
+//     trqwe::simple_array<uint8_t> result(sequence.size());
+//     for(size_t i=0; i<sequence.size(); ++i) {
+//       switch(sequence[i]) {
+//       case 'A':
+//         result[i] = 0;
+//         break;
+//       case 'C':
+//         result[i] = 1;
+//         break;
+//       case 'G':
+//         result[i] = 2;
+//         break;
+//       case 'T':
+//         result[i] = 3;
+//         break;
+//       default:
+//         throw std::runtime_error("sequence must have only A, C, G or T");
+//       }
+//     }
+//     return result;
+//   }
+// };
+// template<> struct dispatch<PrefixTree::value_type>{
+//   static inline uspan sequence_convert(const cspan sequence) { 
+//     return uspan{reinterpret_cast<const uint8_t*>(sequence.data()), sequence.size()};
+//   };
+// };
 
 
 template <class T> struct LevenshteinWorker : public Worker {
@@ -70,7 +69,7 @@ template <class T> struct LevenshteinWorker : public Worker {
     root(root), query(query), max_distance_ptr(max_distance_ptr), output(output), progress_bar(progress_bar) {}
   void operator()(std::size_t begin, std::size_t end) {
     for(size_t i=begin; i<end; ++i) {
-      auto usequence = dispatch<T>::sequence_convert(query[i]);
+      auto usequence = T::value_type::convert_sequence(query[i]);
       output[i] = typename T::Levenshtein(root, usequence, max_distance_ptr[i]).search();
       progress_bar.increment();
     }
@@ -91,7 +90,7 @@ template <class T> struct HammingWorker : public Worker {
     root(root), query(query), max_distance_ptr(max_distance_ptr), output(output), progress_bar(progress_bar) {}
   void operator()(std::size_t begin, std::size_t end) {
     for(size_t i=begin; i<end; ++i) {
-      auto usequence = dispatch<T>::sequence_convert(query[i]);
+      auto usequence = T::value_type::convert_sequence(query[i]);
       output[i] = typename T::Hamming(root, usequence, max_distance_ptr[i]).search();
       progress_bar.increment();
     }
@@ -120,7 +119,7 @@ template <typename T> NumericVector rtree<T>::insert(CharacterVector sequences) 
   double * result_ptr = REAL(result);
   for(size_t i=0; i<nseqs; ++i) {
     cspan sequence(CHAR(sequence_ptr[i]), Rf_xlength(sequence_ptr[i]));
-    auto usequence = dispatch<typename T::value_type>::sequence_convert(sequence);
+    auto usequence = T::value_type::convert_sequence(sequence);
     index_type idx = value_type::insert(root, usequence, sequence_map.size());
     if(idx == value_type::nullidx) {
       sequence_map.push_back(ncstring{sequence.data(), sequence.size()});
@@ -139,7 +138,7 @@ template <typename T> NumericVector rtree<T>::erase(CharacterVector sequences) {
   double * result_ptr = REAL(result);
   for(size_t i=0; i<nseqs; ++i) {
     cspan sequence(CHAR(sequence_ptr[i]), Rf_xlength(sequence_ptr[i]));
-    auto usequence = dispatch<typename T::value_type>::sequence_convert(sequence);
+    auto usequence = value_type::convert_sequence(sequence);
     index_type idx = value_type::erase(root, usequence);
     if(idx == value_type::nullidx) {
       result_ptr[i] = NA_REAL;
@@ -158,7 +157,7 @@ template <typename T> NumericVector rtree<T>::find(CharacterVector sequences) co
   double * result_ptr = REAL(result);
   for(size_t i=0; i<nseqs; ++i) {
     cspan sequence(CHAR(sequence_ptr[i]), Rf_xlength(sequence_ptr[i]));
-    auto usequence = dispatch<typename T::value_type>::sequence_convert(sequence);
+    auto usequence = value_type::convert_sequence(sequence);
     index_type idx = value_type::find(root, usequence);
     result_ptr[i] = idx == value_type::nullidx ? NA_REAL : static_cast<double>(idx);
   }
@@ -174,7 +173,7 @@ template <typename T> SEXP rtree<T>::find_prefix(CharacterVector sequences) cons
   
   for(size_t i=0; i<nseqs; ++i) {
     cspan sequence(CHAR(sequence_ptr[i]), Rf_xlength(sequence_ptr[i]));
-    auto usequence = dispatch<typename T::value_type>::sequence_convert(sequence);
+    auto usequence = value_type::convert_sequence(sequence);
     output[i] = value_type::find_prefix(root, usequence);
   }
 
@@ -210,7 +209,7 @@ template <typename T> SEXP rtree<T>::levenshtein_search(CharacterVector sequence
   
   if(nthreads == 1) {
     for(size_t i=0; i<nseqs; ++i) {
-      auto usequence = dispatch<value_type>::sequence_convert(query[i]);
+      auto usequence = value_type::convert_sequence(query[i]);
       output[i] = levenshtein_type(root, usequence, max_distance_ptr[i]).search();
       progress_bar.increment();
     }
@@ -255,7 +254,7 @@ template <typename T> SEXP rtree<T>::hamming_search(CharacterVector sequences, I
   
   if(nthreads == 1) {
     for(size_t i=0; i<nseqs; ++i) {
-      auto usequence = dispatch<value_type>::sequence_convert(query[i]);
+      auto usequence = value_type::convert_sequence(query[i]);
       output[i] = hamming_type(root, usequence, max_distance_ptr[i]).search();
       progress_bar.increment();
     }
@@ -290,10 +289,7 @@ template <typename T> cspan rtree<T>::index_to_sequence(const index_type idx) co
 }
 
 template <typename T> std::string rtree<T>::print() const {
-  return value_type::print(root, 0);
-}
-template <> std::string DNATree::print() const {
-  return value_type::print(root, 0, "ACGT");
+  return value_type::print(root);
 }
 
 template <typename T> SEXP rtree<T>::to_dataframe() const {

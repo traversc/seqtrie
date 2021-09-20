@@ -1,25 +1,24 @@
 #ifndef TREEDIST_PREFIXMAP_H
 #define TREEDIST_PREFIXMAP_H
 
-#include <memory>
-#include <algorithm>
-#include <limits.h> // INT_MAX
 #include "treedist/utility.h"
 
 namespace treedist {
 
-template <template<typename...> class M = std::unordered_map, typename I=uint64_t> class PrefixMap;
-template <template<typename...> class M = std::unordered_map, typename I=uint64_t> using PrefixMapUPtr = std::unique_ptr<PrefixMap<M,I>>;
-template <template<typename...> class M, typename I>
+template <template<typename...> class M = std::unordered_map, class I=size_t> class PrefixMap;
+template <template<typename...> class M = std::unordered_map, class I=size_t> using PrefixMapUPtr = std::unique_ptr<PrefixMap<M,I>>;
+template <template<typename...> class M, class I>
 class PrefixMap {
 public:
+  static constexpr I nullidx = std::numeric_limits<I>::max();
   typedef I index_type;
   typedef size_t size_type;
   typedef PrefixMap<M,I> value_type;
   typedef PrefixMapUPtr<M,I> pointer_type;
   typedef PrefixMap<M,I>* weak_pointer_type;
   typedef M<uint8_t, PrefixMapUPtr<M,I>> map_type;
-  static constexpr I nullidx = std::numeric_limits<index_type>::max();
+  typedef uspan convert_sequence_type;
+  typedef cspan recover_sequence_type;
 private:
   map_type child_nodes;        // 56 bytes for std::unordered_map
   index_type terminal_idx;    // 4 bytes
@@ -47,6 +46,12 @@ public:
   const index_type & get_terminal_idx() const { return terminal_idx; }
   const map_type & get_child_nodes() const { return child_nodes; }
   size_type size() const { return child_nodes.size(); }
+  static convert_sequence_type convert_sequence(const cspan x) {
+    return convert_sequence_type(reinterpret_cast<const uint8_t*>(x.data()), x.size());
+  }
+  static recover_sequence_type recover_sequence(const uspan x) {
+    return recover_sequence_type(reinterpret_cast<const char*>(x.data()), x.size());
+  }
   static std::vector<index_type> children(pointer_type & node, size_t max_depth = -1) {
     std::vector<index_type> result;
     if(max_depth == 0) return result;
@@ -59,7 +64,7 @@ public:
     }
     return result;
   }
-  static std::string print(const pointer_type & node, size_t depth) {
+  static std::string print(const pointer_type & node, size_t depth = 0) {
     std::string result;
     if(depth == 0) {
       result += "(root)";

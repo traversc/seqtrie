@@ -1,27 +1,20 @@
 #ifndef TREEDIST_RADIXMAP_H
 #define TREEDIST_RADIXMAP_H
 
-#include <memory>
-#include <algorithm>
-#include <limits.h> // INT_MAX
 #include "treedist/utility.h"
 
 namespace treedist {
 
 // radixarray and radixmap classes have nearly identical code
-// Maybe later we can unify these classes with better templates
-// when radixmap differs:
-// - order of data members
-// - RadixMap::size() -- returns child_nodes.size()
-// - RadixMap::children(...) -- iterate through child_nodes using range for loop
-// - RadixMap::Levenshtein::search(...) -- iterate through child_nodes using range for loop
+// Maybe later we can unify these classes with better templates and C++17
 
 // templates: N = Alphabet size, B = branch vector type e.g. std::vector, I = index type
-template <template<typename...> class M = std::unordered_map, template<typename...> class B = trqwe::small_array, typename I=uint64_t> class RadixMap;
-template <template<typename...> class M = std::unordered_map, template<typename...> class B = trqwe::small_array, typename I=uint64_t> using RadixMapUPtr = std::unique_ptr<RadixMap<M,B,I>>;
-template <template<typename...> class M, template<typename...> class B, typename I>
+template <template<typename...> class M = std::unordered_map, template<typename...> class B = std::vector, class I=size_t> class RadixMap;
+template <template<typename...> class M = std::unordered_map, template<typename...> class B = std::vector, class I=size_t> using RadixMapUPtr = std::unique_ptr<RadixMap<M,B,I>>;
+template <template<typename...> class M, template<typename...> class B, class I>
 class RadixMap {
 public:
+  static constexpr I nullidx = std::numeric_limits<I>::max();
   typedef B<uint8_t> branch_type;
   typedef I index_type;
   typedef size_t size_type;
@@ -29,7 +22,8 @@ public:
   typedef RadixMapUPtr<M,B,I> pointer_type;
   typedef RadixMap<M,B,I>* weak_pointer_type;
   typedef M<uint8_t, RadixMapUPtr<M,B,I>> map_type;
-  static constexpr I nullidx = std::numeric_limits<I>::max();
+  typedef uspan convert_sequence_type;
+  typedef cspan recover_sequence_type;
 private:
   map_type child_nodes;        // 56 bytes for std::unordered_map
   index_type terminal_idx;    // 4 bytes
@@ -59,7 +53,13 @@ public:
   const index_type & get_terminal_idx() const { return terminal_idx; }
   const map_type & get_child_nodes() const { return child_nodes; }
   size_type size() const { return child_nodes.size(); }
-  static std::string print(const pointer_type & node, size_t depth) {
+  static convert_sequence_type convert_sequence(const cspan x) {
+    return convert_sequence_type(reinterpret_cast<const uint8_t*>(x.data()), x.size());
+  }
+  static recover_sequence_type recover_sequence(const uspan x) {
+    return recover_sequence_type(reinterpret_cast<const char*>(x.data()), x.size());
+  }
+  static std::string print(const pointer_type & node, size_t depth = 0) {
     std::string result;
     if(depth == 0) {
       result += "(root)";

@@ -62,24 +62,24 @@ run_og <- function(query, target, max_distance) {
   results %>% arrange(query, target)
 }
 
-run_dnatree <- function(query, target, max_distance=NULL, max_fraction=NULL) {
+run_dnatree <- function(query, target, max_distance=NULL, max_fraction=NULL, mode = "levenshtein", show_progress = F, nthreads = 1) {
   x <- DNATree$new()
   x$insert(target)
-  x$search(query, max_distance = max_distance, max_fraction = max_fraction, mode = "levenshtein", show_progress=F) %>% 
+  x$search(query, max_distance = max_distance, max_fraction = max_fraction, mode = mode, show_progress=show_progress, nthreads=nthreads) %>% 
     arrange(query, target)
 }
 
-run_radixtree <- function(query, target, max_distance=NULL, max_fraction=NULL) {
+run_radixtree <- function(query, target, max_distance=NULL, max_fraction=NULL, mode = "levenshtein", show_progress = F, nthreads = 1) {
   x <- DNATree$new()
   x$insert(target)
-  x$search(query, max_distance = max_distance, max_fraction = max_fraction, mode = "levenshtein", show_progress=F) %>% 
+  x$search(query, max_distance = max_distance, max_fraction = max_fraction, mode = mode, show_progress=show_progress, nthreads=nthreads) %>% 
     arrange(query, target)
 }
 
-run_prefixtree <- function(query, target, max_distance=NULL, max_fraction=NULL) {
+run_prefixtree <- function(query, target, max_distance=NULL, max_fraction=NULL, mode = "levenshtein", show_progress = F, nthreads = 1) {
   x <- PrefixTree$new()
   x$insert(target)
-  x$search(query, max_distance = max_distance, max_fraction = max_fraction, mode = "levenshtein", show_progress=F) %>% 
+  x$search(query, max_distance = max_distance, max_fraction = max_fraction, mode = mode, show_progress=show_progress, nthreads=nthreads) %>% 
     arrange(query, target)
 }
 
@@ -129,6 +129,22 @@ for(i in 1:nrow(grid)) {
 }
 
 grid %>% group_by(nseqs, method) %>% summarize(time = mean(time)) %>% print
+
+# run the whole thing
+grid <- expand.grid(method =  c("DNATree", "RadixTree", "PrefixTree"), frac = c(0.035, 0.15))
+grid$time <- rep(0, nrow(grid))
+results <- list()
+for(i in 1:nrow(grid)) {
+  tic()
+  results[[i]] <- methods[[grid$method[i]]](covid_cdr3, covid_cdr3, max_fraction = grid$frac[i], show_progres = T, nthreads = 8)
+  grid$time[i] <- toc()
+}
+print(grid)
+
+identical(results[[1]], results[[2]])
+identical(results[[1]], results[[3]])
+identical(results[[4]], results[[5]])
+identical(results[[4]], results[[6]])
 
 # interactive, takes a while
 if(F) {

@@ -1,9 +1,6 @@
 #ifndef TREEDIST_RADIXARRAY_H
 #define TREEDIST_RADIXARRAY_H
 
-#include <memory>
-#include <algorithm>
-#include <limits.h> // INT_MAX
 #include "treedist/utility.h"
 
 namespace treedist {
@@ -20,11 +17,14 @@ public:
  const index_type & get_terminal_idx() const { return terminal_idx; }
  const map_type & get_child_nodes() const { return child_nodes; }
  size_type size() const;
- static std::string print(const pointer_type & node, size_t depth, const std::string & alphabet);
+ static std::string print(const pointer_type & node, size_t depth);
+ static std::tuple<std::vector<index_type> std::vector<index_type>, std::vector<uspan>> graph(const pointer_type & node, size_t depth);
  static index_type find(const pointer_type & root, const uspan sequence);
  static std::vector<index_type> find_prefix(const pointer_type & root, const uspan sequence);
  static index_type insert(pointer_type & node, const uspan sequence, index_type idx);
  static index_type erase(pointer_type & node, const uspan sequence);
+ template <typename T> static T convert_sequence(const cspan x);
+ template <typename T> static T recover_sequence(const cspan x)
 public:
  Levenshtein
 public:
@@ -36,20 +36,26 @@ public:
  result_type search();
  */
 
-// templates: N = Alphabet size, B = branch vector type e.g. std::vector, I = index type
-template <uint8_t N, template<typename...> class B = trqwe::small_array, typename I=uint64_t> class RadixArray;
-template <uint8_t N, template<typename...> class B = trqwe::small_array, typename I=uint64_t> using RadixArrayUPtr = std::unique_ptr<RadixArray<N,B,I>>;
-template <uint8_t N, template<typename...> class B, typename I>
+// templates: A = Alphabet, B = branch vector type e.g. std::vector, I = index type e.g. size_t
+template <class A = boost::mpl::string<'A','C','G','T'>, template<typename...> class B = std::vector, class I=size_t> class RadixArray;
+template <class A = boost::mpl::string<'A','C','G','T'>, template<typename...> class B = std::vector, class I=size_t> using RadixArrayUPtr = std::unique_ptr<RadixArray<A,B,I>>;
+template <class A, template<typename...> class B, class I>
 class RadixArray {
 public:
+  static constexpr I nullidx = std::numeric_limits<I>::max();
+  static constexpr size_t degree = boost::mpl::size<A>::value;
+  static constexpr const char * charset_begin = &boost::mpl::c_str<A>::value[0];
+  static constexpr const char * charset_end = &boost::mpl::c_str<A>::value[0] + degree;
+  typedef A charset_type;
   typedef B<uint8_t> branch_type;
   typedef I index_type;
   typedef size_t size_type;
-  typedef RadixArray<N,B,I> value_type;
-  typedef RadixArrayUPtr<N,B,I> pointer_type;
-  typedef RadixArray<N,B,I>* weak_pointer_type;
-  typedef std::array<RadixArrayUPtr<N,B,I>,N> map_type;
-  static constexpr I nullidx = std::numeric_limits<I>::max();
+  typedef RadixArray<A,B,I> value_type;
+  typedef RadixArrayUPtr<A,B,I> pointer_type;
+  typedef RadixArray<A,B,I>* weak_pointer_type;
+  typedef std::array<RadixArrayUPtr<A,B,I>,degree> map_type;
+  typedef B<uint8_t> convert_sequence_type;
+  typedef B<char> recover_sequence_type;
 private:
   map_type child_nodes;      // 32 bytes
   branch_type branch;         // 24 bytes for std::vector
@@ -66,7 +72,7 @@ private:
       result.push_back(node->terminal_idx);
     }
     if(max_depth == 0) return result;
-    for(size_t i=0; i<N; ++i) {
+    for(size_t i=0; i<degree; ++i) {
       if(map_exists(node->child_nodes, i)) {
         std::vector<index_type> x = all_idx(node->child_nodes[i].get(), --max_depth);
         result.insert(result.end(), x.begin(), x.end());
@@ -82,22 +88,40 @@ public:
   const map_type & get_child_nodes() const { return child_nodes; }
   size_type size() const { // number of direct children of current node
     size_t result = 0;
-    for(size_t i=0; i<N; ++i) {
+    for(size_t i=0; i<degree; ++i) {
       if(child_nodes[i]) ++result;
     }
     return result;
   }
-  static std::string print(const pointer_type & node, size_t depth, const std::string & alphabet) {
-    if(alphabet.size() != N) throw std::runtime_error("alphabet size must be size N");
+  static convert_sequence_type convert_sequence(const cspan x) {
+    convert_sequence_type result(x.size());
+    for(size_t i=0; i<x.size(); ++i) {
+      auto it = std::find(charset_begin, charset_end, x[i]);
+      if(it == charset_end) {
+        std::string err_msg = "sequence must be " + std::string(charset_begin) + ".";
+        throw std::runtime_error(err_msg);
+      }
+      result[i] = std::distance(charset_begin, it);
+    }
+    return result;
+  }
+  static recover_sequence_type recover_sequence(const uspan x) {
+    recover_sequence_type result(x.size());
+    for(size_t i=0; i<x.size(); ++i) {
+      result[i] = charset_begin[x[i]];
+    }
+    return result;
+  }
+  static std::string print(const pointer_type & node, size_t depth = 0) {
     std::string result;
     if(depth == 0) {
       result += "(root)";
     } else {
       for(size_t i=0; i<depth; ++i) result += " ";
     }
-    std::string x(node->branch.size(), 0);
+    std::string x(node->branch.size(),0);
     for(size_t j=0; j<node->branch.size(); ++j) {
-      x[j] = alphabet[node->branch[j]];
+      x[j] = charset_begin[node->branch[j]];
     }
     result += x;
     
@@ -106,9 +130,9 @@ public:
       result += std::to_string(node->terminal_idx);
     }
     result += "\n";
-    for(uint8_t i=0; i<N; ++i) {
+    for(uint8_t i=0; i<degree; ++i) {
       if(map_exists(node->child_nodes, i)) {
-        result += print(node->child_nodes[i], depth + 1, alphabet);
+        result += print(node->child_nodes[i], depth + 1);
       }
     }
     if(depth == 0) {
@@ -116,6 +140,47 @@ public:
     }
     return result;
   }
+//   struct graph_results {
+//     std::vector<size_t> parent;
+//     std::vector<size_t> child;
+//     std::vector<uspan> branch;
+//   };
+//   graph_container graph(const pointer_type & node, size_t depth = -1); {
+//     std::vector<weak_pointer_type> parent;
+//     std::vector<weak_pointer_type> child;
+//     graph(node, depth, parent, child);
+//     std::unordered_map<weak_pointer_type, size_t> node_map;
+//     graph_results result;
+//     for(size_t i=0; i<parent.size(); ++i) {
+//       if(node_map.find(parent[i]) == node_map.end()) {
+//         result.parent.push_back(result.branch.size());
+//         node_map.emplace(parent[i], result.branch.size());
+//         result.branch.push_back(parent[i]->branch);
+//       } else {
+//         result.parent.push_back(node_map[parent[i]]);
+//       }
+//       if(node_map.find(child[i]) == node_map.end()) {
+//         result.child.push_back(result.branch.size());
+//         node_map.emplace(child[i], result.branch.size());
+//         result.branch.push_back(child[i]->branch);
+//       } else {
+//         result.child.push_back(node_map[child[i]]);
+//       }
+//     }
+//     return result;
+//   }
+// private:
+//   void graph(const pointer_type & node, size_t depth, std::vector<weak_pointer_type> & parent, std::vector<weak_pointer_type> & child) {
+//     if(depth == 0) return;
+//     for(size_t i=0; i<degree; ++i) {
+//       if(map_exists(node->child_nodes, i)) {
+//         parent.push_back(node->get());
+//         child.push_back(node->child_nodes[i].get());
+//         graph(node->child_nodes[i], depth - 1, parent, child);
+//       }
+//     }
+//   }
+// public:
   static index_type find(const pointer_type & root, const uspan sequence) {
     value_type * node = root.get();
     size_t position=0;
@@ -259,7 +324,7 @@ private:
       return erase_action::keep;
     } else if(action == erase_action::merge) {
       uint8_t next_s = 0;
-      for(; next_s < N; ++next_s) {
+      for(; next_s < degree; ++next_s) {
         if(map_exists(node->child_nodes[s]->child_nodes, next_s)) break;
       }
       appendspan(node->child_nodes[s]->branch, node->child_nodes[s]->child_nodes[next_s]->branch);
@@ -308,7 +373,7 @@ public:
         output_index.push_back(node->terminal_idx);
         output_distance.push_back(previous_row.back());
       }
-      for (size_t i=0; i<N; ++i) {
+      for (size_t i=0; i<degree; ++i) {
         if(! map_exists(node->child_nodes, i)) continue;
         std::vector<int> current_row = previous_row;
         branch_type & branch = node->child_nodes[i]->branch;
@@ -362,7 +427,7 @@ public:
   private:
     void search(const pointer_type & node, const size_t position, const int distance) {
       if(position < sequence.size()) {
-        for (size_t i=0; i<N; ++i) {
+        for (size_t i=0; i<degree; ++i) {
           if(! map_exists(node->child_nodes, i)) continue;
           branch_type & branch = node->child_nodes[i]->branch;
           int new_distance = distance;

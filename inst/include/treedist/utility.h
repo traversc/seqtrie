@@ -6,6 +6,10 @@
 #include <unordered_map>
 #include <algorithm>
 #include <string>
+#include <array>
+#include <tuple>
+#include <memory>
+#include <limits.h> // INT_MAX
 
 #ifdef span_CONFIG_CONTRACT_VIOLATION_TERMINATES
 #undef span_CONFIG_CONTRACT_VIOLATION_TERMINATES
@@ -17,6 +21,11 @@
 #include "simple_array/small_array.h"
 #include "simple_array/nullable_array.h"
 #include "simple_array/simple_array.h"
+
+// requires boost
+#include <boost/mpl/string.hpp>
+#include <boost/mpl/for_each.hpp>
+#include <boost/mpl/range_c.hpp>
 
 
 // https://stackoverflow.com/questions/16260033/reinterpret-cast-between-char-and-stduint8-t-safe

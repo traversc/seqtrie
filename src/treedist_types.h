@@ -9,16 +9,13 @@
 
 using namespace Rcpp;
 
-// #include <boost/bimap.hpp>
-// #include <boost/bimap/unordered_set_of.hpp>
-
 using cspan = treedist::cspan;
 using uspan = treedist::uspan;
 
 template <typename T> class rtree;
-using DNATree = rtree<treedist::RadixArray<4>>;
-using RadixTree = rtree<treedist::RadixMap<>>;
-using PrefixTree = rtree<treedist::PrefixMap<>>;
+using DNATree = rtree<treedist::RadixArray<boost::mpl::string<'A','C','G','T'>, trqwe::small_array, size_t>>;
+using RadixTree = rtree<treedist::RadixMap<std::unordered_map, trqwe::small_array, size_t>>;
+using PrefixTree = rtree<treedist::PrefixMap<std::unordered_map, size_t>>;
 
 template <typename T> class rtree {
 public:

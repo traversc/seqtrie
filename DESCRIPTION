@@ -1,7 +1,7 @@
 Package: treedist
-Title: Radix Tree and trie-based string distances
+Title: Radix Tree and Trie-Based String Distances
 Version: 0.2.1
-Date: 2021-9-17
+Date: 2021-9-20
 Authors@R: c(
     person("Travers", "Ching", email = "traversc@gmail.com", role = c("aut", "cre", "cph")),
     person("Martin", "Moene", role = c("ctb", "cph"))
@@ -15,7 +15,7 @@ Depends: R (>= 3.5.0)
 SystemRequirements: C++14, GNU make
 LazyData: true
 LinkingTo: 
-    Rcpp, RcppParallel, RcppProgress
+    Rcpp, RcppParallel, BH
 Imports: 
     Rcpp (>= 0.12.18.3), RcppParallel (>= 5.1.3), R6
 Suggests:

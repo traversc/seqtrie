@@ -69,6 +69,9 @@ public:
   small_array() : m() {}
   small_array(value_type const * const data, const size_t size) : m(data, size) {}
   small_array(const size_t size) : m(size) {}
+  small_array(const size_t size, const value_type value) : m(size) {
+    std::fill(begin(), end(), value);
+  }
   // Copy
   small_array(small_array const & other) : m(other.m._data, other.m._size) {}
   // Move
