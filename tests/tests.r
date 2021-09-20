@@ -237,7 +237,8 @@ for(tt in tree_types) {
 
 print("Checking DNATree not accepting non-ACGT")
 x <- DNATree$new()
-if(tryCatch({x$insert("Z")}, error = function(e) return(e))$message != "sequence must have only A, C, G or T") {
+err <- tryCatch({x$insert("Z")}, error = function(e) return(e))
+if(!inherits(err, "error")) {
   stop("DNATree accepting non-ACGT sequence")
 }
 

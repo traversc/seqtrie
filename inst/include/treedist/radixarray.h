@@ -98,7 +98,7 @@ public:
     for(size_t i=0; i<x.size(); ++i) {
       auto it = std::find(charset_begin, charset_end, x[i]);
       if(it == charset_end) {
-        std::string err_msg = "sequence must be " + std::string(charset_begin) + ".";
+        static const std::string err_msg = "Sequence must be " + std::string(charset_begin);
         throw std::runtime_error(err_msg);
       }
       result[i] = std::distance(charset_begin, it);

@@ -115,7 +115,8 @@ stopifnot(identical(sd_results, dt_results))
 stopifnot(identical(sd_results, rt_results))
 stopifnot(identical(sd_results, pt_results))
 
-grid <- expand.grid(nseqs = 1000, iter = 1:NITER, method = names(methods)) %>% sample_n(nrow(.))
+grid <- expand.grid(nseqs = c(1000,30000), iter = 1:NITER, method = names(methods)) %>% sample_n(nrow(.))
+grid <- filter(grid, nseqs == 1000 | method %in% c("DNATree", "RadixTree", "PrefixTree"))
 grid$time <- rep(0, nrow(grid))
 for(i in 1:nrow(grid)) {
   print(i)
@@ -131,6 +132,7 @@ for(i in 1:nrow(grid)) {
 grid %>% group_by(nseqs, method) %>% summarize(time = mean(time)) %>% print
 
 # run the whole thing
+if(F) {
 grid <- expand.grid(method =  c("DNATree", "RadixTree", "PrefixTree"), frac = c(0.035, 0.15))
 grid$time <- rep(0, nrow(grid))
 results <- list()
@@ -145,6 +147,8 @@ identical(results[[1]], results[[2]])
 identical(results[[1]], results[[3]])
 identical(results[[4]], results[[5]])
 identical(results[[4]], results[[6]])
+}
+
 
 # interactive, takes a while
 if(F) {
