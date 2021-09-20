@@ -28,10 +28,10 @@ jobs:
         config:
           - {os: macOS-latest,   r: 'release'}
           - {os: windows-latest, r: 'release'}
-          - {os: ubuntu-20.04,  r: 'devel'}
-          - {os: ubuntu-20.04,  r: 'release'}
-          - {os: ubuntu-20.04,  r: 'oldrel'}
-          - {os: ubuntu-20.04,  r: '3.5'}
+          - {os: ubuntu-18.04,  r: 'devel'}
+          - {os: ubuntu-18.04,  r: 'release'}
+          - {os: ubuntu-18.04,  r: 'oldrel'}
+          - {os: ubuntu-18.04,  r: '3.5'}
 
     env:
       R_REMOTES_NO_ERRORS_FROM_WARNINGS: true
@@ -104,4 +104,4 @@ jobs:
         uses: actions/upload-artifact@main
         with:
           name: ${{ runner.os }}-r${{ matrix.config.r }}-results
-          path: check
+          path: checks
