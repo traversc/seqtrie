@@ -25,8 +25,8 @@ public:
   static constexpr size_type nullsize = std::numeric_limits<size_type>::max();
 private:
   struct Members : Allocator { // derive from Allocator to use empty base optimization
-    pointer_type          _data;
     value_type            _stack[stack_size::value];
+    pointer_type          _data;
     size_type             _size;
     constexpr pointer_type stack_address() {
       return _stack;
@@ -121,8 +121,10 @@ public:
   size_type size() const { return m._size; }
   pointer_type data() const { return m._data; }
   reference_type operator[](size_type idx) const { return *(m._data + idx); }
+  pointer_type begin() const { return m._data; }
+  pointer_type end() const { return m._data + m._size; }
   pointer_type begin() { return m._data; }
-  pointer_type end()   { return m._data + m._size; }
+  pointer_type end() { return m._data + m._size; }
 };
 
 } // end namespace

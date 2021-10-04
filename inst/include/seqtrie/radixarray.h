@@ -1,9 +1,13 @@
-#ifndef TREEDIST_RADIXARRAY_H
-#define TREEDIST_RADIXARRAY_H
+// This implementation uses a std::array to store children nodes (rather than a std::map)
+// There was no difference in overall computation time, so there's not much point in using this class
 
-#include "treedist/utility.h"
+/*
+#ifndef seqtrie_RADIXARRAY_H
+#define seqtrie_RADIXARRAY_H
 
-namespace treedist {
+#include "seqtrie/utility.h"
+
+namespace seqtrie {
 
 /* interface (to do: put in virtual class?)
 private:
@@ -456,3 +460,5 @@ public:
 
 
 #endif // include guard
+
+*/

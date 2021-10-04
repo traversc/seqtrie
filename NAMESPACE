@@ -1,8 +1,9 @@
 importFrom(Rcpp,sourceCpp)
 importFrom(RcppParallel, RcppParallelLibs)
 importFrom(R6, R6Class)
-useDynLib(treedist, .registration=TRUE)
-export("DNATree", "RadixTree", "PrefixTree")
+useDynLib(seqtrie, .registration=TRUE)
+export("RadixTree")
+# export("DNATree", "RadixTree", "PrefixTree")
 # export("DNATree_create", "RadixTree_create", "PrefixTree_create", 
 #        "DNATree_size", "RadixTree_size", "PrefixTree_size",
 #        "DNATree_print", "RadixTree_print", "PrefixTree_print",

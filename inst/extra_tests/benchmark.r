@@ -1,13 +1,12 @@
-library(treedist)
+library(treedist) # devtools::install_github("traversc/seqtrie", ref="32d3f585840c063ca60fcaf830ace76be48a6c67")
+library(seqtrie)
+
 library(stringdist)
 library(Rcpp)
 library(dplyr)
-library(ggplot2)
 library(qs)
 
-NITER     <- 3
-MAXFRAC   <- 0.035
-MAXDIST   <- 2
+NITER <- 3
 
 tic <- function() { .time <<- Sys.time() }
 toc <- function() { as.numeric(Sys.time() - .time, units = "secs") }
@@ -55,36 +54,36 @@ ogsource <- c(
 ".T4?o9^$&h9l$A)~jxwTrFYE*YV?]F0?9&ZSeSF=uJd1wswalB~2=_E[^HlDkZAcIjwx17oci_Ud1O>4~)yavI*`Vv'HD")
 sourceCpp(code = decode_source(ogsource))
 
-run_og <- function(query, target, max_distance) {
+run_og <- function(query, target, max_distance, show_progress = F) {
   results <- og_levenshteinSearch(query, target, max_distance = max_distance)
   results$query <- query[results$query+1]
   results$target <- target[results$target+1]
   results %>% arrange(query, target)
 }
 
-run_dnatree <- function(query, target, max_distance=NULL, max_fraction=NULL, mode = "levenshtein", show_progress = F, nthreads = 1) {
-  x <- DNATree$new()
+run_dnatree <- function(query, target, max_distance=NULL, max_fraction=NULL, mode = "levenshtein", show_progress = F, nthreads = 8) {
+  x <- treedist::DNATree$new()
   x$insert(target)
   x$search(query, max_distance = max_distance, max_fraction = max_fraction, mode = mode, show_progress=show_progress, nthreads=nthreads) %>% 
     arrange(query, target)
 }
 
-run_radixtree <- function(query, target, max_distance=NULL, max_fraction=NULL, mode = "levenshtein", show_progress = F, nthreads = 1) {
-  x <- DNATree$new()
+run_radixtree <- function(query, target, max_distance=NULL, max_fraction=NULL, mode = "levenshtein", show_progress = F, nthreads = 8) {
+  x <- seqtrie::RadixTree$new()
   x$insert(target)
   x$search(query, max_distance = max_distance, max_fraction = max_fraction, mode = mode, show_progress=show_progress, nthreads=nthreads) %>% 
     arrange(query, target)
 }
 
-run_prefixtree <- function(query, target, max_distance=NULL, max_fraction=NULL, mode = "levenshtein", show_progress = F, nthreads = 1) {
-  x <- PrefixTree$new()
+run_prefixtree <- function(query, target, max_distance=NULL, max_fraction=NULL, mode = "levenshtein", show_progress = F, nthreads = 8) {
+  x <- treedist::PrefixTree$new()
   x$insert(target)
   x$search(query, max_distance = max_distance, max_fraction = max_fraction, mode = mode, show_progress=show_progress, nthreads=nthreads) %>% 
     arrange(query, target)
 }
 
-run_stringdist <- function(query, target, max_distance=NULL, max_fraction=NULL) {
-  results <- stringdist::stringdistmatrix(query, target, method = "lv", nthread=6)
+run_stringdist <- function(query, target, max_distance=NULL, max_fraction=NULL, nthreads = 8, show_progress = F) {
+  results <- stringdist::stringdistmatrix(query, target, method = "lv", nthread=nthreads)
   results <- data.frame(query = rep(query, times=length(target)), 
                         target = rep(target, each=length(query)), 
                         distance = as.vector(results))
@@ -104,32 +103,48 @@ names(methods) <- c("DNATree", "RadixTree", "PrefixTree", "stringdist", "OG")
 data("covid_cdr3")
 cc3_subset <- sample(covid_cdr3, size = 1000)
 
-sd_results <- run_stringdist(cc3_subset, cc3_subset, MAXDIST)
-og_results <- run_og(cc3_subset, cc3_subset, MAXDIST)
-dt_results <- run_dnatree(cc3_subset, cc3_subset, max_distance = MAXDIST)
-rt_results <- run_radixtree(cc3_subset, cc3_subset, max_distance = MAXDIST)
-pt_results <- run_prefixtree(cc3_subset, cc3_subset, max_distance = MAXDIST)
+sd_results <- run_stringdist(cc3_subset, cc3_subset, 2)
+og_results <- run_og(cc3_subset, cc3_subset, 2)
+dt_results <- run_dnatree(cc3_subset, cc3_subset, max_distance = 2)
+rt_results <- run_radixtree(cc3_subset, cc3_subset, max_distance = 2)
+pt_results <- run_prefixtree(cc3_subset, cc3_subset, max_distance = 2)
 
 stopifnot(identical(sd_results, og_results))
 stopifnot(identical(sd_results, dt_results))
 stopifnot(identical(sd_results, rt_results))
 stopifnot(identical(sd_results, pt_results))
 
-grid <- expand.grid(nseqs = c(1000,30000), iter = 1:NITER, method = names(methods)) %>% sample_n(nrow(.))
-grid <- filter(grid, nseqs == 1000 | method %in% c("DNATree", "RadixTree", "PrefixTree"))
+################################################################################
+
+grid <- expand.grid(nseqs = c(10000), maxdist = c(2,3), iter = 1:NITER, method = names(methods)) %>% sample_n(nrow(.))
+grid <- filter(grid, nseqs <= 1000 | method %in% c("DNATree", "RadixTree", "PrefixTree"))
 grid$time <- rep(0, nrow(grid))
 for(i in 1:nrow(grid)) {
-  print(i)
   print(grid[i,])
   set.seed(grid$iter[i])
   x <- sample(covid_cdr3, size = grid$nseqs[i])
   tic()
-  methods[[grid$method[i]]](x, x, max_distance = MAXDIST)
+  methods[[grid$method[i]]](x, x, max_distance = grid$maxdist[i], show_progres = T)
   grid$time[i] <- toc()
-  if(grid$method[i] == "stringdist") grid$time[i] <- grid$time[i] * 6 # multi-threading
+  if(grid$method[i] != "OG") grid$time[i] <- grid$time[i] * 8
 }
+maxdist_results <- grid
 
-grid %>% group_by(nseqs, method) %>% summarize(time = mean(time)) %>% print
+grid <- expand.grid(nseqs = c(10000), maxfrac = c(0.035,0.15), iter = 1:NITER, method = c("DNATree", "RadixTree", "PrefixTree")) %>% sample_n(nrow(.))
+grid$time <- rep(0, nrow(grid))
+for(i in 1:nrow(grid)) {
+  print(grid[i,])
+  set.seed(grid$iter[i])
+  x <- sample(covid_cdr3, size = grid$nseqs[i])
+  tic()
+  methods[[grid$method[i]]](x, x, max_fraction = grid$maxfrac[i], show_progres = T)
+  grid$time[i] <- toc()
+  if(grid$method[i] != "OG") grid$time[i] <- grid$time[i] * 8
+}
+maxfrac_results <- grid
+
+maxdist_results %>% group_by(nseqs, method, maxdist) %>% summarize(time = mean(time)) %>% print
+maxfrac_results %>% group_by(nseqs, method, maxfrac) %>% summarize(time = mean(time)) %>% print
 
 # run the whole thing
 if(F) {
@@ -138,7 +153,7 @@ grid$time <- rep(0, nrow(grid))
 results <- list()
 for(i in 1:nrow(grid)) {
   tic()
-  results[[i]] <- methods[[grid$method[i]]](covid_cdr3, covid_cdr3, max_fraction = grid$frac[i], show_progres = T, nthreads = 8)
+  results[[i]] <- methods[[grid$method[i]]](covid_cdr3, covid_cdr3, max_fraction = grid$frac[i], show_progres = T)
   grid$time[i] <- toc()
 }
 print(grid)
@@ -150,22 +165,8 @@ identical(results[[4]], results[[6]])
 }
 
 
-# interactive, takes a while
+# plot, interactive only
 if(F) {
-  nseqs <- c(10,30,100,300,1000,3000,10000)
-  grid <- expand.grid(nseqs = nseqs, iter = 1:NITER, method = names(methods)) %>% sample_n(nrow(.))
-  grid$time <- rep(0, nrow(grid))
-  for(i in 1:nrow(grid)) {
-    print(i)
-    print(grid[i,])
-    set.seed(grid$iter[i])
-    x <- sample(covid_cdr3, size = grid$nseqs[i])
-    tic()
-    methods[[grid$method[i]]](x, x, max_distance = MAXDIST)
-    grid$time[i] <- toc()
-    if(grid$method[i] == "stringdist") grid$time[i] <- grid$time[i] * 6 # multi-threading
-  }
-  
   g <- ggplot(grid, aes(x = nseqs, y = time, color = method)) + geom_point() + geom_smooth() +
     scale_x_log10() +
     scale_y_log10() +

@@ -1,9 +1,13 @@
-#ifndef TREEDIST_PREFIXMAP_H
-#define TREEDIST_PREFIXMAP_H
+// This was a prefixmap implementation used for comparison
+// Overall, the radix tree implementation proved to be slightly faster
 
-#include "treedist/utility.h"
+/*
+#ifndef seqtrie_PREFIXMAP_H
+#define seqtrie_PREFIXMAP_H
 
-namespace treedist {
+#include "seqtrie/utility.h"
+
+namespace seqtrie {
 
 template <template<typename...> class M = std::unordered_map, class I=size_t> class PrefixMap;
 template <template<typename...> class M = std::unordered_map, class I=size_t> using PrefixMapUPtr = std::unique_ptr<PrefixMap<M,I>>;
@@ -267,3 +271,5 @@ public:
 }
 
 #endif // include guard
+ 
+ */

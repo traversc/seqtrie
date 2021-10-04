@@ -1,13 +1,13 @@
-treedist
+seqtrie
 ================
 
 <!-- <img src="hex.png" width = "130" height = "150" align="right" style="border:0px;padding:15px"> -->
 
-<!-- [![CRAN\_Status\_Badge](http://www.r-pkg.org/badges/version/treedist)](https://cran.r-project.org/package=treedist) [![CRAN\_Downloads\_Badge](https://cranlogs.r-pkg.org/badges/treedist)](https://cran.r-project.org/package=treedist) -->
+<!-- [![CRAN\_Status\_Badge](http://www.r-pkg.org/badges/version/seqtrie)](https://cran.r-project.org/package=seqtrie) [![CRAN\_Downloads\_Badge](https://cranlogs.r-pkg.org/badges/seqtrie)](https://cran.r-project.org/package=seqtrie) -->
 
-<!-- [![CRAN\_Downloads\_Total\_Badge](https://cranlogs.r-pkg.org/badges/grand-total/treedist)](https://cran.r-project.org/package=treedist) -->
+<!-- [![CRAN\_Downloads\_Total\_Badge](https://cranlogs.r-pkg.org/badges/grand-total/seqtrie)](https://cran.r-project.org/package=seqtrie) -->
 
-`treedist` is a collection of Radix Tree and Trie-based algorithms for
+`seqtrie` is a collection of Radix Tree and Trie-based algorithms for
 calculating string distances (Hamming and Levenshtein distances).
 
 There are three `R6` classes in this package:
@@ -29,7 +29,7 @@ the tree.
 ### Install
 
 ``` r
-devtools::install_github("traversc/treedist")
+devtools::install_github("traversc/seqtrie")
 ```
 
 ### Levenshtein “edit distance” search
@@ -42,7 +42,7 @@ licensed under CC 4.0.)
 Here, we find highly similar sequences within a fixed edit distance.
 
 ``` r
-library(treedist)
+library(seqtrie)
 
 # create a new tree and insert 130,000 "CDR3" sequences
 data(covid_cdr3) 

@@ -109,8 +109,10 @@ public:
   size_type size() const { return m._size; }
   pointer_type data() const { return m._data; }
   reference_type operator[](size_type idx) const { return *(m._data + idx); }
+  pointer_type begin() const { return m._data; }
+  pointer_type end() const { return m._data + m._size; }
   pointer_type begin() { return m._data; }
-  pointer_type end()   { return m._data + m._size; }
+  pointer_type end() { return m._data + m._size; }
 };
 
 } // end namespace

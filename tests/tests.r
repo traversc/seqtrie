@@ -6,7 +6,7 @@
 #        "DNATree_hamming", "RadixTree_hamming", "PrefixTree_hamming")
 
 
-library(treedist)
+library(seqtrie)
 library(stringdist)
 library(stringfish)
 library(Rcpp)
@@ -67,61 +67,47 @@ sd_search <- function(query, target, method = "lv") {
   dplyr::arrange(results, query, target)
 }
 
+tt <- "RadixTree"
 
-tree_types <- c("DNATree", "RadixTree", "PrefixTree")
-# tt <- "DNATree"
-for(tt in tree_types) {
+for(. in 1:NITER) {
+
   print(paste0("Checking correct insert/erase methods for ", tt))
-  for(. in 1:NITER) {
-    if(tt == "DNATree") {
-      x <- DNATree$new()
-      y <- DNATree$new()
-    } else if(tt == "RadixTree") {
-      x <- RadixTree$new()
-      y <- RadixTree$new()
-    } else if(tt == "PrefixTree") {
-      x <- PrefixTree$new()
-      y <- PrefixTree$new()
-    }
+
+    x <- RadixTree$new()
+    y <- RadixTree$new()
+
     ins <- c(random_strings(NSEQS, "ACGT"),"")
     era <- c(sample(c(sample(ins, NSEQS/10), random_strings(NSEQS/10, "ACGT"))),"")
     x$insert(ins)
+    stopifnot(x$validate())
     stopifnot(x$size() == n_distinct(ins))
     x$erase(era)
+    stopifnot(x$validate())
     stopifnot(x$size() == n_distinct(ins[!ins %in% era]))
     
     y$insert(ins[!ins %in% era])
+    stopifnot(y$validate())
     stopifnot(tree_equal(x, y))
-  }
-  
+
   print(paste0('Checking find for ', tt))
-  for(. in 1:NITER) {
-    if(tt == "DNATree") {
-      x <- DNATree$new()
-    } else if(tt == "RadixTree") {
-      x <- RadixTree$new()
-    } else if(tt == "PrefixTree") {
-      x <- PrefixTree$new()
-    }
+
+    x <- RadixTree$new()
+
     ins <- c(random_strings(NSEQS, "ACGT"),"")
     era <- c(sample(c(sample(ins, NSEQS/10), random_strings(NSEQS/10, "ACGT"))))
     fin <- c(sample(c(sample(ins, NSEQS/10), random_strings(NSEQS/10, "ACGT"))),"")
     expected <- fin %in% setdiff(ins, era)
     x$insert(ins)
+    stopifnot(x$validate())
     x$erase(era)
+    stopifnot(x$validate())
     results <- x$find(fin)
     stopifnot(identical(results, expected))
-  }
-  
-  print(paste0('Checking find_prefix for ', tt))
-  for(. in 1:NITER) {
-    if(tt == "DNATree") {
-      x <- DNATree$new()
-    } else if(tt == "RadixTree") {
-      x <- RadixTree$new()
-    } else if(tt == "PrefixTree") {
-      x <- PrefixTree$new()
-    }
+
+  print(paste0('Checking prefix_search for ', tt))
+
+    x <- RadixTree$new()
+    
     ins <- c(random_strings(NSEQS, "ACGT"),"")
     era <- c(sample(c(sample(ins, NSEQS/10), random_strings(NSEQS/10, "ACGT"))))
     fin <- c(sample(c(sample(ins, NSEQS/1000), random_strings(NSEQS/1000, "ACGT"))),"") %>% substr(1,5)
@@ -135,26 +121,22 @@ for(tt in tree_types) {
     expected <- do.call(rbind, expected)
     expected <- dplyr::arrange(expected, query, target)
     x$insert(ins)
+    stopifnot(x$validate())
     x$erase(era)
-    results <- x$find_prefix(fin) %>% dplyr::arrange(query, target)
+    stopifnot(x$validate())
+    results <- x$prefix_search(fin) %>% dplyr::arrange(query, target)
     stopifnot(identical(results, expected))
-  }
-  
+
   
   print(paste0("Checking levenshtein search correctness for ", tt))
-  for(. in 1:NITER) {
-    print(.)
-    if(tt == "DNATree") {
-      x <- DNATree$new()
-    } else if(tt == "RadixTree") {
-      x <- RadixTree$new()
-    } else if(tt == "PrefixTree") {
-      x <- PrefixTree$new()
-    }
+
+    x <- RadixTree$new()
+
     target <- c(random_strings(NSEQS, "ACGT"),"") %>% unique
     query <- sample(c(sample(target, NSEQS/1000), random_strings(NSEQS/1000, "ACGT")))
     query <- c(mutate_strings(query, charset = "ACGT"), "") %>% unique
     x$insert(target)
+    stopifnot(x$validate())
     results_dist <- x$search(query, max_distance = MAXDIST, mode = "levenshtein", show_progress=TRUE) %>% dplyr::arrange(query, target)
     results_frac <- x$search(query, max_fraction = MAXFRAC, mode = "levenshtein", show_progress=TRUE) %>% dplyr::arrange(query, target)
     sd_results <- sd_search(query, target, method = "lv")
@@ -162,22 +144,16 @@ for(tt in tree_types) {
     sd_frac <- dplyr::filter(sd_results, distance <= nchar(query) * MAXFRAC)
     stopifnot(identical(results_dist, sd_dist))
     stopifnot(identical(results_frac, sd_frac))
-  }
   
   print(paste0("Checking hamming search correctness for ", tt))
-  for(. in 1:NITER) {
-    print(.)
-    if(tt == "DNATree") {
-      x <- DNATree$new()
-    } else if(tt == "RadixTree") {
-      x <- RadixTree$new()
-    } else if(tt == "PrefixTree") {
-      x <- PrefixTree$new()
-    }
+
+    x <- RadixTree$new()
+
     target <- c(random_strings(NSEQS, "ACGT"),"") %>% unique
     query <- sample(c(sample(target, NSEQS/1000), random_strings(NSEQS/1000, "ACGT")))
     query <- c(mutate_strings(query, indel_prob=0, charset = "ACGT"), "") %>% unique
     x$insert(target)
+    stopifnot(x$validate())
     results_dist <- x$search(query, max_distance = MAXDIST, mode = "hamming", show_progress=TRUE) %>% dplyr::arrange(query, target)
     results_frac <- x$search(query, max_fraction = MAXFRAC, mode = "hamming", show_progress=TRUE) %>% dplyr::arrange(query, target)
     sd_results <- sd_search(query, target, method = "hamming")
@@ -185,22 +161,17 @@ for(tt in tree_types) {
     sd_frac <- dplyr::filter(sd_results, distance <= nchar(query) * MAXFRAC)
     stopifnot(identical(results_dist, sd_dist))
     stopifnot(identical(results_frac, sd_frac))
-  }
+
   
   print(paste0("Checking multithreaded levenshtein search correctness for ", tt))
-  for(. in 1:NITER) {
-    print(.)
-    if(tt == "DNATree") {
-      x <- DNATree$new()
-    } else if(tt == "RadixTree") {
-      x <- RadixTree$new()
-    } else if(tt == "PrefixTree") {
-      x <- PrefixTree$new()
-    }
+
+    x <- RadixTree$new()
+
     target <- c(random_strings(NSEQS, "ACGT"),"") %>% unique
     query <- sample(c(sample(target, NSEQS/1000), random_strings(NSEQS/1000, "ACGT")))
     query <- c(mutate_strings(query, charset = "ACGT"), "") %>% unique
     x$insert(target)
+    stopifnot(x$validate())
     results_dist <- x$search(query, max_distance = MAXDIST, mode = "levenshtein", nthreads=4, show_progress=TRUE) %>% dplyr::arrange(query, target)
     results_frac <- x$search(query, max_fraction = MAXFRAC, mode = "levenshtein", nthreads=4, show_progress=TRUE) %>% dplyr::arrange(query, target)
     sd_results <- sd_search(query, target, method = "lv")
@@ -208,22 +179,16 @@ for(tt in tree_types) {
     sd_frac <- dplyr::filter(sd_results, distance <= nchar(query) * MAXFRAC)
     stopifnot(identical(results_dist, sd_dist))
     stopifnot(identical(results_frac, sd_frac))
-  }
   
   print(paste0("Checking multithreaded hamming search correctness for ", tt))
-  for(. in 1:NITER) {
-    print(.)
-    if(tt == "DNATree") {
-      x <- DNATree$new()
-    } else if(tt == "RadixTree") {
-      x <- RadixTree$new()
-    } else if(tt == "PrefixTree") {
-      x <- PrefixTree$new()
-    }
+
+    x <- RadixTree$new()
+
     target <- c(random_strings(NSEQS, "ACGT"),"") %>% unique
     query <- sample(c(sample(target, NSEQS/1000), random_strings(NSEQS/1000, "ACGT")))
     query <- c(mutate_strings(query, indel_prob=0, charset = "ACGT"), "") %>% unique
     x$insert(target)
+    stopifnot(x$validate())
     results_dist <- x$search(query, max_distance = MAXDIST, mode = "hamming", nthreads=4, show_progress=TRUE) %>% dplyr::arrange(query, target)
     results_frac <- x$search(query, max_fraction = MAXFRAC, mode = "hamming", nthreads=4, show_progress=TRUE) %>% dplyr::arrange(query, target)
     sd_results <- sd_search(query, target, method = "hamming")
@@ -231,27 +196,6 @@ for(tt in tree_types) {
     sd_frac <- dplyr::filter(sd_results, distance <= nchar(query) * MAXFRAC)
     stopifnot(identical(results_dist, sd_dist))
     stopifnot(identical(results_frac, sd_frac))
-  }
+  
   
 }
-
-print("Checking DNATree not accepting non-ACGT")
-x <- DNATree$new()
-err <- tryCatch({x$insert("Z")}, error = function(e) return(e))
-if(!inherits(err, "error")) {
-  stop("DNATree accepting non-ACGT sequence")
-}
-
-print("Checking RadixTree does accept non-ACGT")
-x <- RadixTree$new()
-x$insert("Z")
-stopifnot(x$find("Z"))
-
-print("Checking PrefixTree does accept non-ACGT")
-x <- PrefixTree$new()
-x$insert("Z")
-stopifnot(x$find("Z"))
-
-
-
-

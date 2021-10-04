@@ -6,14 +6,13 @@
 #include <type_traits>
 #include <cstdlib>
 #include <cstring>
-#include <limits>
 
 namespace trqwe {
 
 // simple wrapper around a C style array with small array optimization
 // similar to boost::small_vector but does not store capacity, no push_back method. 
 // Can be re-allocated with reset(size) or resize(size)
-template<class T, class Allocator = std::allocator<T>, class S = size_t, class stack_size = std::integral_constant<S, 8>>
+template<class T, class Allocator = std::allocator<T>, class S = size_t, class stack_size = std::integral_constant<S, 32>>
 class small_array {
   static_assert(std::is_pod<T>::value, "small_array type should be POD");
 public:
@@ -23,8 +22,8 @@ public:
   typedef S       size_type;
 private:
   struct Members : Allocator { // derive from Allocator to use empty base optimization
-    pointer_type    _data;
     value_type      _stack[stack_size::value];
+    pointer_type    _data;
     size_type       _size;
     constexpr pointer_type stack_address() {
       return _stack;
@@ -106,8 +105,10 @@ public:
   size_type size() const { return m._size; }
   pointer_type data() const { return m._data; }
   reference_type operator[](size_type idx) const { return *(m._data + idx); }
+  pointer_type begin() const { return m._data; }
+  pointer_type end() const { return m._data + m._size; }
   pointer_type begin() { return m._data; }
-  pointer_type end()   { return m._data + m._size; }
+  pointer_type end() { return m._data + m._size; }
 };
 
 }

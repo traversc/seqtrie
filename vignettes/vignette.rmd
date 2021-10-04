@@ -1,21 +1,21 @@
 ---
-title: "treedist"
+title: "seqtrie"
 output:
   html_vignette:
     keep_md: no
   rmarkdown::github_document: default
 vignette: >
-  %\VignetteIndexEntry{treedist}
+  %\VignetteIndexEntry{seqtrie}
   \usepackage[utf8]{inputenc}
   %\VignetteEngine{knitr::rmarkdown}
 ---
 
 <!-- <img src="hex.png" width = "130" height = "150" align="right" style="border:0px;padding:15px"> -->
  
-<!-- [![CRAN\_Status\_Badge](http://www.r-pkg.org/badges/version/treedist)](https://cran.r-project.org/package=treedist) [![CRAN\_Downloads\_Badge](https://cranlogs.r-pkg.org/badges/treedist)](https://cran.r-project.org/package=treedist) -->
-<!-- [![CRAN\_Downloads\_Total\_Badge](https://cranlogs.r-pkg.org/badges/grand-total/treedist)](https://cran.r-project.org/package=treedist) -->
+<!-- [![CRAN\_Status\_Badge](http://www.r-pkg.org/badges/version/seqtrie)](https://cran.r-project.org/package=seqtrie) [![CRAN\_Downloads\_Badge](https://cranlogs.r-pkg.org/badges/seqtrie)](https://cran.r-project.org/package=seqtrie) -->
+<!-- [![CRAN\_Downloads\_Total\_Badge](https://cranlogs.r-pkg.org/badges/grand-total/seqtrie)](https://cran.r-project.org/package=seqtrie) -->
 
-`treedist` is a collection of Radix Tree and Trie-based algorithms for calculating string distances (Hamming and Levenshtein distances). 
+`seqtrie` is a collection of Radix Tree and Trie-based algorithms for calculating string distances (Hamming and Levenshtein distances). 
 
 There are three `R6` classes in this package: 
 
@@ -29,7 +29,7 @@ The primary class functions for interacting with a tree are `$insert()` for inse
 
 ### Install
 ```{r, eval = FALSE}
-devtools::install_github("traversc/treedist")
+devtools::install_github("traversc/seqtrie")
 ```
 
 ### Levenshtein "edit distance" search
@@ -39,7 +39,7 @@ Below is an example using COVID19 T-cell data from Adaptive Biotechnologies. (ht
 Here, we find highly similar sequences within a fixed edit distance. 
 
 ```{r eval = FALSE}
-library(treedist)
+library(seqtrie)
 
 # create a new tree and insert 130,000 "CDR3" sequences
 data(covid_cdr3) 

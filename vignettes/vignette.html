@@ -600,14 +600,14 @@ body {
 
 <body>
 
-<h1 id="treedist">treedist</h1>
+<h1 id="seqtrie">seqtrie</h1>
 <!-- <img src="hex.png" width = "130" height = "150" align="right" style="border:0px;padding:15px"> -->
 
-<!-- [![CRAN\_Status\_Badge](http://www.r-pkg.org/badges/version/treedist)](https://cran.r-project.org/package=treedist) [![CRAN\_Downloads\_Badge](https://cranlogs.r-pkg.org/badges/treedist)](https://cran.r-project.org/package=treedist) -->
+<!-- [![CRAN\_Status\_Badge](http://www.r-pkg.org/badges/version/seqtrie)](https://cran.r-project.org/package=seqtrie) [![CRAN\_Downloads\_Badge](https://cranlogs.r-pkg.org/badges/seqtrie)](https://cran.r-project.org/package=seqtrie) -->
 
-<!-- [![CRAN\_Downloads\_Total\_Badge](https://cranlogs.r-pkg.org/badges/grand-total/treedist)](https://cran.r-project.org/package=treedist) -->
+<!-- [![CRAN\_Downloads\_Total\_Badge](https://cranlogs.r-pkg.org/badges/grand-total/seqtrie)](https://cran.r-project.org/package=seqtrie) -->
 
-<p><code>treedist</code> is a collection of Radix Tree and Trie-based algorithms for calculating string distances (Hamming and Levenshtein distances).</p>
+<p><code>seqtrie</code> is a collection of Radix Tree and Trie-based algorithms for calculating string distances (Hamming and Levenshtein distances).</p>
 <p>There are three <code>R6</code> classes in this package:</p>
 <ul>
 <li><code>RadixTree</code> a Radix Tree implementation. See: <a href="https://en.wikipedia.org/wiki/Radix_tree">https://en.wikipedia.org/wiki/Radix_tree</a></li>
@@ -617,11 +617,11 @@ body {
 <p>All classes have exactly the same interface.</p>
 <p>The primary class functions for interacting with a tree are <code>$insert()</code> for inserting sequences on the tree, <code>$erase()</code> for erasing sequences from the tree and <code>$search()</code> for finding similar sequences stored on the tree.</p>
 <h3 id="install">Install</h3>
-<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1-1" title="1">devtools<span class="op">::</span><span class="kw">install_github</span>(<span class="st">&quot;traversc/treedist&quot;</span>)</a></code></pre></div>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1-1" title="1">devtools<span class="op">::</span><span class="kw">install_github</span>(<span class="st">&quot;traversc/seqtrie&quot;</span>)</a></code></pre></div>
 <h3 id="levenshtein-edit-distance-search">Levenshtein “edit distance” search</h3>
 <p>Below is an example using COVID19 T-cell data from Adaptive Biotechnologies. (<a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7418738/">https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7418738/</a>. This data is licensed under CC 4.0.)</p>
 <p>Here, we find highly similar sequences within a fixed edit distance.</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb2-1" title="1"><span class="kw">library</span>(treedist)</a>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb2-1" title="1"><span class="kw">library</span>(seqtrie)</a>
 <a class="sourceLine" id="cb2-2" title="2"></a>
 <a class="sourceLine" id="cb2-3" title="3"><span class="co"># create a new tree and insert 130,000 &quot;CDR3&quot; sequences</span></a>
 <a class="sourceLine" id="cb2-4" title="4"><span class="kw">data</span>(covid_cdr3) </a>
