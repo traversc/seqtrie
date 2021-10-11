@@ -1,74 +1,75 @@
-# export("DNATree_create", "RadixTree_create", "PrefixTree_create", 
-#        "DNATree_size", "RadixTree_size", "PrefixTree_size",
-#        "DNATree_print", "RadixTree_print", "PrefixTree_print",
-#        "DNATree_insert", "RadixTree_insert", "PrefixTree_insert",
-#        "DNATree_erase", "RadixTree_erase", "PrefixTree_erase",
-#        "DNATree_find", "RadixTree_find", "PrefixTree_find",
-#        "DNATree_levenshtein", "RadixTree_levenshtein", "PrefixTree_levenshtein",
-#        "DNATree_hamming", "RadixTree_hamming", "PrefixTree_hamming")
+#' RadixTree
+#'
+#' This class is a generic Radix Tree class
+#'
+#' @section Usage:
+#' \preformatted{tree <- RadixTree$new()
+#' 
+#' tree$print()
+#' 
+#' tree$graph(depth = -1, root_label = "root", plot = TRUE)
+#' 
+#' tree$to_string()
+#' 
+#' tree$to_dataframe()
+#' 
+#' tree$size()
+#' 
+#' tree$insert(sequences)
+#' 
+#' tree$erase(sequences)
+#' 
+#' tree$find(sequences)
+#' 
+#' tree$search(sequences, max_distance = NULL, max_fraction = NULL, mode = "levenshtein", nthreads = 1, show_progress = FALSE)
+#' }
+#'
+#' @section Arguments:
+#' \describe{
+#'   \item{depth}{- In \code{$graph()}, the tree depth to plot. Default -1 means plot the entire tree.}
+#'   \item{root_label}{- In \code{$graph()}, the label of the root node.}
+#'   \item{plot}{- In \code{$graph()}, whether to create a plot or return the data used to generate the plot.}
+#'   \item{sequences}{- In \code{$search()}, the sequences to operate on.}
+#'   \item{max_distance}{- In \code{$search()}, how far to search for similar sequences, in units of absolute distance. See details.}
+#'   \item{max_fraction}{- In \code{$search()}, how far to search for similar sequences, relative to the sequence length. See details.}
+#'   \item{mode}{- In \code{$search()}, either Levenshtein or Hamming. Levenshtein will allows for insertions and deletions and calculates "edit distance". Hamming does not allow for insertions or deletions.}
+#'   \item{nthreads}{- How many threads to use in the search.}
+#'   \item{show_progress}{- Display progress.}
+#' }
+#'
+#' @section Details:
+#' \code{$new()} creates a new Tree object, which holds the pointer to the underlying C++ implentation. The RadixTree class accepts any strings of single-width characters. 
+#'
+#' \code{$print()} and \code{$to_string()} prints to screen or outputs the tree to a string representation.
+#' 
+#' \code{$to_dataframe()} outputs all sequences held by the tree. 
+#' 
+#' \code{$size()} outputs the size of the tree (i.e. how many sequences are contained). 
+#' 
+#' \code{$insert()}, \code{$erase()} and \code{$find()} insert, erase and find sequences in the tree, respectively.
+#' 
+#' \code{$search()} This function searches for similar sequences within a threshold (given by max_distance or max_fraction) based on Levenshtein or Hamming algorithms. 
+#' The output of this function is a data.frame of all matches with columns "query" (the sequences input to the search function), 
+#' "target" (the sequences inserted into the tree) and "distance" the absolute distance between query and target sequences. 
+#' 
+#' @seealso 
+#' https://en.wikipedia.org/wiki/Radix_tree
+#' 
+#' @examples
+#' # Plot Data: x,y,r
+#' tree <- RadixTree$new()
+#' tree$insert(c("ACGT", "AAAA"))
+#' tree$erase("AAAA")
+#' tree$search("ACG", max_distance = 1, mode = "levenshtein")
+#'  #   query target distance
+#'  # 1   ACG   ACGT        1
+#'  
+#' tree$search("ACG", max_distance = 1, mode = "hamming")
+#'  # query    target   distance
+#'  # <0 rows> (or 0-length row.names)
 
-
-# DNATree <- R6::R6Class("DNATree", list(
-#   xp = NULL,
-#   initialize = function(sequences = NULL) {
-#     self$xp <- DNATree_create()
-#     if(!is.null(sequences)) {
-#       DNATree_insert(self$xp, sequences)
-#     }
-#   },
-#   print = function() {
-#     cat(DNATree_print(self$xp))
-#   },
-#   to_string = function() {
-#     DNATree_print(self$xp)
-#   },
-#   to_dataframe = function() {
-#     DNATree_to_dataframe(self$xp)
-#   },
-#   size = function() {
-#     DNATree_size(self$xp)
-#   },
-#   insert = function(sequences) {
-#     invisible(DNATree_insert(self$xp, sequences))
-#   },
-#   erase = function(sequences) {
-#     invisible(DNATree_erase(self$xp, sequences))
-#   },
-#   find = function(sequences) {
-#     !is.na(DNATree_find(self$xp, sequences))
-#   },
-#   find_prefix = function(sequences) {
-#     result <- DNATree_find_prefix(self$xp, sequences)
-#     if(is.null(result)) {
-#       data.frame(query = character(0), target = character(0), stringsAsFactors=F)
-#     } else {
-#       result
-#     }
-#   },
-#   search = function(sequences, max_distance = NULL, max_fraction = NULL, mode = "levenshtein", nthreads = 1, show_progress = FALSE) {
-#     if(!is.null(max_distance)) {
-#       if(length(max_distance) == 1) {
-#         max_distance <- rep(max_distance, length(sequences))
-#       }
-#     } else if(!is.null(max_fraction)) {
-#       max_distance <- as.integer(nchar(sequences) * max_fraction)
-#     } else {
-#       stop("Either max_distance or max_fraction must be non-null")
-#     }
-#     if(mode == "levenshtein") {
-#       result <- DNATree_levenshtein(self$xp, sequences, max_distance, nthreads, show_progress)
-#     } else if(mode == "hamming") {
-#       result <- DNATree_hamming(self$xp, sequences, max_distance, nthreads, show_progress)
-#     } else {
-#       stop("mode should be levenshtein or hamming")
-#     }
-#     if(is.null(result)) {
-#       data.frame(query = character(0), target = character(0), distance = integer(0), stringsAsFactors=F)
-#     } else {
-#       result
-#     }
-#   }
-# ))
+#' @name RadixTree
+NULL
 
 
 RadixTree <- R6::R6Class("RadixTree", list(
@@ -85,7 +86,7 @@ RadixTree <- R6::R6Class("RadixTree", list(
   to_string = function() {
     RadixTree_print(self$xp)
   },
-  graph = function(depth = -1, root_label = "(root)", plot = TRUE) {
+  graph = function(depth = -1, root_label = "root", plot = TRUE) {
     result <- RadixTree_graph(self$xp, depth)
     if(is.null(result)) {
       result <- data.frame(parent = character(0), child = character(0), stringsAsFactors=F)
@@ -148,70 +149,4 @@ RadixTree <- R6::R6Class("RadixTree", list(
     RadixTree_validate(self$xp)
   }
 ))
-
-
-
-
-# PrefixTree <- R6::R6Class("PrefixTree", list(
-#   xp = NULL,
-#   initialize = function(sequences = NULL) {
-#     self$xp <- PrefixTree_create()
-#     if(!is.null(sequences)) {
-#       PrefixTree_insert(self$xp, sequences)
-#     }
-#   },
-#   print = function() {
-#     cat(PrefixTree_print(self$xp))
-#   },
-#   to_string = function() {
-#     PrefixTree_print(self$xp)
-#   },
-#   to_dataframe = function() {
-#     PrefixTree_to_dataframe(self$xp)
-#   },
-#   size = function() {
-#     PrefixTree_size(self$xp)
-#   },
-#   insert = function(sequences) {
-#     invisible(PrefixTree_insert(self$xp, sequences))
-#   },
-#   erase = function(sequences) {
-#     invisible(PrefixTree_erase(self$xp, sequences))
-#   },
-#   find = function(sequences) {
-#     !is.na(PrefixTree_find(self$xp, sequences))
-#   },
-#   find_prefix = function(sequences) {
-#     result <- PrefixTree_find_prefix(self$xp, sequences)
-#     if(is.null(result)) {
-#       data.frame(query = character(0), target = character(0), stringsAsFactors=F)
-#     } else {
-#       result
-#     }
-#   },
-#   search = function(sequences, max_distance = NULL, max_fraction = NULL, mode = "levenshtein", nthreads = 1, show_progress = FALSE) {
-#     if(!is.null(max_distance)) {
-#       if(length(max_distance) == 1) {
-#         max_distance <- rep(max_distance, length(sequences))
-#       }
-#     } else if(!is.null(max_fraction)) {
-#       max_distance <- as.integer(nchar(sequences) * max_fraction)
-#     } else {
-#       stop("Either max_distance or max_fraction must be non-null")
-#     }
-#     if(mode == "levenshtein") {
-#       result <- PrefixTree_levenshtein(self$xp, sequences, max_distance, nthreads, show_progress)
-#     } else if(mode == "hamming") {
-#       result <- PrefixTree_hamming(self$xp, sequences, max_distance, nthreads, show_progress)
-#     } else {
-#       stop("mode should be levenshtein or hamming")
-#     }
-#     if(is.null(result)) {
-#       data.frame(query = character(0), target = character(0), distance = integer(0), stringsAsFactors=F)
-#     } else {
-#       result
-#     }
-#   }
-# ))
-
 

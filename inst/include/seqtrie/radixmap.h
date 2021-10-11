@@ -32,9 +32,7 @@ public:
     const_weak_pointer_type m;
     path() : m(nullptr) {}
     path(const_weak_pointer_type x) : m(x) {}
-    template <typename T> T sequence() const;
-    std::vector<atomic_type> operator*() const { return sequence<std::vector<atomic_type>>(); }
-    index_type index() const { return m->terminal_idx; }
+    const_weak_pointer_type operator->() const { return m; }
   };
   struct search_context { // result struct for levenshtein and hamming search
     std::vector<path> match;
@@ -44,6 +42,11 @@ public:
     search_context() {}
     search_context(span_type sequence, int max_distance) : sequence(sequence), max_distance(max_distance) {}
   };
+  const map_type & get_child_nodes() const { return child_nodes; }
+  const branch_type & get_branch() const { return branch; }
+  const_weak_pointer_type get_parent_node() const { return parent_node; }
+  index_type get_terminal_idx() const { return terminal_idx; }
+  template <typename T> T sequence() const;
   size_type size() const;
   bool validate(const bool is_root = true) const; // check if tree makes sense
   std::vector<path> all(size_t max_depth = -1) const;
@@ -71,9 +74,9 @@ private:
 #define RADIXMAP_T RadixMap<A,M,B,I>
 
 TEMPLATE_LIST template <typename T>
-T RADIXMAP_T::path::sequence() const {
+T RADIXMAP_T::sequence() const {
   static_assert(std::is_same<typename T::value_type, atomic_type>::value, "Output sequence value_type must be the same as RadixMap::atomic_type.");
-  const_weak_pointer_type current = m;
+  const_weak_pointer_type current = this;
   std::vector<const_weak_pointer_type> h;
   size_t size = 0;
   while(current != nullptr) {
@@ -166,7 +169,7 @@ TEMPLATE_LIST std::string RADIXMAP_T::print_impl(size_t depth) const {
 
 TEMPLATE_LIST std::pair<std::vector<typename RADIXMAP_T::path>, std::vector<typename RADIXMAP_T::path>> RADIXMAP_T::graph(size_t max_depth) const {
   std::pair<std::vector<path>, std::vector<path>> result;
-  if(terminal_idx != nullidx) {
+  if(parent_node != nullptr) {
     result.first.push_back(path(parent_node));
     result.second.push_back(path(this));
   }

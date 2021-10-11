@@ -150,7 +150,7 @@ template <typename T> SEXP rtree<T>::levenshtein_search(CharacterVector sequence
     auto & distances = output[i].distance;
     for(size_t j=0; j<targets.size(); ++j) {
       SET_STRING_ELT(query_results, q, STRING_ELT(sequences, i));
-      auto s = targets[j].template sequence<trqwe::small_array<char>>();
+      auto s = targets[j]->template sequence<trqwe::small_array<char>>();
       SET_STRING_ELT(target_results, q, to_charsxp(s));
       distance_results_ptr[q] = distances[j];
       q++;
@@ -193,7 +193,7 @@ template <typename T> SEXP rtree<T>::hamming_search(CharacterVector sequences, I
     auto & distances = output[i].distance;
     for(size_t j=0; j<targets.size(); ++j) {
       SET_STRING_ELT(query_results, q, STRING_ELT(sequences, i));
-      auto s = targets[j].template sequence<trqwe::small_array<char>>();
+      auto s = targets[j]->template sequence<trqwe::small_array<char>>();
       SET_STRING_ELT(target_results, q, to_charsxp(s));
       distance_results_ptr[q] = distances[j];
       q++;
@@ -223,7 +223,7 @@ template <typename T> SEXP rtree<T>::prefix_search(CharacterVector sequences) co
     auto & targets = output[i];
     for(size_t j=0; j<targets.size(); ++j) {
       SET_STRING_ELT(query_results, q, STRING_ELT(sequences, i));
-      auto s = targets[j].template sequence<trqwe::small_array<char>>();
+      auto s = targets[j]->template sequence<trqwe::small_array<char>>();
       SET_STRING_ELT(target_results, q, to_charsxp(s));
       q++;
     }
@@ -249,10 +249,8 @@ template <typename T> SEXP rtree<T>::graph(const double max_depth) const {
   CharacterVector parent(seqs.first.size());
   CharacterVector child(seqs.first.size());
   for(size_t i=0; i<seqs.first.size(); ++i) {
-    auto sp = seqs.first[i].template sequence<trqwe::small_array<char>>();
-    auto sc = seqs.second[i].template sequence<trqwe::small_array<char>>();
-    SET_STRING_ELT(parent, i, to_charsxp(sp));
-    SET_STRING_ELT(child, i, to_charsxp(sc));
+    SET_STRING_ELT(parent, i, to_charsxp(seqs.first[i]->get_branch()));
+    SET_STRING_ELT(child, i, to_charsxp(seqs.second[i]->get_branch()));
   }
   return DataFrame::create(_["parent"] = parent, _["child"] = child, _["stringsAsFactors"] = false);
 }
@@ -264,9 +262,9 @@ template <typename T> SEXP rtree<T>::to_dataframe() const {
   NumericVector index(seqs.size());
   double * indexp = REAL(index);
   for(size_t i=0; i<seqs.size(); ++i) {
-    auto s = seqs[i].template sequence<trqwe::small_array<char>>();
+    auto s = seqs[i]->template sequence<trqwe::small_array<char>>();
     SET_STRING_ELT(sequence, i, to_charsxp(s));
-    size_t idx = seqs[i].index();
+    size_t idx = seqs[i]->get_terminal_idx();
     indexp[i] = idx == nullidx ? NA_REAL : static_cast<double>(idx);
   }
   return DataFrame::create(_["sequence"] = sequence, _["index"] = index, _["stringsAsFactors"] = false);

@@ -7,30 +7,48 @@ seqtrie
 
 <!-- [![CRAN\_Downloads\_Total\_Badge](https://cranlogs.r-pkg.org/badges/grand-total/seqtrie)](https://cran.r-project.org/package=seqtrie) -->
 
-`seqtrie` is a collection of Radix Tree and Trie-based algorithms for
-calculating string distances (Hamming and Levenshtein distances).
+`seqtrie` is a collection of Radix Tree and Trie-based algorithms,
+including functions for calculating string distances (Hamming and
+Levenshtein distances).
 
-There are three `R6` classes in this package:
+A Radix Tree (aka Compact Prefix Tree) is a space efficient data
+structure for storing sequences with quick O(1) insertion and lookup
+(like a hashmap or dictionary). Sequences are stored by paths along the
+tree, with each node/branch representing a common prefix of all child
+nodes.
 
-  - `RadixTree` a Radix Tree implementation. See:
-    <https://en.wikipedia.org/wiki/Radix_tree>
-  - `PrefixTree` a Prefix Tree implementation (aka Trie). See:
-    <https://en.wikipedia.org/wiki/Trie>
-  - `DNATree` a Radix Tree specialization for DNA sequences (ACGT
-    characters). More memory efficient.
+One advantage of this structure is the ability to search for similar
+sequences in logarithmic time (with respect to the tree size). Hence,
+this type of data structure is sometimes used as a database to work with
+DNA and protein sequence alignment.
 
-All classes have exactly the same interface.
+See: <https://en.wikipedia.org/wiki/Radix_tree>
 
-The primary class functions for interacting with a tree are `$insert()`
-for inserting sequences on the tree, `$erase()` for erasing sequences
-from the tree and `$search()` for finding similar sequences stored on
-the tree.
+In `seqtrie`, there is one `R6` class `RadixTree`. The primary class
+functions for interacting with a tree are `$insert()` for inserting
+sequences on the tree, `$erase()` for erasing sequences from the tree
+and `$search()` for finding similar sequences stored on the tree.
 
 ### Install
 
 ``` r
 devtools::install_github("traversc/seqtrie")
 ```
+
+### Simple example
+
+To demonstrate the interface, bBelow is a simple example where we insert
+some sequences (strings), erase a string and then plot out the tree.
+
+``` r
+tree <- RadixTree$new()
+tree$insert(c("cargo", "cart", "carburetor", "carbuncle", "bar", "zebra"))
+tree$erase("zebra")
+tree$graph()
+```
+
+![](vignettes/simple_tree.png "simple_tree")
+<!-- png(vignettes/"simple_tree.png", width = 576*6, height = 300*6, res = 300) -->
 
 ### Levenshtein “edit distance” search
 
@@ -42,8 +60,6 @@ licensed under CC 4.0.)
 Here, we find highly similar sequences within a fixed edit distance.
 
 ``` r
-library(seqtrie)
-
 # create a new tree and insert 130,000 "CDR3" sequences
 data(covid_cdr3) 
 tree <- DNATree$new()
@@ -118,11 +134,13 @@ The `$find_prefix()` function can be used to find similar sequences.
 ``` r
 tree <- RadixTree$new()
 tree$insert(c("cargo", "cart", "carburetor", "carbuncle", "bar"))
-tree$find_prefix("car")
+tree$prefix_search("car")
 
 #   query     target
 # 1   car  carbuncle
 # 2   car carburetor
 # 3   car       cart
 # 4   car      cargo
+
+tree$graph()
 ```
