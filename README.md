@@ -35,7 +35,7 @@ and `$search()` for finding similar sequences stored on the tree.
 devtools::install_github("traversc/seqtrie")
 ```
 
-### Simple example
+### Simple Radix Tree example
 
 To demonstrate the interface, bBelow is a simple example where we insert
 some sequences (strings), erase a string and then plot out the tree.
@@ -48,7 +48,7 @@ tree$graph()
 ```
 
 ![](vignettes/simple_tree.png "simple_tree")
-<!-- png(vignettes/"simple_tree.png", width = 576*6, height = 300*6, res = 300) -->
+<!-- png(vignettes/"simple_tree.png",width=576*6,height=300*6,res=300); par(oma=c(0,0,0,0),mar=c(0,0,0,0)); tree$graph(); dev.off() -->
 
 ### Levenshtein “edit distance” search
 
@@ -69,7 +69,7 @@ tree$insert(covid_cdr3)
 results <- tree$search(covid_cdr3, max_distance=2, mode="levenshtein", nthreads=8)
 ```
 
-### The output
+#### The output
 
 The output is a data.frame mapping query (search sequences) and target
 (sequences inserted into the tree).
@@ -85,7 +85,7 @@ tail(results)
 # 262292 TGTGCCAGCAGCCTCGACAGGGGAAACGCCTACGAGCAGTACTTC TGTGCCAGCAGCCTCGACAGGGGAAACGCCTACGAGCAGTACTTC        0
 ```
 
-### Search parameters
+#### Search parameters
 
 The `$search()` function contains two mutually exclusive parameters:
 `max_distance` and `max_fraction`.
@@ -141,6 +141,4 @@ tree$prefix_search("car")
 # 2   car carburetor
 # 3   car       cart
 # 4   car      cargo
-
-tree$graph()
 ```

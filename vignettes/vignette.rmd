@@ -41,7 +41,7 @@ tree$erase("zebra")
 tree$graph()
 ```
 ![](simple_tree.png "simple_tree"){width=576px}
-<!-- png("simple_tree.png", width = 576*6, height = 300*6, res = 300) -->
+<!-- png("simple_tree.png",width=576*6,height=300*6,res=300); par(oma=c(0,0,0,0),mar=c(0,0,0,0)); tree$graph(); dev.off() -->
 
 ### Levenshtein "edit distance" search
 

@@ -95,7 +95,7 @@ RadixTree <- R6::R6Class("RadixTree", list(
       gr <- igraph::graph_from_data_frame(result)
       igraph::V(gr)$color <- ifelse(names(igraph::V(gr)) == root_label, "white", "skyblue2")
       igraph::V(gr)$size <- ifelse(names(igraph::V(gr)) == root_label, 21, 15)
-      plot(gr, layout=igraph::layout.fruchterman.reingold, vertex.color=igraph::V(gr)$color, vertex.label.family = "sans") 
+      plot(gr, layout=igraph::layout.fruchterman.reingold, vertex.color=igraph::V(gr)$color, vertex.label.family = "sans", margin = 0) 
     }
     invisible(result)
   },
