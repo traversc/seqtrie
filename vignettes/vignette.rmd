@@ -119,7 +119,5 @@ tree$prefix_search("car")
 # 2   car carburetor
 # 3   car       cart
 # 4   car      cargo
-
-tree$graph()
 ```
 
