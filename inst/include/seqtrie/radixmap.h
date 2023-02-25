@@ -58,7 +58,8 @@ public:
   std::vector<path> prefix_search(const span_type sequence) const;
   search_context levenshtein_search(const span_type sequence, const int max_distance) const;
   search_context hamming_search(const span_type sequence, const int max_distance) const;
-  
+  search_context anchored_search(const span_type sequence, const int max_distance) const;
+
 private:
   // implementation helpers, subject to change
   std::string print_impl(size_t depth) const;
@@ -67,8 +68,8 @@ private:
   static int update_row(const atomic_type branchval, const span_type sequence, std::vector<int> & row); // helper for levenshtein search
   static void levenshtein_search_impl(const_weak_pointer_type node, const std::vector<int> & previous_row, search_context & ctx);
   static void hamming_search_impl(const_weak_pointer_type node, const size_t position, const int distance, search_context & ctx);
+  static void anchored_search_impl(const_weak_pointer_type node, const std::vector<int> & previous_row, const int col_min, search_context & ctx);
 };
-
 
 #define TEMPLATE_LIST template <class A, template<typename...> class M, template<typename...> class B, class I>
 #define RADIXMAP_T RadixMap<A,M,B,I>
@@ -313,6 +314,15 @@ TEMPLATE_LIST typename RADIXMAP_T::search_context RADIXMAP_T::hamming_search(con
   return ctx;
 }
 
+// an "anchored" search can end on the last column or row of the dynamic programming array
+// unlike levenshtein which must end on the bottom right corner
+// we need to keep track of the minimum value in the last row
+TEMPLATE_LIST typename RADIXMAP_T::search_context RADIXMAP_T::anchored_search(const typename RADIXMAP_T::span_type sequence, const int max_distance) const {
+  search_context ctx(sequence, max_distance);
+  anchored_search_impl(this, iota_range<std::vector<int>>(0, sequence.size() + 1), sequence.size() + 1, ctx); 
+  return ctx;
+}
+
 TEMPLATE_LIST typename RADIXMAP_T::erase_action RADIXMAP_T::erase_impl(typename RADIXMAP_T::weak_pointer_type node, const span_type sequence, typename RADIXMAP_T::index_type & result) {
   if(sequence.size() == 0) {
     std::swap(result, node->terminal_idx); // if sequence doesn't exist, terminal_idx should be nullidx which is fine since result is initialized as nullidx
@@ -431,6 +441,63 @@ TEMPLATE_LIST void RADIXMAP_T::hamming_search_impl(typename RADIXMAP_T::const_we
   }
 }
 
+// enumerating all cases for stop conditions
+// max > col > row -- if we are on a terminal, add current path (distance = row), keep going (case 3)
+// max > row > col -- add all children (distance = col) and stop (case 2)
+// col > max > row -- if we are on a terminal, add current path (distance = row), keep going (case 3)
+// row > max > col -- add all children (distance = col) and stop (case 2)
+// col > row > max -- stop (case 1)
+// row > col > max -- stop (case 2)
+TEMPLATE_LIST void RADIXMAP_T::anchored_search_impl(typename RADIXMAP_T::const_weak_pointer_type node, const std::vector<int> & previous_row, const int col_min, search_context & ctx) {
+  int current_row_min = *std::min_element(previous_row.begin(), previous_row.end());
+  int current_col_min = col_min;
+  if( (current_row_min > ctx.max_distance) && (current_col_min > ctx.max_distance) ) { // case 1
+    return;
+  } else if( (current_col_min <= ctx.max_distance) && (current_col_min <= current_row_min) ) { // case 2
+    // if col_min <= row_min then the search ends on the column
+    // we can stop, since it's impossible to find a smaller value by continuing the search
+    std::vector<path> child_sequences = node->all();
+    for(auto & chs : child_sequences) { // also includes current node
+      if(chs->terminal_idx != nullidx) {
+        ctx.match.push_back(chs);
+        ctx.distance.push_back(current_col_min);
+      }
+    }
+    return;
+  } else if(node->terminal_idx != nullidx) { // this is a terminal leaf and its best value is on the row // case 3
+    if(current_row_min <= ctx.max_distance) {
+      ctx.match.push_back(path(node));
+      ctx.distance.push_back(current_row_min);
+    }
+  }
+  for (auto & ch : node->child_nodes) {
+    std::vector<int> current_row = previous_row;
+    branch_type & branch = ch.second->branch;
+    bool max_distance_exceeded = false;
+    current_col_min = col_min;
+    for(size_t u=0; u<branch.size(); ++u) {
+      current_row_min = update_row(branch[u], ctx.sequence, current_row);
+      current_col_min = std::min(current_col_min, current_row.back());
+      if( (current_row_min > ctx.max_distance) && (current_col_min > ctx.max_distance) ) { // case 1
+        max_distance_exceeded = true;
+        break;
+      } else if( (current_col_min <= ctx.max_distance) && (current_col_min <= current_row_min) ) { // case 2
+        // if col_min <= row_min then the search ends on the column
+        // we can stop, since it's impossible to find a smaller value by continuing the search
+        max_distance_exceeded = true; // "exceeded" in the sense that we include all children below and don't need to keep searching
+        std::vector<path> grandchild_sequences = ch.second->all();
+        for(auto & gchs : grandchild_sequences) { // also includes ch node
+          if(gchs->terminal_idx != nullidx) {
+            ctx.match.push_back(gchs);
+            ctx.distance.push_back(current_col_min);
+          }
+        }
+      }
+      // case 3 does not need to be considered since we are never on top of a terminal leaf within this loop
+    }
+    if(!max_distance_exceeded) anchored_search_impl(ch.second.get(), current_row, current_col_min, ctx);
+  }
+}
 
 #undef TEMPLATE_LIST
 #undef RADIXMAP_T

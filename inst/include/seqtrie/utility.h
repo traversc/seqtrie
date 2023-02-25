@@ -21,14 +21,10 @@
 #define span_FEATURE_MAKE_SPAN 1
 #include "nonstd/span.hpp"
 
-#include "simple_array/small_array.h"
-// #include "simple_array/nullable_array.h"
-#include "simple_array/simple_array.h"
-
 // requires boost
-#include <boost/mpl/string.hpp>
-#include <boost/mpl/for_each.hpp>
-#include <boost/mpl/range_c.hpp>
+// #include <boost/mpl/string.hpp>
+// #include <boost/mpl/for_each.hpp>
+// #include <boost/mpl/range_c.hpp>
 
 
 // https://stackoverflow.com/questions/16260033/reinterpret-cast-between-char-and-stduint8-t-safe

@@ -43,6 +43,9 @@ install:
 	chmod 644 ChangeLog DESCRIPTION Makefile NAMESPACE README.md
 	# ./configure
 	# ./cleanup
+	find . -iname "*.a" -exec rm {} \;
+	find . -iname "*.o" -exec rm {} \;
+	find . -iname "*.so" -exec rm {} \;
 	Rscript -e "library(Rcpp); compileAttributes('.');"
 	Rscript -e "devtools::load_all(); roxygen2::roxygenise('.');"
 	find . -iname "*.a" -exec rm {} \;

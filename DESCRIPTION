@@ -21,7 +21,7 @@ Imports:
 Suggests:
     knitr, rmarkdown, stringdist, stringfish, qs, dplyr, triebeard
 VignetteBuilder: knitr
-RoxygenNote: 7.1.1
+RoxygenNote: 7.2.3
 Copyright: This package includes code from the 'span-lite' library owned by Martin Moene under Boost Software License 1.0. This package contains data derived from Adaptive Biotechnologies' "ImmuneCODE" dataset under Creative Commons Attribution 4.0.
 URL: https://github.com/traversc/seqtrie
 BugReports: https://github.com/traversc/seqtrie/issues

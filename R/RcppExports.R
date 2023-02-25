@@ -29,8 +29,8 @@ RadixTree_find <- function(xp, sequences) {
     .Call(`_seqtrie_RadixTree_find`, xp, sequences)
 }
 
-RadixTree_to_dataframe <- function(xp) {
-    .Call(`_seqtrie_RadixTree_to_dataframe`, xp)
+RadixTree_to_vector <- function(xp) {
+    .Call(`_seqtrie_RadixTree_to_vector`, xp)
 }
 
 RadixTree_levenshtein_search <- function(xp, sequences, max_distance, nthreads, show_progress) {
@@ -41,11 +41,19 @@ RadixTree_hamming_search <- function(xp, sequences, max_distance, nthreads, show
     .Call(`_seqtrie_RadixTree_hamming_search`, xp, sequences, max_distance, nthreads, show_progress)
 }
 
+RadixTree_anchored_search <- function(xp, sequences, max_distance, nthreads, show_progress) {
+    .Call(`_seqtrie_RadixTree_anchored_search`, xp, sequences, max_distance, nthreads, show_progress)
+}
+
 RadixTree_prefix_search <- function(xp, sequences) {
     .Call(`_seqtrie_RadixTree_prefix_search`, xp, sequences)
 }
 
 RadixTree_validate <- function(xp) {
     .Call(`_seqtrie_RadixTree_validate`, xp)
+}
+
+distance_matrix <- function(query, target, metric = "levenshtein", nthreads = 1L, show_progress = FALSE) {
+    .Call(`_seqtrie_distance_matrix`, query, target, metric, nthreads, show_progress)
 }
 

@@ -11,7 +11,7 @@
 #' 
 #' tree$to_string()
 #' 
-#' tree$to_dataframe()
+#' tree$to_vector()
 #' 
 #' tree$size()
 #' 
@@ -42,7 +42,7 @@
 #'
 #' \code{$print()} and \code{$to_string()} prints to screen or outputs the tree to a string representation.
 #' 
-#' \code{$to_dataframe()} outputs all sequences held by the tree. 
+#' \code{$to_vector()} outputs all sequences held by the tree. 
 #' 
 #' \code{$size()} outputs the size of the tree (i.e. how many sequences are contained). 
 #' 
@@ -99,8 +99,8 @@ RadixTree <- R6::R6Class("RadixTree", list(
     }
     invisible(result)
   },
-  to_dataframe = function() {
-    RadixTree_to_dataframe(self$xp)
+  to_vector = function() {
+    RadixTree_to_vector(self$xp)
   },
   size = function() {
     RadixTree_size(self$xp)
@@ -136,8 +136,10 @@ RadixTree <- R6::R6Class("RadixTree", list(
       result <- RadixTree_levenshtein_search(self$xp, sequences, max_distance, nthreads, show_progress)
     } else if(mode == "hamming") {
       result <- RadixTree_hamming_search(self$xp, sequences, max_distance, nthreads, show_progress)
+    } else if(mode == "anchored") {
+      result <- RadixTree_anchored_search(self$xp, sequences, max_distance, nthreads, show_progress)
     } else {
-      stop("mode should be levenshtein or hamming")
+      stop("mode should be levenshtein, hamming or anchored")
     }
     if(is.null(result)) {
       data.frame(query = character(0), target = character(0), distance = integer(0), stringsAsFactors=F)
