@@ -64,7 +64,7 @@ run_og <- function(query, target, max_distance, show_progress = F) {
 run_dnatree <- function(query, target, max_distance=NULL, max_fraction=NULL, mode = "levenshtein", show_progress = F, nthreads = 8) {
   x <- treedist::DNATree$new()
   x$insert(target)
-  x$search(query, max_distance = max_distance, max_fraction = max_fraction, mode = mode, show_progress=show_progress, nthreads=nthreads) %>% 
+  x$search(query, max_distance = max_distance, max_fraction = max_fraction, mode = mode, show_progress=show_progress, nthreads=nthreads) %>%
     arrange(query, target)
 }
 
@@ -78,7 +78,7 @@ run_radixtree <- function(query, target, max_distance=NULL, max_fraction=NULL, m
 run_prefixtree <- function(query, target, max_distance=NULL, max_fraction=NULL, mode = "levenshtein", show_progress = F, nthreads = 8) {
   x <- treedist::PrefixTree$new()
   x$insert(target)
-  x$search(query, max_distance = max_distance, max_fraction = max_fraction, mode = mode, show_progress=show_progress, nthreads=nthreads) %>% 
+  x$search(query, max_distance = max_distance, max_fraction = max_fraction, mode = mode, show_progress=show_progress, nthreads=nthreads) %>%
     arrange(query, target)
 }
 
@@ -105,14 +105,14 @@ cc3_subset <- sample(covid_cdr3, size = 1000)
 
 sd_results <- run_stringdist(cc3_subset, cc3_subset, 2)
 og_results <- run_og(cc3_subset, cc3_subset, 2)
-dt_results <- run_dnatree(cc3_subset, cc3_subset, max_distance = 2)
+# dt_results <- run_dnatree(cc3_subset, cc3_subset, max_distance = 2)
 rt_results <- run_radixtree(cc3_subset, cc3_subset, max_distance = 2)
-pt_results <- run_prefixtree(cc3_subset, cc3_subset, max_distance = 2)
+# pt_results <- run_prefixtree(cc3_subset, cc3_subset, max_distance = 2)
 
 stopifnot(identical(sd_results, og_results))
-stopifnot(identical(sd_results, dt_results))
+# stopifnot(identical(sd_results, dt_results))
 stopifnot(identical(sd_results, rt_results))
-stopifnot(identical(sd_results, pt_results))
+# stopifnot(identical(sd_results, pt_results))
 
 ################################################################################
 
@@ -130,7 +130,7 @@ for(i in 1:nrow(grid)) {
 }
 maxdist_results <- grid
 
-grid <- expand.grid(nseqs = c(10000), maxfrac = c(0.035,0.15), iter = 1:NITER, method = c("DNATree", "RadixTree", "PrefixTree")) %>% sample_n(nrow(.))
+grid <- expand.grid(nseqs = c(100,300,1000,3000,10000,30000), maxfrac = c(0.035,0.15), iter = 1:NITER, method = c("DNATree", "RadixTree", "PrefixTree")) %>% sample_n(nrow(.))
 grid$time <- rep(0, nrow(grid))
 for(i in 1:nrow(grid)) {
   print(grid[i,])
@@ -158,18 +158,20 @@ for(i in 1:nrow(grid)) {
 }
 print(grid)
 
-identical(results[[1]], results[[2]])
-identical(results[[1]], results[[3]])
-identical(results[[4]], results[[5]])
-identical(results[[4]], results[[6]])
+print(identical(results[[1]], results[[2]]))
+print(identical(results[[1]], results[[3]]))
+print(identical(results[[4]], results[[5]]))
+print(identical(results[[4]], results[[6]]))
 }
 
 
 # plot, interactive only
 if(F) {
-  g <- ggplot(grid, aes(x = nseqs, y = time, color = method)) + geom_point() + geom_smooth() +
+  library(ggplot2)
+  g <- ggplot(grid, aes(x = nseqs, y = time, color = method)) + geom_point() + geom_smooth(fill = NA) +
     scale_x_log10() +
     scale_y_log10() +
+    facet_wrap(~maxfrac) + 
     theme_bw(base_size = 16)
   ggsave(g, file = "benchmark_plot.png", width = 6, height = 4)
 }

@@ -16,7 +16,7 @@ tree$graph(depth = -1, root_label = "root", plot = TRUE)
 
 tree$to_string()
 
-tree$to_dataframe()
+tree$to_vector()
 
 tree$size()
 
@@ -51,7 +51,7 @@ tree$search(sequences, max_distance = NULL, max_fraction = NULL, mode = "levensh
 
 \code{$print()} and \code{$to_string()} prints to screen or outputs the tree to a string representation.
 
-\code{$to_dataframe()} outputs all sequences held by the tree. 
+\code{$to_vector()} outputs all sequences held by the tree. 
 
 \code{$size()} outputs the size of the tree (i.e. how many sequences are contained). 
 

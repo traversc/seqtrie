@@ -58,7 +58,17 @@ mutate_strings <- function(x, prob = 0.025, indel_prob = 0.025, charset = "abcde
 }
 
 sd_search <- function(query, target, method = "lv") {
-  results <- stringdist::stringdistmatrix(query, target, method = method, nthread=1)
+  results <- stringdist::stringdistmatrix(query, target, method = method, nthread=4)
+  results <- data.frame(query = rep(query, times=length(target)), 
+                        target = rep(target, each=length(query)), 
+                        distance = as.vector(results), stringsAsFactors = F)
+  results <- dplyr::filter(results, is.finite(distance))
+  results$distance <- as.integer(results$distance)
+  dplyr::arrange(results, query, target)
+}
+
+anchored_search <- function(query, target) {
+  results <- seqtrie::distance_matrix(query, target, mode = "anchored", nthreads=4)
   results <- data.frame(query = rep(query, times=length(target)), 
                         target = rep(target, each=length(query)), 
                         distance = as.vector(results), stringsAsFactors = F)
@@ -128,10 +138,10 @@ for(. in 1:NITER) {
     stopifnot(identical(results, expected))
 
   
-  print(paste0("Checking levenshtein search correctness for ", tt))
-
+    print(paste0("Checking levenshtein search correctness for ", tt))
+    
     x <- RadixTree$new()
-
+    
     target <- c(random_strings(NSEQS, "ACGT"),"") %>% unique
     query <- sample(c(sample(target, NSEQS/1000), random_strings(NSEQS/1000, "ACGT")))
     query <- c(mutate_strings(query, charset = "ACGT"), "") %>% unique
@@ -140,6 +150,23 @@ for(. in 1:NITER) {
     results_dist <- x$search(query, max_distance = MAXDIST, mode = "levenshtein", show_progress=TRUE) %>% dplyr::arrange(query, target)
     results_frac <- x$search(query, max_fraction = MAXFRAC, mode = "levenshtein", show_progress=TRUE) %>% dplyr::arrange(query, target)
     sd_results <- sd_search(query, target, method = "lv")
+    sd_dist <- dplyr::filter(sd_results, distance <= MAXDIST)
+    sd_frac <- dplyr::filter(sd_results, distance <= nchar(query) * MAXFRAC)
+    stopifnot(identical(results_dist, sd_dist))
+    stopifnot(identical(results_frac, sd_frac))
+    
+    print(paste0("Checking anchored search correctness for ", tt))
+    
+    x <- RadixTree$new()
+    
+    target <- c(random_strings(NSEQS, "ACGT"),"") %>% unique
+    query <- sample(c(sample(target, NSEQS/1000), random_strings(NSEQS/1000, "ACGT")))
+    query <- c(mutate_strings(query, charset = "ACGT"), "") %>% unique
+    x$insert(target)
+    stopifnot(x$validate())
+    results_dist <- x$search(query, max_distance = MAXDIST, mode = "anchored", show_progress=TRUE) %>% dplyr::arrange(query, target)
+    results_frac <- x$search(query, max_fraction = MAXFRAC, mode = "anchored", show_progress=TRUE) %>% dplyr::arrange(query, target)
+    sd_results <- anchored_search(query, target)
     sd_dist <- dplyr::filter(sd_results, distance <= MAXDIST)
     sd_frac <- dplyr::filter(sd_results, distance <= nchar(query) * MAXFRAC)
     stopifnot(identical(results_dist, sd_dist))
@@ -163,10 +190,10 @@ for(. in 1:NITER) {
     stopifnot(identical(results_frac, sd_frac))
 
   
-  print(paste0("Checking multithreaded levenshtein search correctness for ", tt))
-
+    print(paste0("Checking multithreaded levenshtein search correctness for ", tt))
+    
     x <- RadixTree$new()
-
+    
     target <- c(random_strings(NSEQS, "ACGT"),"") %>% unique
     query <- sample(c(sample(target, NSEQS/1000), random_strings(NSEQS/1000, "ACGT")))
     query <- c(mutate_strings(query, charset = "ACGT"), "") %>% unique
@@ -179,7 +206,7 @@ for(. in 1:NITER) {
     sd_frac <- dplyr::filter(sd_results, distance <= nchar(query) * MAXFRAC)
     stopifnot(identical(results_dist, sd_dist))
     stopifnot(identical(results_frac, sd_frac))
-  
+    
   print(paste0("Checking multithreaded hamming search correctness for ", tt))
 
     x <- RadixTree$new()
@@ -197,5 +224,22 @@ for(. in 1:NITER) {
     stopifnot(identical(results_dist, sd_dist))
     stopifnot(identical(results_frac, sd_frac))
   
+    print(paste0("Checking multithreaded anchored search correctness for ", tt))
+    
+    x <- RadixTree$new()
+    
+    target <- c(random_strings(NSEQS, "ACGT"),"") %>% unique
+    query <- sample(c(sample(target, NSEQS/1000), random_strings(NSEQS/1000, "ACGT")))
+    query <- c(mutate_strings(query, charset = "ACGT"), "") %>% unique
+    x$insert(target)
+    stopifnot(x$validate())
+    results_dist <- x$search(query, max_distance = MAXDIST, mode = "anchored", nthreads=4, show_progress=TRUE) %>% dplyr::arrange(query, target)
+    results_frac <- x$search(query, max_fraction = MAXFRAC, mode = "anchored", nthreads=4, show_progress=TRUE) %>% dplyr::arrange(query, target)
+    sd_results <- anchored_search(query, target)
+    sd_dist <- dplyr::filter(sd_results, distance <= MAXDIST)
+    sd_frac <- dplyr::filter(sd_results, distance <= nchar(query) * MAXFRAC)
+    stopifnot(identical(results_dist, sd_dist))
+    stopifnot(identical(results_frac, sd_frac))
+    
   
 }

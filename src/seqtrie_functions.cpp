@@ -1,4 +1,5 @@
 #include <Rcpp.h>
+#include <RcppParallel.h>
 
 #include <set>
 #include <memory>
@@ -93,11 +94,7 @@ template <typename T> LogicalVector RadixTreeContext<T>::insert(CharacterVector 
   for(size_t i=0; i<nseqs; ++i) {
     cspan sequence = charsxp_to_cspan(sequence_ptr[i]);
     size_t idx = root.insert(sequence, posidx);
-    if(idx == nullidx) {
-      result_ptr[i] = 1;
-    } else {
-      result_ptr[i] = 0;
-    }
+    result_ptr[i] = idx == nullidx ? 1 : 0; // nullidx means it was successfully inserted
   }
   return result;
 }
@@ -110,11 +107,7 @@ template <typename T> LogicalVector RadixTreeContext<T>::erase(CharacterVector s
   for(size_t i=0; i<nseqs; ++i) {
     cspan sequence = charsxp_to_cspan(sequence_ptr[i]);
     size_t idx = root.erase(sequence);
-    if(idx == nullidx) {
-      result_ptr[i] = 0;
-    } else {
-      result_ptr[i] = 1;
-    }
+    result_ptr[i] = idx == nullidx ? 0 : 1; // nullidx means sequence did not exist, erase was not succesful
   }
   return result;
 }
@@ -123,11 +116,11 @@ template <typename T> LogicalVector RadixTreeContext<T>::find(CharacterVector se
   SEXP * sequence_ptr = STRING_PTR(sequences);
   size_t nseqs = Rf_xlength(sequences);
   LogicalVector result(nseqs);
-  int * result_ptr = INTEGER(result);
+  int * result_ptr = LOGICAL(result);
   for(size_t i=0; i<nseqs; ++i) {
     cspan sequence = charsxp_to_cspan(sequence_ptr[i]);
     size_t idx = root.find(sequence);
-    result_ptr[i] = idx == nullidx ? 0 : 1;
+    result_ptr[i] = idx == nullidx ? 0 : 1; // nullidx means sequence was not found
   }
   return result;
 }
@@ -146,7 +139,7 @@ template <typename T> SEXP RadixTreeContext<T>::levenshtein_search(CharacterVect
   
   if(nthreads == 1) {
     for(size_t i=0; i<nseqs; ++i) {
-      output[i] = root.anchored_search(query[i], max_distance_ptr[i]);
+      output[i] = root.levenshtein_search(query[i], max_distance_ptr[i]);
       progress_bar.increment();
     }
   } else {
@@ -375,7 +368,7 @@ SEXP RadixTree_prefix_search(Rcpp::XPtr<RadixTreeCtxForR> xp, CharacterVector se
 // [[Rcpp::export(rng = false)]]
 bool RadixTree_validate(Rcpp::XPtr<RadixTreeCtxForR> xp) { return xp->validate(); }
 
-//////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 // distance matrix functions
 
 IMatrix get_dprog_matrix(cspan query, cspan target) {
@@ -407,14 +400,14 @@ int hamming_distance(cspan query, cspan target) {
 
 int levenshtein_distance(cspan query, cspan target) {
   IMatrix mat = get_dprog_matrix(query, target);
-  return *mat.rbegin1();
+  return mat(mat.size1()-1, mat.size2()-1);
 }
 
 int anchored_distance(cspan query, cspan target) {
   IMatrix mat = get_dprog_matrix(query, target);
   int distance = std::numeric_limits<int>::max();
   for(size_t i=0; i<mat.size1(); ++i) distance = std::min(distance, mat(i, mat.size2()-1));
-  for(size_t j=0; j<mat.size1(); ++j) distance = std::min(distance, mat(mat.size1()-1, j));
+  for(size_t j=0; j<mat.size2(); ++j) distance = std::min(distance, mat(mat.size1()-1, j));
   return distance;
 }
 
@@ -480,9 +473,9 @@ struct AnchoredDistanceWorker : public Worker {
 
 // [[Rcpp::export(rng = false)]]
 IntegerMatrix distance_matrix(CharacterVector query, CharacterVector target, 
-                              const std::string metric = "levenshtein", 
+                              const std::string mode = "levenshtein", 
                               const int nthreads = 1, const bool show_progress = false) {
-  if((metric != "levenshtein") && (metric != "hamming") && (metric != "anchored")) {
+  if((mode != "levenshtein") && (mode != "hamming") && (mode != "anchored")) {
     throw std::runtime_error("Metric must be one of levenshtein, hamming or anchored");
   }
   size_t query_len = Rf_xlength(query);
@@ -492,19 +485,19 @@ IntegerMatrix distance_matrix(CharacterVector query, CharacterVector target,
   std::vector<cspan> query_span(query_len);
   for(size_t i=0; i<query_len; ++i) query_span[i] = charsxp_to_cspan(query_ptr[i]);
   std::vector<cspan> target_span(target_len);
-  for(size_t i=0; i<query_len; ++i) target_span[i] = charsxp_to_cspan(target_ptr[i]);
+  for(size_t i=0; i<target_len; ++i) target_span[i] = charsxp_to_cspan(target_ptr[i]);
 
   IntegerMatrix output(query_len, target_len);
   int * output_ptr = INTEGER(output);
   trqwe::simple_progress progress_bar(target_len, show_progress);
   
-  if(metric == "levenshtein") {
+  if(mode == "levenshtein") {
     LevenshteinDistanceWorker w(query_span, target_span, output_ptr, progress_bar);
     parallelFor(0, target_len, w, 1, nthreads);
-  } else if(metric == "hamming") {
+  } else if(mode == "hamming") {
     HammingDistanceWorker w(query_span, target_span, output_ptr, progress_bar);
     parallelFor(0, target_len, w, 1, nthreads);
-  } else if(metric == "anchored") {
+  } else if(mode == "anchored") {
     AnchoredDistanceWorker w(query_span, target_span, output_ptr, progress_bar);
     parallelFor(0, target_len, w, 1, nthreads);
   }

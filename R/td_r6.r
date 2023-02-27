@@ -112,7 +112,7 @@ RadixTree <- R6::R6Class("RadixTree", list(
     invisible(RadixTree_erase(self$xp, sequences))
   },
   find = function(sequences) {
-    !is.na(RadixTree_find(self$xp, sequences))
+    RadixTree_find(self$xp, sequences)
   },
   prefix_search = function(sequences) {
     result <- RadixTree_prefix_search(self$xp, sequences)

@@ -2,7 +2,6 @@
 #define seqtrie_TYPES_H
 
 #include <Rcpp.h>
-#include <RcppParallel.h>
 
 #include <cstring>
 #include <utility>
@@ -10,7 +9,6 @@
 #include "simple_array/small_array.h"
 
 using namespace Rcpp;
-using namespace RcppParallel;
 
 // design approach:
 // this is a realization of Radix Tree for R, so whenever possible use explicit type labels

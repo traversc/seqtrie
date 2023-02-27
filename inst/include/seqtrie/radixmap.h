@@ -52,9 +52,9 @@ public:
   std::vector<path> all(size_t max_depth = -1) const;
   std::string print() const { return print_impl(0); } // this function really only makes sense if atomic_type is char...
   std::pair<std::vector<path>, std::vector<path>> graph(size_t max_depth = -1) const;
-  index_type find(const span_type sequence) const;
-  index_type insert(const span_type sequence, index_type idx);
-  index_type erase(const span_type sequence);
+  index_type find(const span_type sequence) const; // returns terminal_idx if found, nullidx if not found
+  index_type insert(const span_type sequence, index_type idx); // returns terminal_idx if already exists, otherwise nullidx
+  index_type erase(const span_type sequence); // returns terminal_idx if sequence existed, nullidx if it did not exist
   std::vector<path> prefix_search(const span_type sequence) const;
   search_context levenshtein_search(const span_type sequence, const int max_distance) const;
   search_context hamming_search(const span_type sequence, const int max_distance) const;
@@ -319,7 +319,7 @@ TEMPLATE_LIST typename RADIXMAP_T::search_context RADIXMAP_T::hamming_search(con
 // we need to keep track of the minimum value in the last row
 TEMPLATE_LIST typename RADIXMAP_T::search_context RADIXMAP_T::anchored_search(const typename RADIXMAP_T::span_type sequence, const int max_distance) const {
   search_context ctx(sequence, max_distance);
-  anchored_search_impl(this, iota_range<std::vector<int>>(0, sequence.size() + 1), sequence.size() + 1, ctx); 
+  anchored_search_impl(this, iota_range<std::vector<int>>(0, sequence.size() + 1), sequence.size(), ctx); 
   return ctx;
 }
 
@@ -447,7 +447,7 @@ TEMPLATE_LIST void RADIXMAP_T::hamming_search_impl(typename RADIXMAP_T::const_we
 // col > max > row -- if we are on a terminal, add current path (distance = row), keep going (case 3)
 // row > max > col -- add all children (distance = col) and stop (case 2)
 // col > row > max -- stop (case 1)
-// row > col > max -- stop (case 2)
+// row > col > max -- stop (case 1)
 TEMPLATE_LIST void RADIXMAP_T::anchored_search_impl(typename RADIXMAP_T::const_weak_pointer_type node, const std::vector<int> & previous_row, const int col_min, search_context & ctx) {
   int current_row_min = *std::min_element(previous_row.begin(), previous_row.end());
   int current_col_min = col_min;
@@ -492,6 +492,7 @@ TEMPLATE_LIST void RADIXMAP_T::anchored_search_impl(typename RADIXMAP_T::const_w
             ctx.distance.push_back(current_col_min);
           }
         }
+        break;
       }
       // case 3 does not need to be considered since we are never on top of a terminal leaf within this loop
     }

@@ -158,16 +158,16 @@ BEGIN_RCPP
 END_RCPP
 }
 // distance_matrix
-IntegerMatrix distance_matrix(CharacterVector query, CharacterVector target, const std::string metric, const int nthreads, const bool show_progress);
-RcppExport SEXP _seqtrie_distance_matrix(SEXP querySEXP, SEXP targetSEXP, SEXP metricSEXP, SEXP nthreadsSEXP, SEXP show_progressSEXP) {
+IntegerMatrix distance_matrix(CharacterVector query, CharacterVector target, const std::string mode, const int nthreads, const bool show_progress);
+RcppExport SEXP _seqtrie_distance_matrix(SEXP querySEXP, SEXP targetSEXP, SEXP modeSEXP, SEXP nthreadsSEXP, SEXP show_progressSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::traits::input_parameter< CharacterVector >::type query(querySEXP);
     Rcpp::traits::input_parameter< CharacterVector >::type target(targetSEXP);
-    Rcpp::traits::input_parameter< const std::string >::type metric(metricSEXP);
+    Rcpp::traits::input_parameter< const std::string >::type mode(modeSEXP);
     Rcpp::traits::input_parameter< const int >::type nthreads(nthreadsSEXP);
     Rcpp::traits::input_parameter< const bool >::type show_progress(show_progressSEXP);
-    rcpp_result_gen = Rcpp::wrap(distance_matrix(query, target, metric, nthreads, show_progress));
+    rcpp_result_gen = Rcpp::wrap(distance_matrix(query, target, mode, nthreads, show_progress));
     return rcpp_result_gen;
 END_RCPP
 }

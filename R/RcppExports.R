@@ -53,7 +53,7 @@ RadixTree_validate <- function(xp) {
     .Call(`_seqtrie_RadixTree_validate`, xp)
 }
 
-distance_matrix <- function(query, target, metric = "levenshtein", nthreads = 1L, show_progress = FALSE) {
-    .Call(`_seqtrie_distance_matrix`, query, target, metric, nthreads, show_progress)
+distance_matrix <- function(query, target, mode = "levenshtein", nthreads = 1L, show_progress = FALSE) {
+    .Call(`_seqtrie_distance_matrix`, query, target, mode, nthreads, show_progress)
 }
 

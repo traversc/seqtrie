@@ -3,6 +3,7 @@ importFrom(RcppParallel, RcppParallelLibs)
 importFrom(R6, R6Class)
 useDynLib(seqtrie, .registration=TRUE)
 export("RadixTree")
+export("distance_matrix")
 # export("DNATree", "RadixTree", "PrefixTree")
 # export("DNATree_create", "RadixTree_create", "PrefixTree_create", 
 #        "DNATree_size", "RadixTree_size", "PrefixTree_size",
