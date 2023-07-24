@@ -59,7 +59,7 @@ public:
   search_context levenshtein_search(const span_type sequence, const int max_distance) const;
   search_context hamming_search(const span_type sequence, const int max_distance) const;
   search_context anchored_search(const span_type sequence, const int max_distance) const;
-
+  
 private:
   // implementation helpers, subject to change
   std::string print_impl(size_t depth) const;

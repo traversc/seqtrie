@@ -143,8 +143,8 @@ for(i in 1:nrow(grid)) {
 }
 maxfrac_results <- grid
 
-maxdist_results %>% group_by(nseqs, method, maxdist) %>% summarize(time = mean(time)) %>% print
-maxfrac_results %>% group_by(nseqs, method, maxfrac) %>% summarize(time = mean(time)) %>% print
+maxdist_results %>% group_by(nseqs, method, maxdist) %>% summarize(time = mean(time)) %>% as.data.frame %>% print
+maxfrac_results %>% group_by(nseqs, method, maxfrac) %>% summarize(time = mean(time)) %>% as.data.frame %>% print
 
 # run the whole thing
 if(F) {
@@ -156,7 +156,7 @@ for(i in 1:nrow(grid)) {
   results[[i]] <- methods[[grid$method[i]]](covid_cdr3, covid_cdr3, max_fraction = grid$frac[i], show_progres = T)
   grid$time[i] <- toc()
 }
-print(grid)
+print(as.data.frame(grid))
 
 print(identical(results[[1]], results[[2]]))
 print(identical(results[[1]], results[[3]]))
