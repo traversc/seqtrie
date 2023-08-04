@@ -11,7 +11,7 @@ template <class A, template<typename...> class M, template<typename...> class B,
 class RadixMap {
 public:
   static constexpr I nullidx = std::numeric_limits<I>::max();
-  typedef A atomic_type;
+  typedef A atomic_type; // '\0' is reserved character for gap
   typedef B<A> branch_type;
   typedef I index_type;
   typedef size_t size_type;
@@ -20,11 +20,12 @@ public:
   typedef RadixMap<A,M,B,I> const * const_weak_pointer_type;
   typedef RadixMap<A,M,B,I> * weak_pointer_type;
   typedef M<A,RadixMapUPtr<A,M,B,I>> map_type;
+  typedef std::pair<A,A> pairchar;
   typedef nonstd::span<const A> span_type;
 private:
   map_type child_nodes;        // 48 bytes for std::map
   branch_type branch;         // 24 bytes for std::vector
-  const_weak_pointer_type parent_node; // 8 bytes, worth including?
+  const_weak_pointer_type parent_node; // 8 bytes
   index_type terminal_idx;    // 8 bytes
 public:
   RadixMap() : parent_node(nullptr), terminal_idx(nullidx) {}
@@ -46,7 +47,11 @@ public:
   const branch_type & get_branch() const { return branch; }
   const_weak_pointer_type get_parent_node() const { return parent_node; }
   index_type get_terminal_idx() const { return terminal_idx; }
-  template <typename T> T sequence() const;
+
+  // output the sequence represented by this node, by traversing up the tree
+  // ST is an array-like container type, e.g. std::vector<char>, std::string
+  template <typename ST> ST sequence() const;
+
   size_type size() const;
   bool validate(const bool is_root = true) const; // check if tree makes sense
   std::vector<path> all(size_t max_depth = -1) const;
@@ -56,27 +61,46 @@ public:
   index_type insert(const span_type sequence, index_type idx); // returns terminal_idx if already exists, otherwise nullidx
   index_type erase(const span_type sequence); // returns terminal_idx if sequence existed, nullidx if it did not exist
   std::vector<path> prefix_search(const span_type sequence) const;
-  search_context levenshtein_search(const span_type sequence, const int max_distance) const;
+
   search_context hamming_search(const span_type sequence, const int max_distance) const;
+  search_context levenshtein_search(const span_type sequence, const int max_distance) const;
   search_context anchored_search(const span_type sequence, const int max_distance) const;
+
+  // search using a custom edit distance cost matrix
+  // MT is a map type, e.g. std::map<pairchar, int>
+  // (pairchar is defined as std::pair<char, char> in utility.h)
+  // the map key is the pair of characters (query, target) to compare
+  // All possibile pairs of characters must be included in the map, or else it return an error
+  // The map value is the cost of the edit operation and must be non-negative
+  // The map must also include the special character \0, which represents a gap
+  // Example:
+  // map<pairchar, int> m = {{pairchar('A','A'), 0}, {pairchar('A','B'), 1}, {pairchar('A','\0'), 1},
+//                           {pairchar('B','A'), 1}, {pairchar('B','B'), 0}, {pairchar('B','\0'), 1} };
+  template <typename MT> search_context levenshtein_search(const span_type sequence, const int max_distance, const MT & cost_map) const;
+  template <typename MT> search_context anchored_search(const span_type sequence, const int max_distance, const MT & cost_map) const;
   
 private:
   // implementation helpers, subject to change
   std::string print_impl(size_t depth) const;
   enum class erase_action { erase, merge, keep };
   static erase_action erase_impl(weak_pointer_type node, const span_type sequence, index_type & result);
-  static int update_row(const atomic_type branchval, const span_type sequence, std::vector<int> & row); // helper for levenshtein search
-  static void levenshtein_search_impl(const_weak_pointer_type node, const std::vector<int> & previous_row, search_context & ctx);
+
+  static int update_row(const atomic_type branchval, const span_type sequence, std::vector<int> & row); // helper for levenshtein and anchored search
   static void hamming_search_impl(const_weak_pointer_type node, const size_t position, const int distance, search_context & ctx);
+  static void levenshtein_search_impl(const_weak_pointer_type node, const std::vector<int> & previous_row, search_context & ctx);
   static void anchored_search_impl(const_weak_pointer_type node, const std::vector<int> & previous_row, const int col_min, search_context & ctx);
+
+  template <typename MT> static int update_row_costmap(const atomic_type branchval, const span_type sequence, std::vector<int> & row, const MT & cost_map);
+  template <typename MT> static void levenshtein_search_costmap_impl(const_weak_pointer_type node, const std::vector<int> & previous_row, search_context & ctx, const MT & cost_map);
+  template <typename MT> static void anchored_search_costmap_impl(const_weak_pointer_type node, const std::vector<int> & previous_row, const int col_min, search_context & ctx, const MT & cost_map);
 };
 
 #define TEMPLATE_LIST template <class A, template<typename...> class M, template<typename...> class B, class I>
 #define RADIXMAP_T RadixMap<A,M,B,I>
 
-TEMPLATE_LIST template <typename T>
-T RADIXMAP_T::sequence() const {
-  static_assert(std::is_same<typename T::value_type, atomic_type>::value, "Output sequence value_type must be the same as RadixMap::atomic_type.");
+TEMPLATE_LIST template <typename ST>
+ST RADIXMAP_T::sequence() const {
+  static_assert(std::is_same<typename ST::value_type, atomic_type>::value, "Output sequence value_type must be the same as RadixMap::atomic_type.");
   const_weak_pointer_type current = this;
   std::vector<const_weak_pointer_type> h;
   size_t size = 0;
@@ -85,7 +109,7 @@ T RADIXMAP_T::sequence() const {
     size += current->branch.size();
     current = current->parent_node;
   }
-  T result = array_allocate<T>(size);
+  ST result = array_allocate<ST>(size);
   atomic_type * result_ptr = array_data(result);
   for(auto it = h.rbegin(); it != h.rend(); ++it) {
     current = *it;
@@ -302,15 +326,15 @@ TEMPLATE_LIST std::vector<typename RADIXMAP_T::path> RADIXMAP_T::prefix_search(c
   return node->all();
 }
 
-TEMPLATE_LIST typename RADIXMAP_T::search_context RADIXMAP_T::levenshtein_search(const typename RADIXMAP_T::span_type sequence, const int max_distance) const {
-  search_context ctx(sequence, max_distance);
-  levenshtein_search_impl(this, iota_range<std::vector<int>>(0, sequence.size() + 1), ctx); 
-  return ctx;
-}
-
 TEMPLATE_LIST typename RADIXMAP_T::search_context RADIXMAP_T::hamming_search(const span_type sequence, const int max_distance) const {
   search_context ctx(sequence, max_distance);
   hamming_search_impl(this, 0, 0, ctx);
+  return ctx;
+}
+
+TEMPLATE_LIST typename RADIXMAP_T::search_context RADIXMAP_T::levenshtein_search(const typename RADIXMAP_T::span_type sequence, const int max_distance) const {
+  search_context ctx(sequence, max_distance);
+  levenshtein_search_impl(this, iota_range<std::vector<int>>(0, sequence.size() + 1), ctx); 
   return ctx;
 }
 
@@ -320,6 +344,31 @@ TEMPLATE_LIST typename RADIXMAP_T::search_context RADIXMAP_T::hamming_search(con
 TEMPLATE_LIST typename RADIXMAP_T::search_context RADIXMAP_T::anchored_search(const typename RADIXMAP_T::span_type sequence, const int max_distance) const {
   search_context ctx(sequence, max_distance);
   anchored_search_impl(this, iota_range<std::vector<int>>(0, sequence.size() + 1), sequence.size(), ctx); 
+  return ctx;
+}
+
+TEMPLATE_LIST template <typename MT>
+typename RADIXMAP_T::search_context RADIXMAP_T::levenshtein_search(const typename RADIXMAP_T::span_type sequence, const int max_distance, const MT & cost_map) const {
+  search_context ctx(sequence, max_distance);
+  std::vector<int> row(sequence.size() + 1, 0);
+  for(size_t i=1; i<row.size(); ++i) {
+    row[i] = row[i-1] + cost_map.at(pairchar(sequence[i-1], 0)); // gap in target
+  }
+  levenshtein_search_costmap_impl<MT>(this, row, ctx, cost_map);
+  return ctx;
+}
+
+TEMPLATE_LIST template <typename MT>
+typename RADIXMAP_T::search_context RADIXMAP_T::anchored_search(const typename RADIXMAP_T::span_type sequence, const int max_distance, const MT & cost_map) const {
+  search_context ctx(sequence, max_distance);
+  std::vector<int> row(sequence.size() + 1, 0);
+  // std::cout << row[0] << " ";
+  for(size_t i=1; i<row.size(); ++i) {
+    row[i] = row[i-1] + cost_map.at(pairchar(sequence[i-1], 0)); // gap in target
+    //  std::cout << row[i] << " ";
+  }
+  // std::cout << std::endl;
+  anchored_search_costmap_impl<MT>(this, row, row.back(), ctx, cost_map);
   return ctx;
 }
 
@@ -378,41 +427,6 @@ TEMPLATE_LIST typename RADIXMAP_T::erase_action RADIXMAP_T::erase_impl(typename 
   }
 }
 
-TEMPLATE_LIST int RADIXMAP_T::update_row(const typename RADIXMAP_T::atomic_type branchval, const typename RADIXMAP_T::span_type sequence, std::vector<int> & row) {
-  int previous_row_i_minus_1 = row[0];
-  row[0] = row[0] + 1;
-  int min_element = row[0];
-  for(size_t i=1; i<row.size(); ++i) {
-    int match_cost  = previous_row_i_minus_1 + (sequence[i-1] == branchval ? 0 : 1);
-    int insert_cost = row[i-1] + 1;
-    int delete_cost = row[i] + 1;
-    previous_row_i_minus_1 = row[i];
-    row[i] = std::min({match_cost, insert_cost, delete_cost});
-    if(row[i] < min_element) min_element = row[i];
-  }
-  return min_element;
-}
-TEMPLATE_LIST void RADIXMAP_T::levenshtein_search_impl(typename RADIXMAP_T::const_weak_pointer_type node, const std::vector<int> & previous_row, search_context & ctx) {
-  if( *std::min_element(previous_row.begin(), previous_row.end()) > ctx.max_distance ) { return; }
-  if((node->terminal_idx != nullidx) && (previous_row.back() <= ctx.max_distance)) {
-    ctx.match.push_back(path(node));
-    ctx.distance.push_back(previous_row.back());
-  }
-  for (auto & ch : node->child_nodes) {
-    std::vector<int> current_row = previous_row;
-    branch_type & branch = ch.second->branch;
-    bool max_distance_exceeded = false;
-    for(size_t u=0; u<branch.size(); ++u) {
-      int current_dist = update_row(branch[u], ctx.sequence, current_row);
-      if(current_dist > ctx.max_distance) {
-        max_distance_exceeded = true;
-        break;
-      }
-    }
-    if(!max_distance_exceeded) levenshtein_search_impl(ch.second.get(), current_row, ctx);
-  }
-}
-
 TEMPLATE_LIST void RADIXMAP_T::hamming_search_impl(typename RADIXMAP_T::const_weak_pointer_type node, const size_t position, const int distance, typename RADIXMAP_T::search_context & ctx) {
   if(position == ctx.sequence.size()) {
     if(node->terminal_idx != nullidx) {
@@ -438,6 +452,43 @@ TEMPLATE_LIST void RADIXMAP_T::hamming_search_impl(typename RADIXMAP_T::const_we
         hamming_search_impl(ch.second.get(), position + branch.size(), new_distance, ctx);
       }
     }
+  }
+}
+
+
+TEMPLATE_LIST int RADIXMAP_T::update_row(const typename RADIXMAP_T::atomic_type branchval, const typename RADIXMAP_T::span_type sequence, std::vector<int> & row) {
+  int previous_row_i_minus_1 = row[0];
+  row[0] = row[0] + 1;
+  int min_element = row[0];
+  for(size_t i=1; i<row.size(); ++i) {
+    int match_cost  = previous_row_i_minus_1 + (sequence[i-1] == branchval ? 0 : 1);
+    int insert_cost = row[i-1] + 1;
+    int delete_cost = row[i] + 1;
+    previous_row_i_minus_1 = row[i];
+    row[i] = std::min({match_cost, insert_cost, delete_cost});
+    if(row[i] < min_element) min_element = row[i];
+  }
+  return min_element;
+}
+
+TEMPLATE_LIST void RADIXMAP_T::levenshtein_search_impl(typename RADIXMAP_T::const_weak_pointer_type node, const std::vector<int> & previous_row, search_context & ctx) {
+  if( *std::min_element(previous_row.begin(), previous_row.end()) > ctx.max_distance ) { return; }
+  if((node->terminal_idx != nullidx) && (previous_row.back() <= ctx.max_distance)) {
+    ctx.match.push_back(path(node));
+    ctx.distance.push_back(previous_row.back());
+  }
+  for (auto & ch : node->child_nodes) {
+    std::vector<int> current_row = previous_row;
+    branch_type & branch = ch.second->branch;
+    bool max_distance_exceeded = false;
+    for(size_t u=0; u<branch.size(); ++u) {
+      int current_dist = update_row(branch[u], ctx.sequence, current_row);
+      if(current_dist > ctx.max_distance) {
+        max_distance_exceeded = true;
+        break;
+      }
+    }
+    if(!max_distance_exceeded) levenshtein_search_impl(ch.second.get(), current_row, ctx);
   }
 }
 
@@ -497,6 +548,100 @@ TEMPLATE_LIST void RADIXMAP_T::anchored_search_impl(typename RADIXMAP_T::const_w
       // case 3 does not need to be considered since we are never on top of a terminal leaf within this loop
     }
     if(!max_distance_exceeded) anchored_search_impl(ch.second.get(), current_row, current_col_min, ctx);
+  }
+}
+
+TEMPLATE_LIST template <typename MT>
+int RADIXMAP_T::update_row_costmap(const typename RADIXMAP_T::atomic_type branchval, const typename RADIXMAP_T::span_type sequence, std::vector<int> & row, const MT & cost_map) {
+  int previous_row_i_minus_1 = row[0];
+  row[0] = row[0] + cost_map.at(pairchar(0, branchval)); // gap in target
+  int min_element = row[0];
+  // std::cout << row[0] << " ";
+  for(size_t i=1; i<row.size(); ++i) {
+    int match_cost  = previous_row_i_minus_1 + cost_map.at(pairchar(sequence[i-1], branchval));
+    int gap_in_query = row[i] + cost_map.at(pairchar(0, branchval));
+    int gap_in_target = row[i-1] + cost_map.at(pairchar(sequence[i-1], 0));
+    previous_row_i_minus_1 = row[i];
+    row[i] = std::min({match_cost, gap_in_query, gap_in_target});
+    if(row[i] < min_element) min_element = row[i];
+    // std::cout << row[i] << " ";
+  }
+  // std::cout << std::endl;
+  return min_element;
+}
+
+TEMPLATE_LIST template <typename MT>
+void RADIXMAP_T::levenshtein_search_costmap_impl(typename RADIXMAP_T::const_weak_pointer_type node, const std::vector<int> & previous_row, search_context & ctx, const MT & cost_map) {
+  if( *std::min_element(previous_row.begin(), previous_row.end()) > ctx.max_distance ) { return; }
+  if((node->terminal_idx != nullidx) && (previous_row.back() <= ctx.max_distance)) {
+    ctx.match.push_back(path(node));
+    ctx.distance.push_back(previous_row.back());
+  }
+  for (auto & ch : node->child_nodes) {
+    std::vector<int> current_row = previous_row;
+    branch_type & branch = ch.second->branch;
+    bool max_distance_exceeded = false;
+    for(size_t u=0; u<branch.size(); ++u) {
+      int current_dist = update_row_costmap<MT>(branch[u], ctx.sequence, current_row, cost_map);
+      if(current_dist > ctx.max_distance) {
+        max_distance_exceeded = true;
+        break;
+      }
+    }
+    if(!max_distance_exceeded) levenshtein_search_costmap_impl<MT>(ch.second.get(), current_row, ctx, cost_map);
+  }
+}
+
+TEMPLATE_LIST template <typename MT>
+void RADIXMAP_T::anchored_search_costmap_impl(typename RADIXMAP_T::const_weak_pointer_type node, const std::vector<int> & previous_row, const int col_min, search_context & ctx, const MT & cost_map) {
+  int current_row_min = *std::min_element(previous_row.begin(), previous_row.end());
+  int current_col_min = col_min;
+  if( (current_row_min > ctx.max_distance) && (current_col_min > ctx.max_distance) ) { // case 1
+    return;
+  } else if( (current_col_min <= ctx.max_distance) && (current_col_min <= current_row_min) ) { // case 2
+    // if col_min <= row_min then the search ends on the column
+    // we can stop, since it's impossible to find a smaller value by continuing the search
+    std::vector<path> child_sequences = node->all();
+    for(auto & chs : child_sequences) { // also includes current node
+      if(chs->terminal_idx != nullidx) {
+        ctx.match.push_back(chs);
+        ctx.distance.push_back(current_col_min);
+      }
+    }
+    return;
+  } else if(node->terminal_idx != nullidx) { // this is a terminal leaf and its best value is on the row // case 3
+    if(current_row_min <= ctx.max_distance) {
+      ctx.match.push_back(path(node));
+      ctx.distance.push_back(current_row_min);
+    }
+  }
+  for (auto & ch : node->child_nodes) {
+    std::vector<int> current_row = previous_row;
+    branch_type & branch = ch.second->branch;
+    bool max_distance_exceeded = false;
+    current_col_min = col_min;
+    for(size_t u=0; u<branch.size(); ++u) {
+      current_row_min = update_row_costmap(branch[u], ctx.sequence, current_row, cost_map);
+      current_col_min = std::min(current_col_min, current_row.back());
+      if( (current_row_min > ctx.max_distance) && (current_col_min > ctx.max_distance) ) { // case 1
+        max_distance_exceeded = true;
+        break;
+      } else if( (current_col_min <= ctx.max_distance) && (current_col_min <= current_row_min) ) { // case 2
+        // if col_min <= row_min then the search ends on the column
+        // we can stop, since it's impossible to find a smaller value by continuing the search
+        max_distance_exceeded = true; // "exceeded" in the sense that we include all children below and don't need to keep searching
+        std::vector<path> grandchild_sequences = ch.second->all();
+        for(auto & gchs : grandchild_sequences) { // also includes ch node
+          if(gchs->terminal_idx != nullidx) {
+            ctx.match.push_back(gchs);
+            ctx.distance.push_back(current_col_min);
+          }
+        }
+        break;
+      }
+      // case 3 does not need to be considered since we are never on top of a terminal leaf within this loop
+    }
+    if(!max_distance_exceeded) anchored_search_costmap_impl(ch.second.get(), current_row, current_col_min, ctx, cost_map);
   }
 }
 

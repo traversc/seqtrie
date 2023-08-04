@@ -9,7 +9,6 @@ check: $(BUILD)
 	R CMD check --as-cran $<
 
 check-solaris: $(BUILD)
-	# R --interactive --no-save --args $< <<<'rhub::check_for_cran(commandArgs(T)[1])'
 	Rscript -e 'rhub::check("$(BUILD)", platform = c("solaris-x86-patched"))'
 
 compile:
@@ -60,6 +59,9 @@ vignette:
 	sed -r -i 's/\((.+)\.png/\(vignettes\/\1\.png/' README.md
 
 test:
-	Rscript tests/tests.r
+	IS_LOCAL=Yes Rscript tests/test_dist_functions.R; unset IS_LOCAL
+	IS_LOCAL=Yes Rscript tests/test_radix_tree.R; unset IS_LOCAL
+
+local-bench:
 	Rscript inst/extra_tests/benchmark.r
 

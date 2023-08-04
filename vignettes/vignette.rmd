@@ -10,18 +10,13 @@ vignette: >
   %\VignetteEngine{knitr::rmarkdown}
 ---
 
-<!-- <img src="hex.png" width = "130" height = "150" align="right" style="border:0px;padding:15px"> -->
- 
-<!-- [![CRAN\_Status\_Badge](http://www.r-pkg.org/badges/version/seqtrie)](https://cran.r-project.org/package=seqtrie) [![CRAN\_Downloads\_Badge](https://cranlogs.r-pkg.org/badges/seqtrie)](https://cran.r-project.org/package=seqtrie) -->
-<!-- [![CRAN\_Downloads\_Total\_Badge](https://cranlogs.r-pkg.org/badges/grand-total/seqtrie)](https://cran.r-project.org/package=seqtrie) -->
-
 `seqtrie` is a collection of Radix Tree and Trie-based algorithms, including functions for calculating string distances (Hamming and Levenshtein distances). 
 
 A Radix Tree (aka Compact Prefix Tree) is a space efficient data structure for storing sequences with quick O(1) insertion and lookup (like a hashmap or dictionary). Sequences are stored by paths along the tree, with each node/branch representing a common prefix of all child nodes. 
 
 One advantage of this structure is the ability to search for similar sequences in logarithmic time (with respect to the tree size). Hence, this type of data structure is sometimes used as a database to work with DNA and protein sequence alignment. 
 
-See: https://en.wikipedia.org/wiki/Radix_tree
+See also: https://en.wikipedia.org/wiki/Radix_tree
 
 In `seqtrie`, there is one `R6` class `RadixTree`. The primary class functions for interacting with a tree are `$insert()` for inserting sequences on the tree, `$erase()` for erasing sequences from the tree and `$search()` for finding similar sequences stored on the tree. 
 

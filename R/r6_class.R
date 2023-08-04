@@ -1,6 +1,6 @@
 #' RadixTree
 #'
-#' This class is a generic Radix Tree class
+#' Radix Tree (trie) class implementation
 #'
 #' @section Usage:
 #' \preformatted{tree <- RadixTree$new()
@@ -21,7 +21,7 @@
 #' 
 #' tree$find(sequences)
 #' 
-#' tree$search(sequences, max_distance = NULL, max_fraction = NULL, mode = "levenshtein", nthreads = 1, show_progress = FALSE)
+#' tree$search(sequences, max_distance = NULL, max_fraction = NULL, mode = "levenshtein", cost_matrix = NULL, nthreads = 1, show_progress = FALSE)
 #' }
 #'
 #' @section Arguments:
@@ -32,9 +32,11 @@
 #'   \item{sequences}{- In \code{$search()}, the sequences to operate on.}
 #'   \item{max_distance}{- In \code{$search()}, how far to search for similar sequences, in units of absolute distance. See details.}
 #'   \item{max_fraction}{- In \code{$search()}, how far to search for similar sequences, relative to the sequence length. See details.}
-#'   \item{mode}{- In \code{$search()}, either Levenshtein or Hamming. Levenshtein will allows for insertions and deletions and calculates "edit distance". Hamming does not allow for insertions or deletions.}
+#'   \item{mode}{- In \code{$search()}, One of hamming (hm), levenshtein (lv) or anchored (an). Levenshtein will allows for insertions and deletions and calculates "edit distance". Hamming does not allow for insertions or deletions.}
+#'   \item{cost_matrix}{In \code{$search()}, a cost matrix for use with Levenshtein or Anchored searches. See details.}
+#'   \item{gap_cost}{In \code{$search()}, a cost matrix for use with Levenshtein or Anchored searches. See details.}
 #'   \item{nthreads}{- How many threads to use in the search.}
-#'   \item{show_progress}{- Display progress.}
+#'   \item{show_progress}{- Display progress.}lgm
 #' }
 #'
 #' @section Details:
@@ -48,15 +50,19 @@
 #' 
 #' \code{$insert()}, \code{$erase()} and \code{$find()} insert, erase and find sequences in the tree, respectively.
 #' 
-#' \code{$search()} This function searches for similar sequences within a threshold (given by max_distance or max_fraction) based on Levenshtein or Hamming algorithms. 
+#' \code{$search()} This function searches for similar sequences within a threshold (given by max_distance or max_fraction) based on Hamming, Levenshtein or Anchored algorithms.
+#' An anchored search is a form of semi-global alignment, where the query sequence is "anchored" (global) to the beginning of both the query and target sequences, 
+#' but is semi-global in that the end of the either the query sequence or target sequence (but not both) can be unaligned. This contrasts with the Levenshtein distance which is global at 
+#' both the starts and ends of the sequences. 
+#' 
 #' The output of this function is a data.frame of all matches with columns "query" (the sequences input to the search function), 
 #' "target" (the sequences inserted into the tree) and "distance" the absolute distance between query and target sequences. 
+#' For anchored searches, the output also includes "query_size" and "target_size" which are the partial lengths of the query and target sequences that are aligned. 
 #' 
 #' @seealso 
 #' https://en.wikipedia.org/wiki/Radix_tree
 #' 
 #' @examples
-#' # Plot Data: x,y,r
 #' tree <- RadixTree$new()
 #' tree$insert(c("ACGT", "AAAA"))
 #' tree$erase("AAAA")
@@ -67,7 +73,6 @@
 #' tree$search("ACG", max_distance = 1, mode = "hamming")
 #'  # query    target   distance
 #'  # <0 rows> (or 0-length row.names)
-
 #' @name RadixTree
 NULL
 
@@ -122,7 +127,11 @@ RadixTree <- R6::R6Class("RadixTree", list(
       result
     }
   },
-  search = function(sequences, max_distance = NULL, max_fraction = NULL, mode = "levenshtein", nthreads = 1, show_progress = FALSE) {
+  search = function(sequences, max_distance = NULL, max_fraction = NULL, mode = "levenshtein", cost_matrix = NULL, gap_cost = NULL, nthreads = 1, show_progress = FALSE) {
+    check_alignment_params(mode, cost_matrix, gap_cost)
+    cost_matrix <- append_gap_cost(cost_matrix, gap_cost)
+    mode <- normalize_mode_parameter(mode)
+    
     if(!is.null(max_distance)) {
       if(length(max_distance) == 1) {
         max_distance <- rep(max_distance, length(sequences))
@@ -132,18 +141,19 @@ RadixTree <- R6::R6Class("RadixTree", list(
     } else {
       stop("Either max_distance or max_fraction must be non-null")
     }
-    if(mode == "levenshtein") {
-      result <- RadixTree_levenshtein_search(self$xp, sequences, max_distance, nthreads, show_progress)
-    } else if(mode == "hamming") {
-      result <- RadixTree_hamming_search(self$xp, sequences, max_distance, nthreads, show_progress)
-    } else if(mode == "anchored") {
-      result <- RadixTree_anchored_search(self$xp, sequences, max_distance, nthreads, show_progress)
-    } else {
-      stop("mode should be levenshtein, hamming or anchored")
-    }
-    if(is.null(result)) {
-      data.frame(query = character(0), target = character(0), distance = integer(0), stringsAsFactors=F)
-    } else {
+
+    if(mode == "hamming") {
+      RadixTree_hamming_search(self$xp, sequences, max_distance, cost_matrix, nthreads, show_progress)
+    } else if(mode == "levenshtein") {
+      RadixTree_levenshtein_search(self$xp, sequences, max_distance, cost_matrix, nthreads, show_progress)
+    } else if(mode == "anchored") { # Append query_start and target_start columns from dist_pairwise anchored search
+      result <- RadixTree_anchored_search(self$xp, sequences, max_distance, cost_matrix, nthreads, show_progress)
+      result2 <- dist_pairwise(result$query, result$target, mode = "anchored", cost_matrix = cost_matrix, nthreads = nthreads, show_progress = FALSE)
+      if(any(result$distance != result2)) {
+        stop("Internal error: anchored search results do not match pairwise results")
+      }
+      result$query_size <- attr(result2, "query_size")
+      result$target_size <- attr(result2, "target_size")
       result
     }
   },

@@ -13,8 +13,22 @@
 
 using namespace Rcpp;
 
+using pairchar = std::pair<char, char>;
+using pairchar_map = std::unordered_map<pairchar, int>;
 using cspan = nonstd::span<const char>;
+
+// Convert a string to a SEXP
+// Be careful about R protection / GC
+SEXP to_charsxp(const trqwe::small_array<char> & x);
+
+// Define a span of const char from a SEXP
 cspan charsxp_to_cspan(SEXP x);
+
+// Input: cost_matrix
+// a NxN matrix where column/row names are the characters to use for pairchar_map keys
+// The special column "gap" is recoded as '\0'
+// Output: pairchar_map
+pairchar_map convert_cost_matrix(IntegerMatrix cost_matrix);
 
 namespace SeqTrie {
   using RadixTreeR = seqtrie::RadixMap<char, std::map, trqwe::small_array, size_t>;

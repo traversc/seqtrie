@@ -11,7 +11,7 @@
 #include <memory>
 #include <limits.h> // INT_MAX
 #include <iterator>
-#include <cstdint>
+#include <utility>
 
 #ifdef span_CONFIG_CONTRACT_VIOLATION_TERMINATES
 #undef span_CONFIG_CONTRACT_VIOLATION_TERMINATES
@@ -92,9 +92,9 @@ template <typename T, typename S> void appendspan(T & x, const S & y) {
   std::copy(y.data(), y.data() + y.size(), x.data() + xs);
 }
 
-template <typename T> T iota_range(const typename T::value_type start, const size_t len) {
+template <typename T> T iota_range(const typename T::value_type value, const size_t len) {
   T result(len);
-  std::iota(result.begin(), result.end(), start);
+  std::iota(result.begin(), result.end(), value);
   return result;
 }
 
@@ -110,9 +110,16 @@ template <typename T> T iota_range(const typename T::value_type start, const siz
 //   x.resize(xs + y.size());
 //   std::copy(y.data(), y.data() + y.size(), &x[0] + xs);
 // }
-
-
 }
 
+// hash for unordered_map with std::pair<char, char> as key
+namespace std {
+  template <>
+  struct hash<std::pair<char, char>> {
+    size_t operator()(const std::pair<char, char> & p) const {
+      return ((p.first + 128) << 8) + (p.second + 128);
+    }
+  };
+}
 
 #endif // include guard

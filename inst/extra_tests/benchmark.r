@@ -1,4 +1,4 @@
-library(treedist) # devtools::install_github("traversc/seqtrie", ref="32d3f585840c063ca60fcaf830ace76be48a6c67")
+library(seqtrie) # devtools::install_github("traversc/seqtrie", ref="32d3f585840c063ca60fcaf830ace76be48a6c67")
 library(seqtrie)
 
 library(stringdist)
