@@ -19,6 +19,8 @@ generate_cost_matrix(
 
 \item{mismatch}{The cost of a mismatch}
 
+\item{gap}{The cost of a gap, ignored if `include_gap` is FALSE (default: 1)}
+
 \item{include_gap}{Whether to encode the cost of a gap in the matrix directly (default: FALSE)}
 }
 \value{

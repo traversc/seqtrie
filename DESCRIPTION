@@ -13,6 +13,7 @@ Biarch: true
 Encoding: UTF-8
 Depends: R (>= 3.5.0)
 LazyData: true
+SystemRequirements: GNU make
 LinkingTo: 
     Rcpp, RcppParallel, BH
 Imports: 
