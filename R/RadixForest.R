@@ -1,9 +1,9 @@
-#' RadixTree
+#' RadixForest
 #'
-#' Radix Tree (trie) class implementation
+#' Radix Forest (trie) class implementation
 #'
 #' @section Usage:
-#' \preformatted{tree <- RadixTree$new()
+#' \preformatted{tree <- RadixForest$new()
 #' 
 #' tree$print()
 #' 
@@ -32,15 +32,14 @@
 #'   \item{sequences}{- In \code{$search()}, the sequences to operate on.}
 #'   \item{max_distance}{- In \code{$search()}, how far to search for similar sequences, in units of absolute distance. See details.}
 #'   \item{max_fraction}{- In \code{$search()}, how far to search for similar sequences, relative to the sequence length. See details.}
-#'   \item{mode}{- In \code{$search()}, One of hamming (hm), levenshtein (lv) or anchored (an). Levenshtein will allows for insertions and deletions and calculates "edit distance". Hamming does not allow for insertions or deletions.}
-#'   \item{cost_matrix}{In \code{$search()}, a cost matrix for use with Levenshtein or Anchored searches. See details.}
-#'   \item{gap_cost}{In \code{$search()}, a cost matrix for use with Levenshtein or Anchored searches. See details.}
+#'   \item{mode}{- In \code{$search()}, either hamming (hm) or levenshtein (lv). Levenshtein will allows for insertions and deletions and calculates "edit distance". Hamming does not allow for insertions or deletions.}
 #'   \item{nthreads}{- How many threads to use in the search.}
-#'   \item{show_progress}{- Display progress.}lgm
+#'   \item{show_progress}{- Display progress.}
 #' }
 #'
 #' @section Details:
-#' \code{$new()} creates a new Tree object, which holds the pointer to the underlying C++ implentation. The RadixTree class accepts any strings of single-width characters. 
+#'
+#' \code{$new()} creates a new Radix Forest object, which holds the pointer to the underlying C++ implentation. The RadixForest class accepts any strings of single-width characters. 
 #'
 #' \code{$print()} and \code{$to_string()} prints to screen or outputs the tree to a string representation.
 #' 
@@ -50,20 +49,17 @@
 #' 
 #' \code{$insert()}, \code{$erase()} and \code{$find()} insert, erase and find sequences in the tree, respectively.
 #' 
-#' \code{$search()} This function searches for similar sequences within a threshold (given by max_distance or max_fraction) based on Hamming, Levenshtein or Anchored algorithms.
-#' An anchored search is a form of semi-global alignment, where the query sequence is "anchored" (global) to the beginning of both the query and target sequences, 
-#' but is semi-global in that the end of the either the query sequence or target sequence (but not both) can be unaligned. This contrasts with the Levenshtein distance which is global at 
-#' both the starts and ends of the sequences. 
+#' \code{$search()} This function searches for similar sequences within a threshold (given by max_distance or max_fraction) based on Hamming or Levenshtein. Unlike the `RadixTree` class, 
+#' `RadixForest` does not support anchored searches or custom cost matrices. 
 #' 
 #' The output of this function is a data.frame of all matches with columns "query" (the sequences input to the search function), 
 #' "target" (the sequences inserted into the tree) and "distance" the absolute distance between query and target sequences. 
-#' For anchored searches, the output also includes "query_size" and "target_size" which are the partial lengths of the query and target sequences that are aligned. 
 #' 
 #' @seealso 
 #' https://en.wikipedia.org/wiki/Radix_tree
 #' 
 #' @examples
-#' tree <- RadixTree$new()
+#' tree <- RadixForest$new()
 #' tree$insert(c("ACGT", "AAAA"))
 #' tree$erase("AAAA")
 #' tree$search("ACG", max_distance = 1, mode = "levenshtein")
@@ -73,26 +69,26 @@
 #' tree$search("ACG", max_distance = 1, mode = "hamming")
 #'  # query    target   distance
 #'  # <0 rows> (or 0-length row.names)
-#' @name RadixTree
+#' @name RadixForest
 NULL
 
 
-RadixTree <- R6::R6Class("RadixTree", list(
-  xp = NULL,
+RadixForest <- R6::R6Class("RadixForest", list(
+  forest_pointer = NULL,
   initialize = function(sequences = NULL) {
-    self$xp <- RadixTree_create()
+    self$forest_pointer <- RadixForest_create()
     if(!is.null(sequences)) {
-      RadixTree_insert(self$xp, sequences)
+      RadixForest_insert(self$forest_pointer, sequences)
     }
   },
   print = function() {
-    cat(RadixTree_print(self$xp))
+    cat(RadixForest_print(self$forest_pointer))
   },
   to_string = function() {
-    RadixTree_print(self$xp)
+    RadixForest_print(self$forest_pointer)
   },
   graph = function(depth = -1, root_label = "root", plot = TRUE) {
-    result <- RadixTree_graph(self$xp, depth)
+    result <- RadixForest_graph(self$forest_pointer, depth)
     if(is.null(result)) {
       result <- data.frame(parent = character(0), child = character(0), stringsAsFactors=F)
     } else if(plot) {
@@ -105,31 +101,33 @@ RadixTree <- R6::R6Class("RadixTree", list(
     invisible(result)
   },
   to_vector = function() {
-    RadixTree_to_vector(self$xp)
+    RadixForest_to_vector(self$forest_pointer)
   },
   size = function() {
-    RadixTree_size(self$xp)
+    RadixForest_size(self$forest_pointer)
   },
   insert = function(sequences) {
-    invisible(RadixTree_insert(self$xp, sequences))
+    result <- RadixForest_insert(self$forest_pointer, sequences)
+    invisible(result)
   },
   erase = function(sequences) {
-    invisible(RadixTree_erase(self$xp, sequences))
+    result <- RadixForest_erase(self$forest_pointer, sequences)
+    invisible(result)
   },
   find = function(sequences) {
-    RadixTree_find(self$xp, sequences)
+    RadixForest_find(self$forest_pointer, sequences)
   },
   prefix_search = function(sequences) {
-    result <- RadixTree_prefix_search(self$xp, sequences)
+    result <- RadixForest_prefix_search(self$forest_pointer, sequences)
     if(is.null(result)) {
       data.frame(query = character(0), target = character(0), stringsAsFactors=F)
     } else {
       result
     }
   },
-  search = function(sequences, max_distance = NULL, max_fraction = NULL, mode = "levenshtein", cost_matrix = NULL, gap_cost = NULL, nthreads = 1, show_progress = FALSE) {
-    check_alignment_params(mode, cost_matrix, gap_cost)
-    cost_matrix <- append_gap_cost(cost_matrix, gap_cost)
+  search = function(sequences, max_distance = NULL, max_fraction = NULL, mode = "levenshtein", nthreads = 1, show_progress = FALSE) {
+    check_alignment_params(mode, cost_matrix=NULL, gap_cost=NULL, charset = "")
+    stopifnot(mode %in% c("hamming", "levenshtein","hm", "lv"))
     mode <- normalize_mode_parameter(mode)
     
     if(!is.null(max_distance)) {
@@ -141,24 +139,17 @@ RadixTree <- R6::R6Class("RadixTree", list(
     } else {
       stop("Either max_distance or max_fraction must be non-null")
     }
-
+    if(any(max_distance < 0)) {
+      stop("max_distance/max_fraction must be non-negative")
+    }
     if(mode == "hamming") {
-      RadixTree_hamming_search(self$xp, sequences, max_distance, cost_matrix, nthreads, show_progress)
+      RadixForest_hamming_search(self$forest_pointer, sequences, max_distance, nthreads, show_progress)
     } else if(mode == "levenshtein") {
-      RadixTree_levenshtein_search(self$xp, sequences, max_distance, cost_matrix, nthreads, show_progress)
-    } else if(mode == "anchored") { # Append query_start and target_start columns from dist_pairwise anchored search
-      result <- RadixTree_anchored_search(self$xp, sequences, max_distance, cost_matrix, nthreads, show_progress)
-      result2 <- dist_pairwise(result$query, result$target, mode = "anchored", cost_matrix = cost_matrix, nthreads = nthreads, show_progress = FALSE)
-      if(any(result$distance != result2)) {
-        stop("Internal error: anchored search results do not match pairwise results")
-      }
-      result$query_size <- attr(result2, "query_size")
-      result$target_size <- attr(result2, "target_size")
-      result
+      RadixForest_levenshtein_search(self$forest_pointer, sequences, max_distance, nthreads, show_progress)
     }
   },
   validate = function() {
-    RadixTree_validate(self$xp)
+    RadixForest_validate(self$forest_pointer)
   }
 ))
 

@@ -13,7 +13,8 @@
 #' dist_matrix(c("ACGT", "AAAA"), c("ACG", "ACGT"), mode = "levenshtein")
 #' @name dist_matrix
 dist_matrix <- function(query, target, mode, cost_matrix = NULL, gap_cost = NULL, nthreads = 1, show_progress = FALSE) {
-    check_alignment_params(mode, cost_matrix, gap_cost)
+    charset <- unique(c(get_charset(query), get_charset(target)))
+    check_alignment_params(mode, cost_matrix, gap_cost, charset)
     cost_matrix <- append_gap_cost(cost_matrix, gap_cost)
     mode <- normalize_mode_parameter(mode)
     c_dist_matrix(query, target, mode, cost_matrix, nthreads, show_progress)
@@ -37,7 +38,8 @@ dist_matrix <- function(query, target, mode, cost_matrix = NULL, gap_cost = NULL
 #' dist_pairwise(c("ACGT", "AAAA"), c("ACG", "ACGT"), mode = "levenshtein")
 #' @name dist_pairwise
 dist_pairwise <- function(query, target, mode, cost_matrix = NULL, gap_cost = NULL, nthreads = 1, show_progress = FALSE) {
-    check_alignment_params(mode, cost_matrix, gap_cost)
+    charset <- unique(c(get_charset(query), get_charset(target)))
+    check_alignment_params(mode, cost_matrix, gap_cost, charset)
     cost_matrix <- append_gap_cost(cost_matrix, gap_cost)
     mode <- normalize_mode_parameter(mode)
     c_dist_pairwise(query, target, mode, cost_matrix, nthreads, show_progress)

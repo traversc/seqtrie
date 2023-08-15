@@ -25,7 +25,11 @@ private:
     value_type      _stack[stack_size::value];
     pointer_type    _data;
     size_type       _size;
+#if __cplusplus >= 201402L
     constexpr pointer_type stack_address() {
+#else
+    inline pointer_type stack_address() {
+#endif
       return _stack;
     }
     inline pointer_type allocate_check_and_copy(value_type const * const data, const size_type size) {

@@ -142,3 +142,12 @@ tree$prefix_search("car")
 # 3   car       cart
 # 4   car      cargo
 ```
+
+### Why not just use Bowtie2, BWA or other NGS/fast alignment software?
+
+There is no apples-to-apples comparison. 
+
+With NGS alignment software, you are looking for alignments of reads (queries) _within_ a genome reference (target). 
+Here, we're looking for alignments from the query to the _full_ target. 
+
+Use the right tool for the right task. That said, the run-time of trie-based methods seem very comparable if you forced Bowtie2 (or BWA) to run deterministically and return all alignments. 

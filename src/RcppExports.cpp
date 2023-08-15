@@ -11,33 +11,135 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
-// c_dist_matrix
-IntegerMatrix c_dist_matrix(CharacterVector query, CharacterVector target, const std::string mode, Rcpp::Nullable<IntegerMatrix> cost_matrix, const int nthreads, const bool show_progress);
-RcppExport SEXP _seqtrie_c_dist_matrix(SEXP querySEXP, SEXP targetSEXP, SEXP modeSEXP, SEXP cost_matrixSEXP, SEXP nthreadsSEXP, SEXP show_progressSEXP) {
+// RadixForest_size
+double RadixForest_size(RadixForestRXPtr xp);
+RcppExport SEXP _seqtrie_RadixForest_size(SEXP xpSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
-    Rcpp::traits::input_parameter< CharacterVector >::type query(querySEXP);
-    Rcpp::traits::input_parameter< CharacterVector >::type target(targetSEXP);
-    Rcpp::traits::input_parameter< const std::string >::type mode(modeSEXP);
-    Rcpp::traits::input_parameter< Rcpp::Nullable<IntegerMatrix> >::type cost_matrix(cost_matrixSEXP);
-    Rcpp::traits::input_parameter< const int >::type nthreads(nthreadsSEXP);
-    Rcpp::traits::input_parameter< const bool >::type show_progress(show_progressSEXP);
-    rcpp_result_gen = Rcpp::wrap(c_dist_matrix(query, target, mode, cost_matrix, nthreads, show_progress));
+    Rcpp::traits::input_parameter< RadixForestRXPtr >::type xp(xpSEXP);
+    rcpp_result_gen = Rcpp::wrap(RadixForest_size(xp));
     return rcpp_result_gen;
 END_RCPP
 }
-// c_dist_pairwise
-IntegerVector c_dist_pairwise(CharacterVector query, CharacterVector target, const std::string mode, Rcpp::Nullable<IntegerMatrix> cost_matrix, const int nthreads, const bool show_progress);
-RcppExport SEXP _seqtrie_c_dist_pairwise(SEXP querySEXP, SEXP targetSEXP, SEXP modeSEXP, SEXP cost_matrixSEXP, SEXP nthreadsSEXP, SEXP show_progressSEXP) {
+// RadixForest_insert
+LogicalVector RadixForest_insert(RadixForestRXPtr xp, CharacterVector sequences);
+RcppExport SEXP _seqtrie_RadixForest_insert(SEXP xpSEXP, SEXP sequencesSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
-    Rcpp::traits::input_parameter< CharacterVector >::type query(querySEXP);
-    Rcpp::traits::input_parameter< CharacterVector >::type target(targetSEXP);
-    Rcpp::traits::input_parameter< const std::string >::type mode(modeSEXP);
-    Rcpp::traits::input_parameter< Rcpp::Nullable<IntegerMatrix> >::type cost_matrix(cost_matrixSEXP);
+    Rcpp::traits::input_parameter< RadixForestRXPtr >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< CharacterVector >::type sequences(sequencesSEXP);
+    rcpp_result_gen = Rcpp::wrap(RadixForest_insert(xp, sequences));
+    return rcpp_result_gen;
+END_RCPP
+}
+// RadixForest_erase
+LogicalVector RadixForest_erase(RadixForestRXPtr xp, CharacterVector sequences);
+RcppExport SEXP _seqtrie_RadixForest_erase(SEXP xpSEXP, SEXP sequencesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< RadixForestRXPtr >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< CharacterVector >::type sequences(sequencesSEXP);
+    rcpp_result_gen = Rcpp::wrap(RadixForest_erase(xp, sequences));
+    return rcpp_result_gen;
+END_RCPP
+}
+// RadixForest_find
+LogicalVector RadixForest_find(RadixForestRXPtr xp, CharacterVector sequences);
+RcppExport SEXP _seqtrie_RadixForest_find(SEXP xpSEXP, SEXP sequencesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< RadixForestRXPtr >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< CharacterVector >::type sequences(sequencesSEXP);
+    rcpp_result_gen = Rcpp::wrap(RadixForest_find(xp, sequences));
+    return rcpp_result_gen;
+END_RCPP
+}
+// RadixForest_hamming_search
+DataFrame RadixForest_hamming_search(RadixForestRXPtr xp, CharacterVector sequences, IntegerVector max_distance, const int nthreads, const bool show_progress);
+RcppExport SEXP _seqtrie_RadixForest_hamming_search(SEXP xpSEXP, SEXP sequencesSEXP, SEXP max_distanceSEXP, SEXP nthreadsSEXP, SEXP show_progressSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< RadixForestRXPtr >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< CharacterVector >::type sequences(sequencesSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type max_distance(max_distanceSEXP);
     Rcpp::traits::input_parameter< const int >::type nthreads(nthreadsSEXP);
     Rcpp::traits::input_parameter< const bool >::type show_progress(show_progressSEXP);
-    rcpp_result_gen = Rcpp::wrap(c_dist_pairwise(query, target, mode, cost_matrix, nthreads, show_progress));
+    rcpp_result_gen = Rcpp::wrap(RadixForest_hamming_search(xp, sequences, max_distance, nthreads, show_progress));
+    return rcpp_result_gen;
+END_RCPP
+}
+// RadixForest_levenshtein_search
+DataFrame RadixForest_levenshtein_search(RadixForestRXPtr xp, CharacterVector sequences, IntegerVector max_distance, const int nthreads, const bool show_progress);
+RcppExport SEXP _seqtrie_RadixForest_levenshtein_search(SEXP xpSEXP, SEXP sequencesSEXP, SEXP max_distanceSEXP, SEXP nthreadsSEXP, SEXP show_progressSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< RadixForestRXPtr >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< CharacterVector >::type sequences(sequencesSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type max_distance(max_distanceSEXP);
+    Rcpp::traits::input_parameter< const int >::type nthreads(nthreadsSEXP);
+    Rcpp::traits::input_parameter< const bool >::type show_progress(show_progressSEXP);
+    rcpp_result_gen = Rcpp::wrap(RadixForest_levenshtein_search(xp, sequences, max_distance, nthreads, show_progress));
+    return rcpp_result_gen;
+END_RCPP
+}
+// RadixForest_prefix_search
+DataFrame RadixForest_prefix_search(RadixForestRXPtr xp, CharacterVector sequences);
+RcppExport SEXP _seqtrie_RadixForest_prefix_search(SEXP xpSEXP, SEXP sequencesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< RadixForestRXPtr >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< CharacterVector >::type sequences(sequencesSEXP);
+    rcpp_result_gen = Rcpp::wrap(RadixForest_prefix_search(xp, sequences));
+    return rcpp_result_gen;
+END_RCPP
+}
+// RadixForest_print
+std::vector<std::string> RadixForest_print(RadixForestRXPtr xp);
+RcppExport SEXP _seqtrie_RadixForest_print(SEXP xpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< RadixForestRXPtr >::type xp(xpSEXP);
+    rcpp_result_gen = Rcpp::wrap(RadixForest_print(xp));
+    return rcpp_result_gen;
+END_RCPP
+}
+// RadixForest_graph
+DataFrame RadixForest_graph(RadixForestRXPtr xp, const double max_depth);
+RcppExport SEXP _seqtrie_RadixForest_graph(SEXP xpSEXP, SEXP max_depthSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< RadixForestRXPtr >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< const double >::type max_depth(max_depthSEXP);
+    rcpp_result_gen = Rcpp::wrap(RadixForest_graph(xp, max_depth));
+    return rcpp_result_gen;
+END_RCPP
+}
+// RadixForest_to_vector
+CharacterVector RadixForest_to_vector(RadixForestRXPtr xp);
+RcppExport SEXP _seqtrie_RadixForest_to_vector(SEXP xpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< RadixForestRXPtr >::type xp(xpSEXP);
+    rcpp_result_gen = Rcpp::wrap(RadixForest_to_vector(xp));
+    return rcpp_result_gen;
+END_RCPP
+}
+// RadixForest_validate
+bool RadixForest_validate(RadixForestRXPtr xp);
+RcppExport SEXP _seqtrie_RadixForest_validate(SEXP xpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< RadixForestRXPtr >::type xp(xpSEXP);
+    rcpp_result_gen = Rcpp::wrap(RadixForest_validate(xp));
+    return rcpp_result_gen;
+END_RCPP
+}
+// RadixForest_create
+RadixForestRXPtr RadixForest_create();
+RcppExport SEXP _seqtrie_RadixForest_create() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    rcpp_result_gen = Rcpp::wrap(RadixForest_create());
     return rcpp_result_gen;
 END_RCPP
 }
@@ -190,10 +292,99 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// c_dist_matrix
+IntegerMatrix c_dist_matrix(CharacterVector query, CharacterVector target, const std::string mode, Rcpp::Nullable<IntegerMatrix> cost_matrix, const int nthreads, const bool show_progress);
+RcppExport SEXP _seqtrie_c_dist_matrix(SEXP querySEXP, SEXP targetSEXP, SEXP modeSEXP, SEXP cost_matrixSEXP, SEXP nthreadsSEXP, SEXP show_progressSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< CharacterVector >::type query(querySEXP);
+    Rcpp::traits::input_parameter< CharacterVector >::type target(targetSEXP);
+    Rcpp::traits::input_parameter< const std::string >::type mode(modeSEXP);
+    Rcpp::traits::input_parameter< Rcpp::Nullable<IntegerMatrix> >::type cost_matrix(cost_matrixSEXP);
+    Rcpp::traits::input_parameter< const int >::type nthreads(nthreadsSEXP);
+    Rcpp::traits::input_parameter< const bool >::type show_progress(show_progressSEXP);
+    rcpp_result_gen = Rcpp::wrap(c_dist_matrix(query, target, mode, cost_matrix, nthreads, show_progress));
+    return rcpp_result_gen;
+END_RCPP
+}
+// c_dist_pairwise
+IntegerVector c_dist_pairwise(CharacterVector query, CharacterVector target, const std::string mode, Rcpp::Nullable<IntegerMatrix> cost_matrix, const int nthreads, const bool show_progress);
+RcppExport SEXP _seqtrie_c_dist_pairwise(SEXP querySEXP, SEXP targetSEXP, SEXP modeSEXP, SEXP cost_matrixSEXP, SEXP nthreadsSEXP, SEXP show_progressSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< CharacterVector >::type query(querySEXP);
+    Rcpp::traits::input_parameter< CharacterVector >::type target(targetSEXP);
+    Rcpp::traits::input_parameter< const std::string >::type mode(modeSEXP);
+    Rcpp::traits::input_parameter< Rcpp::Nullable<IntegerMatrix> >::type cost_matrix(cost_matrixSEXP);
+    Rcpp::traits::input_parameter< const int >::type nthreads(nthreadsSEXP);
+    Rcpp::traits::input_parameter< const bool >::type show_progress(show_progressSEXP);
+    rcpp_result_gen = Rcpp::wrap(c_dist_pairwise(query, target, mode, cost_matrix, nthreads, show_progress));
+    return rcpp_result_gen;
+END_RCPP
+}
+// CharCounter_create
+CharCounterXPtr CharCounter_create();
+RcppExport SEXP _seqtrie_CharCounter_create() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    rcpp_result_gen = Rcpp::wrap(CharCounter_create());
+    return rcpp_result_gen;
+END_RCPP
+}
+// CharCounter_add
+void CharCounter_add(CharCounterXPtr xp, CharacterVector sequences);
+RcppExport SEXP _seqtrie_CharCounter_add(SEXP xpSEXP, SEXP sequencesSEXP) {
+BEGIN_RCPP
+    Rcpp::traits::input_parameter< CharCounterXPtr >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< CharacterVector >::type sequences(sequencesSEXP);
+    CharCounter_add(xp, sequences);
+    return R_NilValue;
+END_RCPP
+}
+// CharCounter_subtract
+void CharCounter_subtract(CharCounterXPtr xp, CharacterVector sequences);
+RcppExport SEXP _seqtrie_CharCounter_subtract(SEXP xpSEXP, SEXP sequencesSEXP) {
+BEGIN_RCPP
+    Rcpp::traits::input_parameter< CharCounterXPtr >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< CharacterVector >::type sequences(sequencesSEXP);
+    CharCounter_subtract(xp, sequences);
+    return R_NilValue;
+END_RCPP
+}
+// CharCounter_keys
+CharacterVector CharCounter_keys(CharCounterXPtr xp);
+RcppExport SEXP _seqtrie_CharCounter_keys(SEXP xpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< CharCounterXPtr >::type xp(xpSEXP);
+    rcpp_result_gen = Rcpp::wrap(CharCounter_keys(xp));
+    return rcpp_result_gen;
+END_RCPP
+}
+// get_charset
+CharacterVector get_charset(CharacterVector sequences);
+RcppExport SEXP _seqtrie_get_charset(SEXP sequencesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< CharacterVector >::type sequences(sequencesSEXP);
+    rcpp_result_gen = Rcpp::wrap(get_charset(sequences));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_seqtrie_c_dist_matrix", (DL_FUNC) &_seqtrie_c_dist_matrix, 6},
-    {"_seqtrie_c_dist_pairwise", (DL_FUNC) &_seqtrie_c_dist_pairwise, 6},
+    {"_seqtrie_RadixForest_size", (DL_FUNC) &_seqtrie_RadixForest_size, 1},
+    {"_seqtrie_RadixForest_insert", (DL_FUNC) &_seqtrie_RadixForest_insert, 2},
+    {"_seqtrie_RadixForest_erase", (DL_FUNC) &_seqtrie_RadixForest_erase, 2},
+    {"_seqtrie_RadixForest_find", (DL_FUNC) &_seqtrie_RadixForest_find, 2},
+    {"_seqtrie_RadixForest_hamming_search", (DL_FUNC) &_seqtrie_RadixForest_hamming_search, 5},
+    {"_seqtrie_RadixForest_levenshtein_search", (DL_FUNC) &_seqtrie_RadixForest_levenshtein_search, 5},
+    {"_seqtrie_RadixForest_prefix_search", (DL_FUNC) &_seqtrie_RadixForest_prefix_search, 2},
+    {"_seqtrie_RadixForest_print", (DL_FUNC) &_seqtrie_RadixForest_print, 1},
+    {"_seqtrie_RadixForest_graph", (DL_FUNC) &_seqtrie_RadixForest_graph, 2},
+    {"_seqtrie_RadixForest_to_vector", (DL_FUNC) &_seqtrie_RadixForest_to_vector, 1},
+    {"_seqtrie_RadixForest_validate", (DL_FUNC) &_seqtrie_RadixForest_validate, 1},
+    {"_seqtrie_RadixForest_create", (DL_FUNC) &_seqtrie_RadixForest_create, 0},
     {"_seqtrie_RadixTree_size", (DL_FUNC) &_seqtrie_RadixTree_size, 1},
     {"_seqtrie_RadixTree_insert", (DL_FUNC) &_seqtrie_RadixTree_insert, 2},
     {"_seqtrie_RadixTree_erase", (DL_FUNC) &_seqtrie_RadixTree_erase, 2},
@@ -207,6 +398,13 @@ static const R_CallMethodDef CallEntries[] = {
     {"_seqtrie_RadixTree_to_vector", (DL_FUNC) &_seqtrie_RadixTree_to_vector, 1},
     {"_seqtrie_RadixTree_validate", (DL_FUNC) &_seqtrie_RadixTree_validate, 1},
     {"_seqtrie_RadixTree_create", (DL_FUNC) &_seqtrie_RadixTree_create, 0},
+    {"_seqtrie_c_dist_matrix", (DL_FUNC) &_seqtrie_c_dist_matrix, 6},
+    {"_seqtrie_c_dist_pairwise", (DL_FUNC) &_seqtrie_c_dist_pairwise, 6},
+    {"_seqtrie_CharCounter_create", (DL_FUNC) &_seqtrie_CharCounter_create, 0},
+    {"_seqtrie_CharCounter_add", (DL_FUNC) &_seqtrie_CharCounter_add, 2},
+    {"_seqtrie_CharCounter_subtract", (DL_FUNC) &_seqtrie_CharCounter_subtract, 2},
+    {"_seqtrie_CharCounter_keys", (DL_FUNC) &_seqtrie_CharCounter_keys, 1},
+    {"_seqtrie_get_charset", (DL_FUNC) &_seqtrie_get_charset, 1},
     {NULL, NULL, 0}
 };
 

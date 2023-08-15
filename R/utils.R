@@ -1,10 +1,11 @@
 # A cost matrix must
-# 1. Be a square matrix _OR_ NULL
-# 2. If gap_cost is NULL, cost_matrix must have a "gap" entry instead
-# 3. Have all values be non-negative integers
+# 1) Be a square matrix _OR_ NULL
+# 2) If gap_cost is NULL, cost_matrix must have a "gap" entry instead
+# 3) Have all values be non-negative integers
+# 4) cost_matrix (if not null) should have an entry for every element in charset (a CharacterVector of single char strings)
 # Not exported, internal function only
 # This function does not return anything but throws an error if the cost matrix is invalid
-check_cost_matrix <- function(cost_matrix, gap_cost) {
+check_cost_matrix <- function(cost_matrix, gap_cost, charset) {
     if(is.null(cost_matrix)) return()
     if(!is.matrix(cost_matrix)) {
         stop("Cost matrix must be a matrix or NULL")
@@ -13,6 +14,9 @@ check_cost_matrix <- function(cost_matrix, gap_cost) {
         if(! "gap" %in% rownames(cost_matrix)) {
             stop("Cost matrix must have a 'gap' entry if gap_cost is NULL")
         }
+    }
+    if(!all(charset %in% rownames(cost_matrix))) {
+        stop("Cost matrix must have an entry for every character in query or target sequences")
     }
     if(nrow(cost_matrix) != ncol(cost_matrix)) {
         stop("Cost matrix must be square")
@@ -25,9 +29,6 @@ check_cost_matrix <- function(cost_matrix, gap_cost) {
     if(!all(rnames == cnames)) {
         stop("Cost matrix must have row and column names that are the same")
     }
-    # if(!any(rnames == "gap")) {
-    #     stop("Cost matrix must a 'gap' entry in the row and column names")
-    # }
     if(!all(cost_matrix == as.integer(cost_matrix))) {
         stop("Cost matrix must have all integer values")
     }
@@ -43,12 +44,12 @@ check_cost_matrix <- function(cost_matrix, gap_cost) {
 # 3) If mode == "hamming" throw a warning that cost_matrix and gap_cost is ignored IF not NULL
 # This check applies to RadixTree$search, dist_pairwise, dist_matrix
 # Internal function only, not exported
-check_alignment_params <- function(mode, cost_matrix, gap_cost) {
+check_alignment_params <- function(mode, cost_matrix, gap_cost, charset) {
     mode <- tolower(mode)
     if(!mode %in% c("hamming", "levenshtein", "anchored", "hm", "lv", "an")) {
         stop("mode must be one of hamming (hm), levenshtein (lv) or anchored (an)")
     }
-    check_cost_matrix(cost_matrix, gap_cost)
+    check_cost_matrix(cost_matrix, gap_cost, charset)
     if( (mode %in% c("hamming", "hm")) && (!is.null(cost_matrix) || !is.null(gap_cost)) ) {
         warning("cost_matrix and gap_cost are ignored when mode is 'hamming'")
     }

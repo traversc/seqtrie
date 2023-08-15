@@ -118,10 +118,12 @@ struct AnchoredWorkerWithCostMap : public Worker {
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-// RadixTreeContext class definitions 
+// RadixTree R functions
 
 // [[Rcpp::export(rng = false)]]
-double RadixTree_size(RadixTreeRXPtr xp) { return static_cast<double>(xp->size()); }
+double RadixTree_size(RadixTreeRXPtr xp) {
+  return static_cast<double>(xp->size());
+}
 
 // [[Rcpp::export(rng = false)]]
 LogicalVector RadixTree_insert(RadixTreeRXPtr xp, CharacterVector sequences) {
@@ -184,15 +186,8 @@ DataFrame RadixTree_hamming_search(RadixTreeRXPtr xp, CharacterVector sequences,
   std::vector<SeqTrie::search_context> output(nseqs);
   trqwe::simple_progress progress_bar(nseqs, show_progress);
   
-  if(nthreads == 1) {
-    for(size_t i=0; i<nseqs; ++i) {
-      output[i] = root.hamming_search(query[i], max_distance_ptr[i]);
-      progress_bar.increment();
-    }
-  } else {
-    HammingWorker w(root, query, max_distance_ptr, output, progress_bar);
-    parallelFor(0, nseqs, w, 1, nthreads);
-  }
+  HammingWorker w(root, query, max_distance_ptr, output, progress_bar);
+  parallelFor(0, nseqs, w, 1, nthreads);
   
   size_t nresults = 0;
   for(size_t i=0; i<nseqs; ++i) { nresults += output[i].match.size(); }
@@ -376,7 +371,6 @@ DataFrame RadixTree_graph(RadixTreeRXPtr xp, const double max_depth) {
 CharacterVector RadixTree_to_vector(RadixTreeRXPtr xp) {
   auto & root = *xp;
   auto seqs = root.all();
-  if(seqs.size() == 0) return R_NilValue;
   CharacterVector sequence(seqs.size());
   for(size_t i=0; i<seqs.size(); ++i) {
     auto s = seqs[i]->template sequence<trqwe::small_array<char>>();
