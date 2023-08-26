@@ -4,79 +4,286 @@
 \alias{RadixForest}
 \title{RadixForest}
 \description{
-Radix Forest (trie) class implementation
+Radix Forest class implementation
 }
-\section{Usage}{
-
-\preformatted{tree <- RadixForest$new()
-
-tree$print()
-
-tree$graph(depth = -1, root_label = "root", plot = TRUE)
-
-tree$to_string()
-
-tree$to_vector()
-
-tree$size()
-
-tree$insert(sequences)
-
-tree$erase(sequences)
-
-tree$find(sequences)
-
-tree$search(sequences, max_distance = NULL, max_fraction = NULL, mode = "levenshtein", cost_matrix = NULL, nthreads = 1, show_progress = FALSE)
+\details{
+The RadixForest class is a specialization of the RadixTree implementation. Instead of putting sequences into a single tree, the RadixForest class puts sequences into a tree based on sequence length. 
+I.e. *map<sequence_length, RadixTree>. This allows for faster searching of similar sequences based on Hamming or Levenshtein distance metrics.
+Unlike the RadixTree class, the RadixForest class does NOT support Anchored searches or a custom cost matrix.
+See *RadixTree* for additional details.
 }
-}
-
-\section{Arguments}{
-
-\describe{
-  \item{depth}{- In \code{$graph()}, the tree depth to plot. Default -1 means plot the entire tree.}
-  \item{root_label}{- In \code{$graph()}, the label of the root node.}
-  \item{plot}{- In \code{$graph()}, whether to create a plot or return the data used to generate the plot.}
-  \item{sequences}{- In \code{$search()}, the sequences to operate on.}
-  \item{max_distance}{- In \code{$search()}, how far to search for similar sequences, in units of absolute distance. See details.}
-  \item{max_fraction}{- In \code{$search()}, how far to search for similar sequences, relative to the sequence length. See details.}
-  \item{mode}{- In \code{$search()}, either hamming (hm) or levenshtein (lv). Levenshtein will allows for insertions and deletions and calculates "edit distance". Hamming does not allow for insertions or deletions.}
-  \item{nthreads}{- How many threads to use in the search.}
-  \item{show_progress}{- Display progress.}
-}
-}
-
-\section{Details}{
-
-
-\code{$new()} creates a new Radix Forest object, which holds the pointer to the underlying C++ implentation. The RadixForest class accepts any strings of single-width characters. 
-
-\code{$print()} and \code{$to_string()} prints to screen or outputs the tree to a string representation.
-
-\code{$to_vector()} outputs all sequences held by the tree. 
-
-\code{$size()} outputs the size of the tree (i.e. how many sequences are contained). 
-
-\code{$insert()}, \code{$erase()} and \code{$find()} insert, erase and find sequences in the tree, respectively.
-
-\code{$search()} This function searches for similar sequences within a threshold (given by max_distance or max_fraction) based on Hamming or Levenshtein. Unlike the `RadixTree` class, 
-`RadixForest` does not support anchored searches or custom cost matrices. 
-
-The output of this function is a data.frame of all matches with columns "query" (the sequences input to the search function), 
-"target" (the sequences inserted into the tree) and "distance" the absolute distance between query and target sequences.
-}
-
 \examples{
-tree <- RadixForest$new()
-tree$insert(c("ACGT", "AAAA"))
-tree$erase("AAAA")
-tree$search("ACG", max_distance = 1, mode = "levenshtein")
+forest <- RadixForest$new()
+forest$insert(c("ACGT", "AAAA"))
+forest$erase("AAAA")
+forest$search("ACG", max_distance = 1, mode = "levenshtein")
  #   query target distance
  # 1   ACG   ACGT        1
  
-tree$search("ACG", max_distance = 1, mode = "hamming")
+forest$search("ACG", max_distance = 1, mode = "hamming")
  # query    target   distance
  # <0 rows> (or 0-length row.names)
 }
-\seealso{
-https://en.wikipedia.org/wiki/Radix_tree
+\section{Public fields}{
+\if{html}{\out{<div class="r6-fields">}}
+\describe{
+\item{\code{forest_pointer}}{Pointer C++ implementation (holds trie map)}
+
+\item{\code{char_counter_pointer}}{Pointer to C++ object (holds character counts for the purpose of validating input)}
+}
+\if{html}{\out{</div>}}
+}
+\section{Methods}{
+\subsection{Public methods}{
+\itemize{
+\item \href{#method-RadixForest-new}{\code{RadixForest$new()}}
+\item \href{#method-RadixForest-print}{\code{RadixForest$print()}}
+\item \href{#method-RadixForest-to_string}{\code{RadixForest$to_string()}}
+\item \href{#method-RadixForest-graph}{\code{RadixForest$graph()}}
+\item \href{#method-RadixForest-to_vector}{\code{RadixForest$to_vector()}}
+\item \href{#method-RadixForest-size}{\code{RadixForest$size()}}
+\item \href{#method-RadixForest-insert}{\code{RadixForest$insert()}}
+\item \href{#method-RadixForest-erase}{\code{RadixForest$erase()}}
+\item \href{#method-RadixForest-find}{\code{RadixForest$find()}}
+\item \href{#method-RadixForest-prefix_search}{\code{RadixForest$prefix_search()}}
+\item \href{#method-RadixForest-search}{\code{RadixForest$search()}}
+\item \href{#method-RadixForest-validate}{\code{RadixForest$validate()}}
+\item \href{#method-RadixForest-clone}{\code{RadixForest$clone()}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-RadixForest-new"></a>}}
+\if{latex}{\out{\hypertarget{method-RadixForest-new}{}}}
+\subsection{Method \code{new()}}{
+Create a new RadixForest object
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{RadixForest$new(sequences = NULL)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{sequences}}{A character vector of sequences to insert into the forest}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-RadixForest-print"></a>}}
+\if{latex}{\out{\hypertarget{method-RadixForest-print}{}}}
+\subsection{Method \code{print()}}{
+Print the forest to screen
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{RadixForest$print()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-RadixForest-to_string"></a>}}
+\if{latex}{\out{\hypertarget{method-RadixForest-to_string}{}}}
+\subsection{Method \code{to_string()}}{
+Print the forest to a string
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{RadixForest$to_string()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-RadixForest-graph"></a>}}
+\if{latex}{\out{\hypertarget{method-RadixForest-graph}{}}}
+\subsection{Method \code{graph()}}{
+Plot of the forest using igraph
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{RadixForest$graph(depth = -1, root_label = "root", plot = TRUE)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{depth}}{The tree depth to plot for each tree in the forest.}
+
+\item{\code{root_label}}{The label of the root node(s) in the plot.}
+
+\item{\code{plot}}{Whether to create a plot or return the data used to generate the plot.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+a data frame of parent-child relationships used to generate the igraph plot
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-RadixForest-to_vector"></a>}}
+\if{latex}{\out{\hypertarget{method-RadixForest-to_vector}{}}}
+\subsection{Method \code{to_vector()}}{
+Output all sequences held by the forest as a character vector
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{RadixForest$to_vector()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+A character vector of all sequences contained in the forest.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-RadixForest-size"></a>}}
+\if{latex}{\out{\hypertarget{method-RadixForest-size}{}}}
+\subsection{Method \code{size()}}{
+Output the size of the forest (i.e. how many sequences are contained)
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{RadixForest$size()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+The size of the forest
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-RadixForest-insert"></a>}}
+\if{latex}{\out{\hypertarget{method-RadixForest-insert}{}}}
+\subsection{Method \code{insert()}}{
+Insert new sequences into the forest
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{RadixForest$insert(sequences)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{sequences}}{A character vector of sequences to insert into the forest}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A logical vector indicating whether the sequence was inserted (TRUE) or already existing in the forest (FALSE)
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-RadixForest-erase"></a>}}
+\if{latex}{\out{\hypertarget{method-RadixForest-erase}{}}}
+\subsection{Method \code{erase()}}{
+Erase sequences from the forest
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{RadixForest$erase(sequences)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{sequences}}{A character vector of sequences to erase from the forest}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A logical vector indicating whether the sequence was erased (TRUE) or not found in the forest (FALSE)
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-RadixForest-find"></a>}}
+\if{latex}{\out{\hypertarget{method-RadixForest-find}{}}}
+\subsection{Method \code{find()}}{
+Find sequences in the forest
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{RadixForest$find(query)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{query}}{A character vector of sequences to find in the forest}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A logical vector indicating whether the sequence was found (TRUE) or not found in the forest (FALSE)
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-RadixForest-prefix_search"></a>}}
+\if{latex}{\out{\hypertarget{method-RadixForest-prefix_search}{}}}
+\subsection{Method \code{prefix_search()}}{
+Search for sequences in the forest that start with a specified prefix.
+E.g.: a query of "CAR" will find "CART", "CARBON", "CARROT", etc. but not "CATS".
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{RadixForest$prefix_search(query)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{query}}{A character vector of sequences to search for in the forest}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A data frame of all matches with columns "query" and "target".
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-RadixForest-search"></a>}}
+\if{latex}{\out{\hypertarget{method-RadixForest-search}{}}}
+\subsection{Method \code{search()}}{
+Search for sequences in the forest that are with a specified distance metric to a specified query.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{RadixForest$search(
+  query,
+  max_distance = NULL,
+  max_fraction = NULL,
+  mode = "levenshtein",
+  nthreads = 1,
+  show_progress = FALSE
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{query}}{`r rdoc("query")`}
+
+\item{\code{max_distance}}{how far to search in units of absolute distance. Can be a single value or a vector.}
+
+\item{\code{max_fraction}}{how far to search in units of relative distance to each query sequence length. Can be a single value or a vector.}
+
+\item{\code{mode}}{`r rdoc("mode")`}
+
+\item{\code{nthreads}}{`r rdoc("nthreads")`}
+
+\item{\code{show_progress}}{`r rdoc("show_progress")`}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+The output is a data.frame of all matches with columns "query" and "target".
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-RadixForest-validate"></a>}}
+\if{latex}{\out{\hypertarget{method-RadixForest-validate}{}}}
+\subsection{Method \code{validate()}}{
+Validate the forest
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{RadixForest$validate()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+A logical indicating whether the forest is valid (TRUE) or not (FALSE). This is mostly an internal function for debugging purposes and should always return TRUE.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-RadixForest-clone"></a>}}
+\if{latex}{\out{\hypertarget{method-RadixForest-clone}{}}}
+\subsection{Method \code{clone()}}{
+The objects of this class are cloneable with this method.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{RadixForest$clone(deep = FALSE)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{deep}}{Whether to make a deep clone.}
+}
+\if{html}{\out{</div>}}
+}
+}
 }

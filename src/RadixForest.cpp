@@ -5,62 +5,12 @@
 #include <memory>
 #include <tuple>
 #include "seqtrie_types.h"
+#include "seqtrie_utils.h"
 
 #include "simple_progress/simple_progress.h"
 
 using namespace Rcpp;
 using namespace RcppParallel;
-
-struct HammingWorkerForest : public Worker {
-  const SeqTrie::RadixForestR & forest;
-  const std::vector<cspan> & query;
-  int const * const max_distance_ptr;
-  std::vector<SeqTrie::search_context> & output;
-  trqwe::simple_progress & progress_bar;
-  HammingWorkerForest(const SeqTrie::RadixForestR & forest,
-                const std::vector<cspan> & query,
-                int const * const max_distance_ptr,
-                std::vector<SeqTrie::search_context> & output,
-                trqwe::simple_progress & progress_bar) : 
-    forest(forest), query(query), max_distance_ptr(max_distance_ptr), output(output), progress_bar(progress_bar) {}
-  void operator()(std::size_t begin, std::size_t end) {
-    for(size_t i=begin; i<end; ++i) {
-      auto it = forest.find(query[i].size());
-      if(it != forest.end()) {
-        output[i] = it->second.hamming_search(query[i], max_distance_ptr[i]);
-      }
-      progress_bar.increment();
-    }
-  }
-};
-
-struct LevenshteinWorkerForest : public Worker {
-  const SeqTrie::RadixForestR & forest;
-  const std::vector<cspan> & query;
-  int const * const max_distance_ptr;
-  std::vector<std::vector<SeqTrie::search_context>> & output;
-  trqwe::simple_progress & progress_bar;
-  LevenshteinWorkerForest(const SeqTrie::RadixForestR & forest,
-                const std::vector<cspan> & query,
-                int const * const max_distance_ptr,
-                std::vector<std::vector<SeqTrie::search_context>> & output,
-                trqwe::simple_progress & progress_bar) : 
-    forest(forest), query(query), max_distance_ptr(max_distance_ptr), output(output), progress_bar(progress_bar) {}
-  void operator()(std::size_t begin, std::size_t end) {
-    for(size_t i=begin; i<end; ++i) {
-      size_t len = query[i].size();
-      size_t min_search_len = len > static_cast<size_t>(max_distance_ptr[i]) ? len - static_cast<size_t>(max_distance_ptr[i]) : 0;
-      size_t max_search_len = len + static_cast<size_t>(max_distance_ptr[i]);
-      for(size_t j=min_search_len; j<=max_search_len; ++j) {
-        auto it = forest.find(j);
-        if(it != forest.end()) {
-          output[i].push_back(it->second.levenshtein_search(query[i], max_distance_ptr[i]));
-        }
-      }
-      progress_bar.increment();
-    }
-  }
-};
 
 ////////////////////////////////////////////////////////////////////////////////
 // RadixForest
@@ -141,93 +91,6 @@ LogicalVector RadixForest_find(RadixForestRXPtr xp, CharacterVector sequences) {
     }
   }
   return result;
-}
-
-// [[Rcpp::export(rng = false)]]
-DataFrame RadixForest_hamming_search(RadixForestRXPtr xp, CharacterVector sequences, IntegerVector max_distance, const int nthreads, const bool show_progress) {
-  auto & forest = *xp;
-  size_t nseqs = Rf_xlength(sequences);
-  SEXP * sequence_ptr = STRING_PTR(sequences);
-  int * max_distance_ptr = INTEGER(max_distance);
-  
-  if(nseqs == 0) {
-    return DataFrame::create(_["query"] = CharacterVector(), _["target"] = CharacterVector(), _["distance"] = IntegerVector(), _["stringsAsFactors"] = false);
-  }
-  
-  std::vector<cspan> query(nseqs);
-  for(size_t i=0; i<nseqs; ++i) { query[i] = charsxp_to_cspan(sequence_ptr[i]); }
-  std::vector<SeqTrie::search_context> output(nseqs);
-  trqwe::simple_progress progress_bar(nseqs, show_progress);
-  
-  HammingWorkerForest w(forest, query, max_distance_ptr, output, progress_bar);
-  parallelFor(0, nseqs, w, 1, nthreads);
-
-  size_t nresults = 0;
-  for(size_t i=0; i<nseqs; ++i) { nresults += output[i].match.size(); }
-  CharacterVector query_results(nresults);
-  CharacterVector target_results(nresults);
-  IntegerVector distance_results(nresults);
-  int * distance_results_ptr = INTEGER(distance_results);
-  size_t q = 0;
-  for(size_t i=0; i<nseqs; ++i) {
-    auto & targets = output[i].match;
-    auto & distances = output[i].distance;
-    for(size_t j=0; j<targets.size(); ++j) {
-      SET_STRING_ELT(query_results, q, STRING_ELT(sequences, i));
-      auto s = targets[j]->template sequence<trqwe::small_array<char>>();
-      SET_STRING_ELT(target_results, q, to_charsxp(s));
-      distance_results_ptr[q] = distances[j];
-      q++;
-    }
-  }
-  return DataFrame::create(_["query"] = query_results, _["target"] = target_results, _["distance"] = distance_results, _["stringsAsFactors"] = false);
-}
-
-
-// [[Rcpp::export(rng = false)]]
-DataFrame RadixForest_levenshtein_search(RadixForestRXPtr xp, CharacterVector sequences, IntegerVector max_distance, const int nthreads, const bool show_progress) {
-  auto & forest = *xp;
-  size_t nseqs = Rf_xlength(sequences);
-  SEXP * sequence_ptr = STRING_PTR(sequences);
-  int * max_distance_ptr = INTEGER(max_distance);
-  
-  if(nseqs == 0) {
-    return DataFrame::create(_["query"] = CharacterVector(), _["target"] = CharacterVector(), _["distance"] = IntegerVector(), _["stringsAsFactors"] = false);
-  }
-  
-  std::vector<cspan> query(nseqs);
-  for(size_t i=0; i<nseqs; ++i) { query[i] = charsxp_to_cspan(sequence_ptr[i]); }
-  std::vector<std::vector<SeqTrie::search_context>> output(nseqs);
-  trqwe::simple_progress progress_bar(nseqs, show_progress);
-  
-  LevenshteinWorkerForest w(forest, query, max_distance_ptr, output, progress_bar);
-  parallelFor(0, nseqs, w, 1, nthreads);
-  
-  size_t nresults = 0;
-  for(size_t i=0; i<nseqs; ++i) {
-    for(size_t j=0; j<output[i].size(); ++j) {
-      nresults += output[i][j].match.size();
-    }
-  }
-  CharacterVector query_results(nresults);
-  CharacterVector target_results(nresults);
-  IntegerVector distance_results(nresults);
-  int * distance_results_ptr = INTEGER(distance_results);
-  size_t q = 0;
-  for(size_t i=0; i<nseqs; ++i) {
-    for(size_t j=0; j<output[i].size(); ++j) {
-      auto & targets = output[i][j].match;
-      auto & distances = output[i][j].distance;
-      for(size_t k=0; k<targets.size(); ++k) {
-        SET_STRING_ELT(query_results, q, STRING_ELT(sequences, i));
-        auto s = targets[k]->template sequence<trqwe::small_array<char>>();
-        SET_STRING_ELT(target_results, q, to_charsxp(s));
-        distance_results_ptr[q] = distances[k];
-        q++;
-      }
-    }
-  }
-  return DataFrame::create(_["query"] = query_results, _["target"] = target_results, _["distance"] = distance_results, _["stringsAsFactors"] = false);
 }
 
 // [[Rcpp::export(rng = false)]]
@@ -337,3 +200,52 @@ RadixForestRXPtr RadixForest_create() {
   return RadixForestRXPtr(new SeqTrie::RadixForestR, true);
 }
 
+// All input parameters should be checked in R, so any error thrown here is an internal error
+// [[Rcpp::export(rng = false)]]
+DataFrame RadixForest_search(RadixForestRXPtr xp,
+                           CharacterVector query,
+                           IntegerVector max_distance,
+                           const std::string mode = "global", // global or hamming
+                           const int nthreads = 1, const bool show_progress = false) {
+
+  auto & forest = *xp;
+  size_t nseqs = Rf_xlength(query);
+  int * max_distance_ptr = INTEGER(max_distance);
+  std::vector<cspan> query_span =  strsxp_to_cspan(query);
+  std::vector<SeqTrie::search_context> output(nseqs);
+  trqwe::simple_progress progress_bar(nseqs, show_progress);
+
+  if(nseqs == 0) {
+    return DataFrame::create(_["query"] = CharacterVector(), _["target"] = CharacterVector(), _["distance"] = IntegerVector(), _["stringsAsFactors"] = false);
+  }
+
+  if(mode == "hamming") {
+    do_parallel_for([&forest, &query_span, max_distance_ptr, &output, &progress_bar](size_t begin, size_t end) {
+      for(size_t i=begin; i<end; ++i) {
+        size_t len = query_span[i].size();
+        auto it = forest.find(len);
+        if(it != forest.end()) {
+          output[i] = it->second.hamming_search(query_span[i], max_distance_ptr[i]);
+        }
+        progress_bar.increment();
+      }
+    }, 0, nseqs, 1, nthreads);
+  } else if(mode == "global") {
+    do_parallel_for([&forest, &query_span, max_distance_ptr, &output, &progress_bar](size_t begin, size_t end) {
+      for(size_t i=begin; i<end; ++i) {
+        size_t len = query_span[i].size();
+        size_t min_search_len = len > static_cast<size_t>(max_distance_ptr[i]) ? len - static_cast<size_t>(max_distance_ptr[i]) : 0;
+        size_t max_search_len = len + static_cast<size_t>(max_distance_ptr[i]);
+        for(size_t j=min_search_len; j<=max_search_len; ++j) {
+          auto it = forest.find(j);
+          if(it != forest.end()) {
+            SeqTrie::search_context res = it->second.global_search(query_span[i], max_distance_ptr[i]);
+            output[i].append(res);
+          }
+        }
+        progress_bar.increment();
+      }
+    }, 0, nseqs, 1, nthreads);
+  }
+  return seqtrie_results_to_dataframe(query, output);
+}

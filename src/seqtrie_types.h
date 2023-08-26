@@ -2,7 +2,6 @@
 #define seqtrie_TYPES_H
 
 #include <Rcpp.h>
-#include <RcppParallel.h>
 
 #include <unordered_map>
 #include <map>
@@ -17,12 +16,18 @@
 #include "simple_progress/simple_progress.h"
 
 using namespace Rcpp;
-using namespace RcppParallel;
 
 // constants and types
-using pairchar = std::pair<char, char>;
-using pairchar_map = std::unordered_map<pairchar, int>;
+using pairchar_type = std::pair<char, char>;
+using pairchar_map_type = std::unordered_map<pairchar_type, int>;
 using cspan = nonstd::span<const char>;
+constexpr char GAP_CHAR = '\0';                                     // '\0' any gap cost for non-affine
+constexpr char GAP_OPEN_CHAR = std::numeric_limits<char>::min(); // '\255' gap open cost for affine
+constexpr char GAP_EXTN_CHAR = '\0';                                // '\0' extension for affine
+
+// used in utils.cpp, a map for counting chars, to make sure input cost_matrix contains all chars in a trie
+using CharCounter = std::unordered_map<char, size_t>;
+using CharCounterXPtr = Rcpp::XPtr<CharCounter>;
 
 // defined in utils.cpp
 // Convert a string to a SEXP
@@ -34,21 +39,15 @@ SEXP to_charsxp(const trqwe::small_array<char> & x);
 cspan charsxp_to_cspan(SEXP x);
 
 // defined in utils.cpp
-// Input: cost_matrix
-// a NxN matrix where column/row names are the characters to use for pairchar_map keys
-// The special column "gap" is recoded as '\0'
-// Output: pairchar_map
-pairchar_map convert_cost_matrix(IntegerMatrix cost_matrix);
+// CharacterVector to cspan vector
+std::vector<cspan> strsxp_to_cspan(CharacterVector x);
 
 // defined in utils.cpp
-// counts chars for strings
-// keys returns the chars that are non-zero as a CharacterVector
-struct CharCounter {
-  std::unordered_map<char, size_t> counts;
-  void add(cspan s);
-  void subtract(cspan s);
-  CharacterVector keys(); 
-};
+// Input: cost_matrix
+// a NxN matrix where column/row names are the characters to use for pairchar_map_type keys
+// The special column "gap" is recoded as '\0'
+// Output: pairchar_map_type
+pairchar_map_type convert_cost_matrix(IntegerMatrix cost_matrix);
 
 namespace SeqTrie {
   using RadixTreeR = seqtrie::RadixMap<char, std::map, trqwe::small_array, size_t>;
@@ -63,6 +62,5 @@ namespace SeqTrie {
 using RadixTreeRXPtr = Rcpp::XPtr<SeqTrie::RadixTreeR>;
 using RadixForestRXPtr = Rcpp::XPtr<SeqTrie::RadixForestR>;
 using CharCounterXPtr = Rcpp::XPtr<CharCounter>;
-
 
 #endif

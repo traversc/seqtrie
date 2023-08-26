@@ -1,92 +1,48 @@
-#' RadixForest
-#'
-#' Radix Forest (trie) class implementation
-#'
-#' @section Usage:
-#' \preformatted{tree <- RadixForest$new()
+#' @title RadixForest
+#' @description Radix Forest class implementation
 #' 
-#' tree$print()
-#' 
-#' tree$graph(depth = -1, root_label = "root", plot = TRUE)
-#' 
-#' tree$to_string()
-#' 
-#' tree$to_vector()
-#' 
-#' tree$size()
-#' 
-#' tree$insert(sequences)
-#' 
-#' tree$erase(sequences)
-#' 
-#' tree$find(sequences)
-#' 
-#' tree$search(sequences, max_distance = NULL, max_fraction = NULL, mode = "levenshtein", cost_matrix = NULL, nthreads = 1, show_progress = FALSE)
-#' }
-#'
-#' @section Arguments:
-#' \describe{
-#'   \item{depth}{- In \code{$graph()}, the tree depth to plot. Default -1 means plot the entire tree.}
-#'   \item{root_label}{- In \code{$graph()}, the label of the root node.}
-#'   \item{plot}{- In \code{$graph()}, whether to create a plot or return the data used to generate the plot.}
-#'   \item{sequences}{- In \code{$search()}, the sequences to operate on.}
-#'   \item{max_distance}{- In \code{$search()}, how far to search for similar sequences, in units of absolute distance. See details.}
-#'   \item{max_fraction}{- In \code{$search()}, how far to search for similar sequences, relative to the sequence length. See details.}
-#'   \item{mode}{- In \code{$search()}, either hamming (hm) or levenshtein (lv). Levenshtein will allows for insertions and deletions and calculates "edit distance". Hamming does not allow for insertions or deletions.}
-#'   \item{nthreads}{- How many threads to use in the search.}
-#'   \item{show_progress}{- Display progress.}
-#' }
-#'
-#' @section Details:
-#'
-#' \code{$new()} creates a new Radix Forest object, which holds the pointer to the underlying C++ implentation. The RadixForest class accepts any strings of single-width characters. 
-#'
-#' \code{$print()} and \code{$to_string()} prints to screen or outputs the tree to a string representation.
-#' 
-#' \code{$to_vector()} outputs all sequences held by the tree. 
-#' 
-#' \code{$size()} outputs the size of the tree (i.e. how many sequences are contained). 
-#' 
-#' \code{$insert()}, \code{$erase()} and \code{$find()} insert, erase and find sequences in the tree, respectively.
-#' 
-#' \code{$search()} This function searches for similar sequences within a threshold (given by max_distance or max_fraction) based on Hamming or Levenshtein. Unlike the `RadixTree` class, 
-#' `RadixForest` does not support anchored searches or custom cost matrices. 
-#' 
-#' The output of this function is a data.frame of all matches with columns "query" (the sequences input to the search function), 
-#' "target" (the sequences inserted into the tree) and "distance" the absolute distance between query and target sequences. 
-#' 
-#' @seealso 
-#' https://en.wikipedia.org/wiki/Radix_tree
-#' 
+#' @details
+#' The RadixForest class is a specialization of the RadixTree implementation. Instead of putting sequences into a single tree, the RadixForest class puts sequences into a tree based on sequence length. 
+#' I.e. *map<sequence_length, RadixTree>. This allows for faster searching of similar sequences based on Hamming or Levenshtein distance metrics.
+#' Unlike the RadixTree class, the RadixForest class does NOT support Anchored searches or a custom cost matrix.
+#' See *RadixTree* for additional details. 
 #' @examples
-#' tree <- RadixForest$new()
-#' tree$insert(c("ACGT", "AAAA"))
-#' tree$erase("AAAA")
-#' tree$search("ACG", max_distance = 1, mode = "levenshtein")
+#' forest <- RadixForest$new()
+#' forest$insert(c("ACGT", "AAAA"))
+#' forest$erase("AAAA")
+#' forest$search("ACG", max_distance = 1, mode = "levenshtein")
 #'  #   query target distance
 #'  # 1   ACG   ACGT        1
 #'  
-#' tree$search("ACG", max_distance = 1, mode = "hamming")
+#' forest$search("ACG", max_distance = 1, mode = "hamming")
 #'  # query    target   distance
 #'  # <0 rows> (or 0-length row.names)
-#' @name RadixForest
-NULL
-
-
 RadixForest <- R6::R6Class("RadixForest", list(
+  #' @field forest_pointer Pointer C++ implementation (holds trie map)
   forest_pointer = NULL,
+  #' @field char_counter_pointer Pointer to C++ object (holds character counts for the purpose of validating input)
+  char_counter_pointer = NULL,
+  #' @description Create a new RadixForest object
+  #' @param sequences A character vector of sequences to insert into the forest
   initialize = function(sequences = NULL) {
     self$forest_pointer <- RadixForest_create()
     if(!is.null(sequences)) {
-      RadixForest_insert(self$forest_pointer, sequences)
+      self$insert(sequences)
     }
   },
+  #' @description Print the forest to screen
   print = function() {
     cat(RadixForest_print(self$forest_pointer))
   },
+  #' @description Print the forest to a string
   to_string = function() {
     RadixForest_print(self$forest_pointer)
   },
+  #' @description Plot of the forest using igraph
+  #' @param depth The tree depth to plot for each tree in the forest.
+  #' @param root_label The label of the root node(s) in the plot.
+  #' @param plot Whether to create a plot or return the data used to generate the plot.
+  #' @return a data frame of parent-child relationships used to generate the igraph plot
   graph = function(depth = -1, root_label = "root", plot = TRUE) {
     result <- RadixForest_graph(self$forest_pointer, depth)
     if(is.null(result)) {
@@ -100,54 +56,80 @@ RadixForest <- R6::R6Class("RadixForest", list(
     }
     invisible(result)
   },
+  #' @description Output all sequences held by the forest as a character vector
+  #' @return A character vector of all sequences contained in the forest.
   to_vector = function() {
     RadixForest_to_vector(self$forest_pointer)
   },
+  #' @description Output the size of the forest (i.e. how many sequences are contained)
+  #' @return The size of the forest
   size = function() {
     RadixForest_size(self$forest_pointer)
   },
+  #' @description Insert new sequences into the forest
+  #' @param sequences A character vector of sequences to insert into the forest
+  #' @return A logical vector indicating whether the sequence was inserted (TRUE) or already existing in the forest (FALSE)
   insert = function(sequences) {
     result <- RadixForest_insert(self$forest_pointer, sequences)
     invisible(result)
   },
+  #' @description Erase sequences from the forest
+  #' @param sequences A character vector of sequences to erase from the forest
+  #' @return A logical vector indicating whether the sequence was erased (TRUE) or not found in the forest (FALSE)
   erase = function(sequences) {
     result <- RadixForest_erase(self$forest_pointer, sequences)
     invisible(result)
   },
-  find = function(sequences) {
-    RadixForest_find(self$forest_pointer, sequences)
+  #' @description Find sequences in the forest
+  #' @param query A character vector of sequences to find in the forest
+  #' @return A logical vector indicating whether the sequence was found (TRUE) or not found in the forest (FALSE)
+  find = function(query) {
+    RadixForest_find(self$forest_pointer, query)
   },
-  prefix_search = function(sequences) {
-    result <- RadixForest_prefix_search(self$forest_pointer, sequences)
+  #' @description Search for sequences in the forest that start with a specified prefix.
+  #' E.g.: a query of "CAR" will find "CART", "CARBON", "CARROT", etc. but not "CATS".
+  #' @param query A character vector of sequences to search for in the forest
+  #' @return A data frame of all matches with columns "query" and "target".
+  prefix_search = function(query) {
+    result <- RadixForest_prefix_search(self$forest_pointer, query)
     if(is.null(result)) {
       data.frame(query = character(0), target = character(0), stringsAsFactors=F)
     } else {
       result
     }
   },
-  search = function(sequences, max_distance = NULL, max_fraction = NULL, mode = "levenshtein", nthreads = 1, show_progress = FALSE) {
-    check_alignment_params(mode, cost_matrix=NULL, gap_cost=NULL, charset = "")
-    stopifnot(mode %in% c("hamming", "levenshtein","hm", "lv"))
+  #' @description Search for sequences in the forest that are with a specified distance metric to a specified query.
+  #' @param query `r rdoc("query")`
+  #' @param max_distance how far to search in units of absolute distance. Can be a single value or a vector.
+  #' @param max_fraction how far to search in units of relative distance to each query sequence length. Can be a single value or a vector.
+  #' @param mode `r rdoc("mode")`
+  #' @param nthreads `r rdoc("nthreads")`
+  #' @param show_progress `r rdoc("show_progress")`
+  #' @return The output is a data.frame of all matches with columns "query" and "target".
+  
+  search = function(query, max_distance = NULL, max_fraction = NULL, mode = "levenshtein", nthreads = 1, show_progress = FALSE) {
+    check_alignment_params(mode, cost_matrix=NULL, gap_cost=NULL, gap_open_cost=NULL, charset = "", diag_must_be_zero = TRUE)
     mode <- normalize_mode_parameter(mode)
+    if(!mode %in% c("hamming", "global")) {
+      stop("mode must be one of hamming (hm) or global (gb, lv, levenshtein)")
+    }
     
     if(!is.null(max_distance)) {
       if(length(max_distance) == 1) {
-        max_distance <- rep(max_distance, length(sequences))
+        max_distance <- rep(max_distance, length(query))
       }
     } else if(!is.null(max_fraction)) {
-      max_distance <- as.integer(nchar(sequences) * max_fraction)
+      max_distance <- as.integer(nchar(query) * max_fraction)
     } else {
       stop("Either max_distance or max_fraction must be non-null")
     }
     if(any(max_distance < 0)) {
       stop("max_distance/max_fraction must be non-negative")
     }
-    if(mode == "hamming") {
-      RadixForest_hamming_search(self$forest_pointer, sequences, max_distance, nthreads, show_progress)
-    } else if(mode == "levenshtein") {
-      RadixForest_levenshtein_search(self$forest_pointer, sequences, max_distance, nthreads, show_progress)
-    }
+    RadixForest_search(self$forest_pointer, query, max_distance, mode, nthreads, show_progress)
   },
+  #' @description Validate the forest
+  #' @return A logical indicating whether the forest is valid (TRUE) or not (FALSE). This is mostly an internal function for debugging purposes and should always return TRUE.
   validate = function() {
     RadixForest_validate(self$forest_pointer)
   }

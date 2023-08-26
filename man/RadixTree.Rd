@@ -6,69 +6,11 @@
 \description{
 Radix Tree (trie) class implementation
 }
-\section{Usage}{
-
-\preformatted{tree <- RadixTree$new()
-
-tree$print()
-
-tree$graph(depth = -1, root_label = "root", plot = TRUE)
-
-tree$to_string()
-
-tree$to_vector()
-
-tree$size()
-
-tree$insert(sequences)
-
-tree$erase(sequences)
-
-tree$find(sequences)
-
-tree$search(sequences, max_distance = NULL, max_fraction = NULL, mode = "levenshtein", cost_matrix = NULL, nthreads = 1, show_progress = FALSE)
+\details{
+The RadixTree class is a trie implementation. The primary usage is to be able to search of similar sequences based on a dynamic programming framework. 
+This can be done using the _search_ method which searches for similar sequences based on the Global, Anchored or Hamming distance metrics.
+`r rdoc("details")`
 }
-}
-
-\section{Arguments}{
-
-\describe{
-  \item{depth}{- In \code{$graph()}, the tree depth to plot. Default -1 means plot the entire tree.}
-  \item{root_label}{- In \code{$graph()}, the label of the root node.}
-  \item{plot}{- In \code{$graph()}, whether to create a plot or return the data used to generate the plot.}
-  \item{sequences}{- In \code{$search()}, the sequences to operate on.}
-  \item{max_distance}{- In \code{$search()}, how far to search for similar sequences, in units of absolute distance. See details.}
-  \item{max_fraction}{- In \code{$search()}, how far to search for similar sequences, relative to the sequence length. See details.}
-  \item{mode}{- In \code{$search()}, One of hamming (hm), levenshtein (lv) or anchored (an). Levenshtein will allows for insertions and deletions and calculates "edit distance". Hamming does not allow for insertions or deletions.}
-  \item{cost_matrix}{In \code{$search()}, a cost matrix for use with Levenshtein or Anchored searches. See details.}
-  \item{gap_cost}{In \code{$search()}, a cost matrix for use with Levenshtein or Anchored searches. See details.}
-  \item{nthreads}{- How many threads to use in the search.}
-  \item{show_progress}{- Display progress.}
-}
-}
-
-\section{Details}{
-
-\code{$new()} creates a new Tree object, which holds the pointer to the underlying C++ implentation. The RadixTree class accepts any strings of single-width characters. 
-
-\code{$print()} and \code{$to_string()} prints to screen or outputs the tree to a string representation.
-
-\code{$to_vector()} outputs all sequences held by the tree. 
-
-\code{$size()} outputs the size of the tree (i.e. how many sequences are contained). 
-
-\code{$insert()}, \code{$erase()} and \code{$find()} insert, erase and find sequences in the tree, respectively.
-
-\code{$search()} This function searches for similar sequences within a threshold (given by max_distance or max_fraction) based on Hamming, Levenshtein or Anchored algorithms.
-An anchored search is a form of semi-global alignment, where the query sequence is "anchored" (global) to the beginning of both the query and target sequences, 
-but is semi-global in that the end of the either the query sequence or target sequence (but not both) can be unaligned. This contrasts with the Levenshtein distance which is global at 
-both the starts and ends of the sequences. 
-
-The output of this function is a data.frame of all matches with columns "query" (the sequences input to the search function), 
-"target" (the sequences inserted into the tree) and "distance" the absolute distance between query and target sequences. 
-For anchored searches, the output also includes "query_size" and "target_size" which are the partial lengths of the query and target sequences that are aligned.
-}
-
 \examples{
 tree <- RadixTree$new()
 tree$insert(c("ACGT", "AAAA"))
@@ -83,4 +25,280 @@ tree$search("ACG", max_distance = 1, mode = "hamming")
 }
 \seealso{
 https://en.wikipedia.org/wiki/Radix_tree
+}
+\section{Public fields}{
+\if{html}{\out{<div class="r6-fields">}}
+\describe{
+\item{\code{root_pointer}}{Pointer C++ implementation (holds trie map)}
+
+\item{\code{char_counter_pointer}}{Pointer to C++ object (holds character counts for the purpose of validating input)}
+}
+\if{html}{\out{</div>}}
+}
+\section{Methods}{
+\subsection{Public methods}{
+\itemize{
+\item \href{#method-RadixTree-new}{\code{RadixTree$new()}}
+\item \href{#method-RadixTree-print}{\code{RadixTree$print()}}
+\item \href{#method-RadixTree-to_string}{\code{RadixTree$to_string()}}
+\item \href{#method-RadixTree-graph}{\code{RadixTree$graph()}}
+\item \href{#method-RadixTree-to_vector}{\code{RadixTree$to_vector()}}
+\item \href{#method-RadixTree-size}{\code{RadixTree$size()}}
+\item \href{#method-RadixTree-insert}{\code{RadixTree$insert()}}
+\item \href{#method-RadixTree-erase}{\code{RadixTree$erase()}}
+\item \href{#method-RadixTree-find}{\code{RadixTree$find()}}
+\item \href{#method-RadixTree-prefix_search}{\code{RadixTree$prefix_search()}}
+\item \href{#method-RadixTree-search}{\code{RadixTree$search()}}
+\item \href{#method-RadixTree-validate}{\code{RadixTree$validate()}}
+\item \href{#method-RadixTree-clone}{\code{RadixTree$clone()}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-RadixTree-new"></a>}}
+\if{latex}{\out{\hypertarget{method-RadixTree-new}{}}}
+\subsection{Method \code{new()}}{
+Create a new RadixTree object
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{RadixTree$new(sequences = NULL)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{sequences}}{A character vector of sequences to insert into the tree}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-RadixTree-print"></a>}}
+\if{latex}{\out{\hypertarget{method-RadixTree-print}{}}}
+\subsection{Method \code{print()}}{
+Print the tree to screen
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{RadixTree$print()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-RadixTree-to_string"></a>}}
+\if{latex}{\out{\hypertarget{method-RadixTree-to_string}{}}}
+\subsection{Method \code{to_string()}}{
+Print the tree to a string
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{RadixTree$to_string()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+A string representation of the tree
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-RadixTree-graph"></a>}}
+\if{latex}{\out{\hypertarget{method-RadixTree-graph}{}}}
+\subsection{Method \code{graph()}}{
+Plot of the tree using igraph
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{RadixTree$graph(depth = -1, root_label = "root", plot = TRUE)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{depth}}{The tree depth to plot. If -1 (default), plot the entire tree.}
+
+\item{\code{root_label}}{The label of the root node in the plot.}
+
+\item{\code{plot}}{Whether to create a plot or return the data used to generate the plot.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+a data frame of parent-child relationships used to generate the igraph plot
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-RadixTree-to_vector"></a>}}
+\if{latex}{\out{\hypertarget{method-RadixTree-to_vector}{}}}
+\subsection{Method \code{to_vector()}}{
+Output all sequences held by the tree as a character vector
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{RadixTree$to_vector()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+A character vector of all sequences contained in the tree. Return order is not guaranteed.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-RadixTree-size"></a>}}
+\if{latex}{\out{\hypertarget{method-RadixTree-size}{}}}
+\subsection{Method \code{size()}}{
+Output the size of the tree (i.e. how many sequences are contained)
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{RadixTree$size()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+The size of the tree
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-RadixTree-insert"></a>}}
+\if{latex}{\out{\hypertarget{method-RadixTree-insert}{}}}
+\subsection{Method \code{insert()}}{
+Insert new sequences into the tree
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{RadixTree$insert(sequences)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{sequences}}{A character vector of sequences to insert into the tree}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A logical vector indicating whether the sequence was inserted (TRUE) or already existing in the tree (FALSE)
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-RadixTree-erase"></a>}}
+\if{latex}{\out{\hypertarget{method-RadixTree-erase}{}}}
+\subsection{Method \code{erase()}}{
+Erase sequences from the tree
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{RadixTree$erase(sequences)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{sequences}}{A character vector of sequences to erase from the tree}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A logical vector indicating whether the sequence was erased (TRUE) or not found in the tree (FALSE)
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-RadixTree-find"></a>}}
+\if{latex}{\out{\hypertarget{method-RadixTree-find}{}}}
+\subsection{Method \code{find()}}{
+Find sequences in the tree
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{RadixTree$find(query)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{query}}{A character vector of sequences to find in the tree}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A logical vector indicating whether the sequence was found (TRUE) or not found in the tree (FALSE)
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-RadixTree-prefix_search"></a>}}
+\if{latex}{\out{\hypertarget{method-RadixTree-prefix_search}{}}}
+\subsection{Method \code{prefix_search()}}{
+Search for sequences in the tree that start with a specified prefix.
+E.g.: a query of "CAR" will find "CART", "CARBON", "CARROT", etc. but not "CATS".
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{RadixTree$prefix_search(query)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{query}}{A character vector of sequences to search for in the tree}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A data frame of all matches with columns "query" and "target".
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-RadixTree-search"></a>}}
+\if{latex}{\out{\hypertarget{method-RadixTree-search}{}}}
+\subsection{Method \code{search()}}{
+Search for sequences in the tree that are with a specified distance metric to a specified query.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{RadixTree$search(
+  query,
+  max_distance = NULL,
+  max_fraction = NULL,
+  mode = "levenshtein",
+  cost_matrix = NULL,
+  gap_cost = NULL,
+  gap_open_cost = NULL,
+  nthreads = 1,
+  show_progress = FALSE
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{query}}{`r rdoc("query")`}
+
+\item{\code{max_distance}}{how far to search in units of absolute distance. Can be a single value or a vector. Mutually exclusive with max_fraction.}
+
+\item{\code{max_fraction}}{how far to search in units of relative distance to each query sequence length. Can be a single value or a vector. Mutually exclusive with max_distance.}
+
+\item{\code{mode}}{`r rdoc("mode")`}
+
+\item{\code{cost_matrix}}{`r rdoc("cost_matrix")`}
+
+\item{\code{gap_cost}}{`r rdoc("gap_cost")`}
+
+\item{\code{gap_open_cost}}{`r rdoc("gap_open_cost")`}
+
+\item{\code{nthreads}}{`r rdoc("nthreads")`}
+
+\item{\code{show_progress}}{`r rdoc("show_progress")`}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+The output is a data.frame of all matches with columns "query" and "target". 
+For anchored searches, the output also includes attributes "query_size" and "target_size" which are vectors containing the portion of the query and target sequences that are aligned.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-RadixTree-validate"></a>}}
+\if{latex}{\out{\hypertarget{method-RadixTree-validate}{}}}
+\subsection{Method \code{validate()}}{
+Validate the tree
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{RadixTree$validate()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+A logical indicating whether the tree is valid (TRUE) or not (FALSE). This is mostly an internal function for debugging purposes and should always return TRUE.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-RadixTree-clone"></a>}}
+\if{latex}{\out{\hypertarget{method-RadixTree-clone}{}}}
+\subsection{Method \code{clone()}}{
+The objects of this class are cloneable with this method.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{RadixTree$clone(deep = FALSE)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{deep}}{Whether to make a deep clone.}
+}
+\if{html}{\out{</div>}}
+}
+}
 }

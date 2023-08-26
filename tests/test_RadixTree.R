@@ -58,8 +58,8 @@ sd_search <- function(query, target, method = "lv") {
   dplyr::arrange(results, query, target)
 }
 
-dist_matrix_search <- function(query, target, cost_matrix = NULL, gap_cost = NULL, mode = "anchored") {
-  results <- seqtrie::dist_matrix(query, target, mode = mode, cost_matrix, gap_cost, nthreads=NTHREADS)
+dist_matrix_search <- function(query, target, cost_matrix = NULL, gap_cost = NULL, gap_open_cost = NULL, mode = "anchored") {
+  results <- seqtrie::dist_matrix(query, target, mode = mode, cost_matrix, gap_cost, gap_open_cost, nthreads=NTHREADS)
   if(mode == "anchored") {
     results <- data.frame(query = rep(query, times=length(target)),
                           target = rep(target, each=length(query)), 
@@ -135,7 +135,7 @@ for(. in 1:NITER) {
     stopifnot(identical(results, expected))
   })
 
-  print(paste0("Checking multithreaded hamming search correctness for ", tt))
+  print(paste0("Checking hamming search correctness for ", tt))
   local({
     x <- RadixTree$new()
     target <- c(random_strings(NSEQS, CHARSET),"") %>% unique
@@ -152,7 +152,7 @@ for(. in 1:NITER) {
     stopifnot(identical(results_frac, sd_frac))
   })
 
-    print(paste0("Checking multithreaded levenshtein search correctness for ", tt))
+    print(paste0("Checking levenshtein search correctness for ", tt))
     local({
       x <- RadixTree$new()
       target <- c(random_strings(NSEQS, CHARSET),"") %>% unique
@@ -169,7 +169,7 @@ for(. in 1:NITER) {
       stopifnot(identical(results_frac, sd_frac))
     })
 
-    print(paste0("Checking multithreaded anchored search correctness for ", tt))
+    print(paste0("Checking anchored search correctness for ", tt))
     local({
       x <- RadixTree$new()
       target <- c(random_strings(NSEQS, CHARSET),"") %>% unique
@@ -186,7 +186,7 @@ for(. in 1:NITER) {
       stopifnot(identical(results_frac, sd_frac))
     })
 
-    print(paste0("Checking multithreaded levenshtein search with custom cost for correctness for ", tt))
+    print(paste0("Checking global search with linear gap for correctness for ", tt))
     local({
       x <- RadixTree$new()
       target <- c(random_strings(NSEQS, CHARSET),"") %>% unique
@@ -212,7 +212,7 @@ for(. in 1:NITER) {
     })
     
 
-    print(paste0("Checking multithreaded anchored search with custom cost for correctness for ", tt))
+    print(paste0("Checking anchored search with linear gap for correctness for ", tt))
     local({
       x <- RadixTree$new()
       target <- c(random_strings(NSEQS, CHARSET),"") %>% unique
@@ -231,6 +231,59 @@ for(. in 1:NITER) {
       results_frac <- x$search(query, max_fraction = MAXFRAC, mode = "anchored", cost_matrix=cost_matrix, gap_cost = gap_cost, nthreads=NTHREADS, show_progress=TRUE) %>% 
         dplyr::arrange(query, target)
       sd_results <- dist_matrix_search(query, target, cost_matrix = cost_matrix, gap_cost = gap_cost, mode = "anchored")
+      sd_dist <- dplyr::filter(sd_results, distance <= MAXDIST)
+      sd_frac <- dplyr::filter(sd_results, distance <= nchar(query) * MAXFRAC)
+      stopifnot(identical(results_dist, sd_dist))
+      stopifnot(identical(results_frac, sd_frac))
+    })
+
+    print(paste0("Checking global search with affine gap for correctness for ", tt))
+    local({
+      x <- RadixTree$new()
+      target <- c(random_strings(NSEQS, CHARSET),"") %>% unique
+      query <- sample(c(sample(target, NSEQS/1000), random_strings(NSEQS/1000, CHARSET)))
+      query <- c(mutate_strings(query, charset = CHARSET), "") %>% unique
+      x$insert(target)
+      stopifnot(x$validate())
+
+      cost_matrix <- matrix(sample(1:3, size = nchar(CHARSET)^2, replace=T), nrow=nchar(CHARSET))
+      diag(cost_matrix) <- 0
+      colnames(cost_matrix) <- rownames(cost_matrix) <- strsplit(CHARSET, "")[[1]]
+      gap_cost <- sample(1:3, size = 1)
+      gap_open_cost <- sample(1:3, size = 1)
+
+      results_dist <- x$search(query, max_distance = MAXDIST, mode = "levenshtein", cost_matrix=cost_matrix, gap_cost = gap_cost, gap_open_cost=gap_open_cost, nthreads=NTHREADS, show_progress=TRUE) %>% 
+        dplyr::arrange(query, target)
+      results_frac <- x$search(query, max_fraction = MAXFRAC, mode = "levenshtein", cost_matrix=cost_matrix, gap_cost = gap_cost, gap_open_cost=gap_open_cost, nthreads=NTHREADS, show_progress=TRUE) %>% 
+        dplyr::arrange(query, target)
+      sd_results <- dist_matrix_search(query, target, cost_matrix = cost_matrix, gap_cost = gap_cost, gap_open_cost=gap_open_cost, mode = "levenshtein")
+      sd_dist <- dplyr::filter(sd_results, distance <= MAXDIST)
+      sd_frac <- dplyr::filter(sd_results, distance <= nchar(query) * MAXFRAC)
+      stopifnot(identical(results_dist, sd_dist))
+      stopifnot(identical(results_frac, sd_frac))
+    })
+    
+
+    print(paste0("Checking anchored search with affine gap for correctness for ", tt))
+    local({
+      x <- RadixTree$new()
+      target <- c(random_strings(NSEQS, CHARSET),"") %>% unique
+      query <- sample(c(sample(target, NSEQS/1000), random_strings(NSEQS/1000, CHARSET)))
+      query <- c(mutate_strings(query, charset = CHARSET), "") %>% unique
+      x$insert(target)
+      stopifnot(x$validate())
+
+      cost_matrix <- matrix(sample(1:3, size = nchar(CHARSET)^2, replace=T), nrow=nchar(CHARSET))
+      diag(cost_matrix) <- 0
+      colnames(cost_matrix) <- rownames(cost_matrix) <- strsplit(CHARSET, "")[[1]]
+      gap_cost <- sample(1:3, size = 1)
+      gap_open_cost <- sample(1:3, size = 1)
+
+      results_dist <- x$search(query, max_distance = MAXDIST, mode = "anchored", cost_matrix=cost_matrix, gap_cost = gap_cost, gap_open_cost=gap_open_cost, nthreads=NTHREADS, show_progress=TRUE) %>% 
+        dplyr::arrange(query, target)
+      results_frac <- x$search(query, max_fraction = MAXFRAC, mode = "anchored", cost_matrix=cost_matrix, gap_cost = gap_cost, gap_open_cost=gap_open_cost, nthreads=NTHREADS, show_progress=TRUE) %>% 
+        dplyr::arrange(query, target)
+      sd_results <- dist_matrix_search(query, target, cost_matrix = cost_matrix, gap_cost = gap_cost, gap_open_cost=gap_open_cost, mode = "anchored")
       sd_dist <- dplyr::filter(sd_results, distance <= MAXDIST)
       sd_frac <- dplyr::filter(sd_results, distance <= nchar(query) * MAXFRAC)
       stopifnot(identical(results_dist, sd_dist))

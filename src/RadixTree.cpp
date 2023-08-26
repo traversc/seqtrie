@@ -5,117 +5,12 @@
 #include <memory>
 #include <tuple>
 #include "seqtrie_types.h"
+#include "seqtrie_utils.h"
 
 #include "simple_progress/simple_progress.h"
 
 using namespace Rcpp;
 using namespace RcppParallel;
-
-struct HammingWorker : public Worker {
-  const SeqTrie::RadixTreeR & root;
-  const std::vector<cspan> & query;
-  int const * const max_distance_ptr;
-  std::vector<SeqTrie::search_context> & output;
-  trqwe::simple_progress & progress_bar;
-  HammingWorker(const SeqTrie::RadixTreeR & root,
-                const std::vector<cspan> & query,
-                int const * const max_distance_ptr,
-                std::vector<SeqTrie::search_context> & output,
-                trqwe::simple_progress & progress_bar) : 
-    root(root), query(query), max_distance_ptr(max_distance_ptr), output(output), progress_bar(progress_bar) {}
-  void operator()(std::size_t begin, std::size_t end) {
-    for(size_t i=begin; i<end; ++i) {
-      output[i] = root.hamming_search(query[i], max_distance_ptr[i]);
-      progress_bar.increment();
-    }
-  }
-};
-
-struct LevenshteinWorker : public Worker {
-  const SeqTrie::RadixTreeR & root;
-  const std::vector<cspan> & query;
-  int const * const max_distance_ptr;
-  std::vector<SeqTrie::search_context> & output;
-  trqwe::simple_progress & progress_bar;
-  LevenshteinWorker(const SeqTrie::RadixTreeR & root,
-                const std::vector<cspan> & query,
-                int const * const max_distance_ptr,
-                std::vector<SeqTrie::search_context> & output,
-                trqwe::simple_progress & progress_bar) : 
-    root(root), query(query), max_distance_ptr(max_distance_ptr), output(output), progress_bar(progress_bar) {}
-  void operator()(std::size_t begin, std::size_t end) {
-    for(size_t i=begin; i<end; ++i) {
-      output[i] = root.levenshtein_search(query[i], max_distance_ptr[i]);
-      progress_bar.increment();
-    }
-  }
-};
-
-struct AnchoredWorker : public Worker {
-  const SeqTrie::RadixTreeR & root;
-  const std::vector<cspan> & query;
-  int const * const max_distance_ptr;
-  std::vector<SeqTrie::search_context> & output;
-  trqwe::simple_progress & progress_bar;
-  AnchoredWorker(const SeqTrie::RadixTreeR & root,
-                const std::vector<cspan> & query,
-                int const * const max_distance_ptr,
-                std::vector<SeqTrie::search_context> & output,
-                trqwe::simple_progress & progress_bar) : 
-    root(root), query(query), max_distance_ptr(max_distance_ptr), output(output), progress_bar(progress_bar) {}
-  void operator()(std::size_t begin, std::size_t end) {
-    for(size_t i=begin; i<end; ++i) {
-      output[i] = root.anchored_search(query[i], max_distance_ptr[i]);
-      progress_bar.increment();
-    }
-  }
-};
-
-struct LevenshteinWorkerWithCostMap : public Worker {
-  const SeqTrie::RadixTreeR & root;
-  const std::vector<cspan> & query;
-  int const * const max_distance_ptr;
-  std::vector<SeqTrie::search_context> & output;
-  pairchar_map & cost_map;
-  trqwe::simple_progress & progress_bar;
-  LevenshteinWorkerWithCostMap(const SeqTrie::RadixTreeR & root,
-                const std::vector<cspan> & query,
-                int const * const max_distance_ptr,
-                std::vector<SeqTrie::search_context> & output,
-                pairchar_map & cost_map,
-                trqwe::simple_progress & progress_bar) : 
-    root(root), query(query), max_distance_ptr(max_distance_ptr), output(output), 
-    cost_map(cost_map), progress_bar(progress_bar) {}
-  void operator()(std::size_t begin, std::size_t end) {
-    for(size_t i=begin; i<end; ++i) {
-      output[i] = root.levenshtein_search(query[i], max_distance_ptr[i], cost_map);
-      progress_bar.increment();
-    }
-  }
-};
-
-struct AnchoredWorkerWithCostMap : public Worker {
-  const SeqTrie::RadixTreeR & root;
-  const std::vector<cspan> & query;
-  int const * const max_distance_ptr;
-  std::vector<SeqTrie::search_context> & output;
-  pairchar_map & cost_map;
-  trqwe::simple_progress & progress_bar;
-  AnchoredWorkerWithCostMap(const SeqTrie::RadixTreeR & root,
-                const std::vector<cspan> & query,
-                int const * const max_distance_ptr,
-                std::vector<SeqTrie::search_context> & output,
-                pairchar_map & cost_map,
-                trqwe::simple_progress & progress_bar) : 
-    root(root), query(query), max_distance_ptr(max_distance_ptr), output(output), 
-    cost_map(cost_map), progress_bar(progress_bar) {}
-  void operator()(std::size_t begin, std::size_t end) {
-    for(size_t i=begin; i<end; ++i) {
-      output[i] = root.anchored_search(query[i], max_distance_ptr[i], cost_map);
-      progress_bar.increment();
-    }
-  }
-};
 
 ////////////////////////////////////////////////////////////////////////////////
 // RadixTree R functions
@@ -170,140 +65,6 @@ LogicalVector RadixTree_find(RadixTreeRXPtr xp, CharacterVector sequences) {
   return result;
 }
 
-// [[Rcpp::export(rng = false)]]
-DataFrame RadixTree_hamming_search(RadixTreeRXPtr xp, CharacterVector sequences, IntegerVector max_distance, Rcpp::Nullable<IntegerMatrix> cost_matrix, const int nthreads, const bool show_progress) {
-  auto & root = *xp;
-  size_t nseqs = Rf_xlength(sequences);
-  SEXP * sequence_ptr = STRING_PTR(sequences);
-  int * max_distance_ptr = INTEGER(max_distance);
-  
-  if(nseqs == 0) {
-    return DataFrame::create(_["query"] = CharacterVector(), _["target"] = CharacterVector(), _["distance"] = IntegerVector(), _["stringsAsFactors"] = false);
-  }
-  
-  std::vector<cspan> query(nseqs);
-  for(size_t i=0; i<nseqs; ++i) { query[i] = charsxp_to_cspan(sequence_ptr[i]); }
-  std::vector<SeqTrie::search_context> output(nseqs);
-  trqwe::simple_progress progress_bar(nseqs, show_progress);
-  
-  HammingWorker w(root, query, max_distance_ptr, output, progress_bar);
-  parallelFor(0, nseqs, w, 1, nthreads);
-  
-  size_t nresults = 0;
-  for(size_t i=0; i<nseqs; ++i) { nresults += output[i].match.size(); }
-  CharacterVector query_results(nresults);
-  CharacterVector target_results(nresults);
-  IntegerVector distance_results(nresults);
-  int * distance_results_ptr = INTEGER(distance_results);
-  size_t q = 0;
-  for(size_t i=0; i<nseqs; ++i) {
-    auto & targets = output[i].match;
-    auto & distances = output[i].distance;
-    for(size_t j=0; j<targets.size(); ++j) {
-      SET_STRING_ELT(query_results, q, STRING_ELT(sequences, i));
-      auto s = targets[j]->template sequence<trqwe::small_array<char>>();
-      SET_STRING_ELT(target_results, q, to_charsxp(s));
-      distance_results_ptr[q] = distances[j];
-      q++;
-    }
-  }
-  return DataFrame::create(_["query"] = query_results, _["target"] = target_results, _["distance"] = distance_results, _["stringsAsFactors"] = false);
-}
-
-
-// [[Rcpp::export(rng = false)]]
-DataFrame RadixTree_levenshtein_search(RadixTreeRXPtr xp, CharacterVector sequences, IntegerVector max_distance, Rcpp::Nullable<IntegerMatrix> cost_matrix, const int nthreads, const bool show_progress) {
-  auto & root = *xp;
-  size_t nseqs = Rf_xlength(sequences);
-  SEXP * sequence_ptr = STRING_PTR(sequences);
-  int * max_distance_ptr = INTEGER(max_distance);
-  
-  if(nseqs == 0) {
-    return DataFrame::create(_["query"] = CharacterVector(), _["target"] = CharacterVector(), _["distance"] = IntegerVector(), _["stringsAsFactors"] = false);
-  }
-  
-  std::vector<cspan> query(nseqs);
-  for(size_t i=0; i<nseqs; ++i) { query[i] = charsxp_to_cspan(sequence_ptr[i]); }
-  std::vector<SeqTrie::search_context> output(nseqs);
-  trqwe::simple_progress progress_bar(nseqs, show_progress);
-  
-  if(cost_matrix.isNotNull()) {
-    IntegerMatrix cost_matrix_(cost_matrix);
-    pairchar_map cost_map = convert_cost_matrix(cost_matrix_);
-    LevenshteinWorkerWithCostMap w(root, query, max_distance_ptr, output, cost_map, progress_bar);
-    parallelFor(0, nseqs, w, 1, nthreads);
-  } else {
-    LevenshteinWorker w(root, query, max_distance_ptr, output, progress_bar);
-    parallelFor(0, nseqs, w, 1, nthreads);
-  }
-  
-  size_t nresults = 0;
-  for(size_t i=0; i<nseqs; ++i) { nresults += output[i].match.size(); }
-  CharacterVector query_results(nresults);
-  CharacterVector target_results(nresults);
-  IntegerVector distance_results(nresults);
-  int * distance_results_ptr = INTEGER(distance_results);
-  size_t q = 0;
-  for(size_t i=0; i<nseqs; ++i) {
-    auto & targets = output[i].match;
-    auto & distances = output[i].distance;
-    for(size_t j=0; j<targets.size(); ++j) {
-      SET_STRING_ELT(query_results, q, STRING_ELT(sequences, i));
-      auto s = targets[j]->template sequence<trqwe::small_array<char>>();
-      SET_STRING_ELT(target_results, q, to_charsxp(s));
-      distance_results_ptr[q] = distances[j];
-      q++;
-    }
-  }
-  return DataFrame::create(_["query"] = query_results, _["target"] = target_results, _["distance"] = distance_results, _["stringsAsFactors"] = false);
-}
-
-// [[Rcpp::export(rng = false)]]
-DataFrame RadixTree_anchored_search(RadixTreeRXPtr xp, CharacterVector sequences, IntegerVector max_distance, Rcpp::Nullable<IntegerMatrix> cost_matrix, const int nthreads, const bool show_progress) {
-  auto & root = *xp;
-  size_t nseqs = Rf_xlength(sequences);
-  SEXP * sequence_ptr = STRING_PTR(sequences);
-  int * max_distance_ptr = INTEGER(max_distance);
-  
-  if(nseqs == 0) {
-    return DataFrame::create(_["query"] = CharacterVector(), _["target"] = CharacterVector(), _["distance"] = IntegerVector(), _["stringsAsFactors"] = false);
-  }
-  
-  std::vector<cspan> query(nseqs);
-  for(size_t i=0; i<nseqs; ++i) { query[i] = charsxp_to_cspan(sequence_ptr[i]); }
-  std::vector<SeqTrie::search_context> output(nseqs);
-  trqwe::simple_progress progress_bar(nseqs, show_progress);
-  
-  if(cost_matrix.isNotNull()) {
-    IntegerMatrix cost_matrix_(cost_matrix);
-    pairchar_map cost_map = convert_cost_matrix(cost_matrix_);
-    AnchoredWorkerWithCostMap w(root, query, max_distance_ptr, output, cost_map, progress_bar);
-    parallelFor(0, nseqs, w, 1, nthreads);
-  } else {
-    AnchoredWorker w(root, query, max_distance_ptr, output, progress_bar);
-    parallelFor(0, nseqs, w, 1, nthreads);
-  }
-  
-  size_t nresults = 0;
-  for(size_t i=0; i<nseqs; ++i) { nresults += output[i].match.size(); }
-  CharacterVector query_results(nresults);
-  CharacterVector target_results(nresults);
-  IntegerVector distance_results(nresults);
-  int * distance_results_ptr = INTEGER(distance_results);
-  size_t q = 0;
-  for(size_t i=0; i<nseqs; ++i) {
-    auto & targets = output[i].match;
-    auto & distances = output[i].distance;
-    for(size_t j=0; j<targets.size(); ++j) {
-      SET_STRING_ELT(query_results, q, STRING_ELT(sequences, i));
-      auto s = targets[j]->template sequence<trqwe::small_array<char>>();
-      SET_STRING_ELT(target_results, q, to_charsxp(s));
-      distance_results_ptr[q] = distances[j];
-      q++;
-    }
-  }
-  return DataFrame::create(_["query"] = query_results, _["target"] = target_results, _["distance"] = distance_results, _["stringsAsFactors"] = false);
-}
 
 // [[Rcpp::export(rng = false)]]
 DataFrame RadixTree_prefix_search(RadixTreeRXPtr xp, CharacterVector sequences) {
@@ -390,3 +151,89 @@ RadixTreeRXPtr RadixTree_create() {
   return RadixTreeRXPtr(new SeqTrie::RadixTreeR, true);
 }
 
+// All input parameters should be checked in R, so any error thrown here is an internal error
+// [[Rcpp::export(rng = false)]]
+DataFrame RadixTree_search(RadixTreeRXPtr xp,
+                           CharacterVector query,
+                           IntegerVector max_distance,
+                           const std::string mode = "global", // global, anchored or hamming
+                           const std::string gap_type = "linear", // linear or affine; ignored if hamming or if cost_matrix is NULL
+                           Rcpp::Nullable<IntegerMatrix> cost_matrix = R_NilValue,
+                           const int nthreads = 1, const bool show_progress = false) {
+  auto & root = *xp;
+  size_t nseqs = Rf_xlength(query);
+  int * max_distance_ptr = INTEGER(max_distance);
+  std::vector<cspan> query_span =  strsxp_to_cspan(query);
+  std::vector<SeqTrie::search_context> output(nseqs);
+  trqwe::simple_progress progress_bar(nseqs, show_progress);
+
+  if(nseqs == 0) {
+    return DataFrame::create(_["query"] = CharacterVector(), _["target"] = CharacterVector(), _["distance"] = IntegerVector(), _["stringsAsFactors"] = false);
+  }
+
+    if(mode == "hamming") {
+    do_parallel_for([&root, &query_span, max_distance_ptr, &output, &progress_bar](size_t begin, size_t end) {
+      for(size_t i=begin; i<end; ++i) {
+        output[i] = root.hamming_search(query_span[i], max_distance_ptr[i]);
+        progress_bar.increment();
+      }
+    }, 0, nseqs, 1, nthreads);
+  } else if(mode == "global") {
+    if(cost_matrix.isNull()) {
+      do_parallel_for([&root, &query_span, max_distance_ptr, &output, &progress_bar](size_t begin, size_t end) {
+        for(size_t i=begin; i<end; ++i) {
+          output[i] = root.global_search(query_span[i], max_distance_ptr[i]);
+          progress_bar.increment();
+        }
+      }, 0, nseqs, 1, nthreads);
+    } else if(gap_type == "linear") {
+      pairchar_map_type cost_map = convert_cost_matrix(cost_matrix.get());
+      do_parallel_for([&root, &query_span, max_distance_ptr, &output, &cost_map, &progress_bar](size_t begin, size_t end) {
+        for(size_t i=begin; i<end; ++i) {
+          output[i] = root.template global_search_linear<pairchar_map_type>(query_span[i], max_distance_ptr[i], cost_map);
+          progress_bar.increment();
+        }
+      }, 0, nseqs, 1, nthreads);
+    } else if(gap_type == "affine") {
+      pairchar_map_type cost_map = convert_cost_matrix(cost_matrix.get());
+      do_parallel_for([&root, &query_span, max_distance_ptr, &output, &cost_map, &progress_bar](size_t begin, size_t end) {
+        for(size_t i=begin; i<end; ++i) {
+          output[i] = root.template global_search_affine<pairchar_map_type>(query_span[i], max_distance_ptr[i], cost_map);
+          progress_bar.increment();
+        }
+      }, 0, nseqs, 1, nthreads);
+    } else {
+      throw std::runtime_error("Internal Error: gap_type must be one of linear or affine");
+    }
+  } else if(mode == "anchored") { // anchored
+    if(cost_matrix.isNull()) {
+      do_parallel_for([&root, &query_span, max_distance_ptr, &output, &progress_bar](size_t begin, size_t end) {
+        for(size_t i=begin; i<end; ++i) {
+          output[i] = root.anchored_search(query_span[i], max_distance_ptr[i]);
+          progress_bar.increment();
+        }
+      }, 0, nseqs, 1, nthreads);
+    } else if(gap_type == "linear") {
+      pairchar_map_type cost_map = convert_cost_matrix(cost_matrix.get());
+      do_parallel_for([&root, &query_span, max_distance_ptr, &output, &cost_map, &progress_bar](size_t begin, size_t end) {
+        for(size_t i=begin; i<end; ++i) {
+          output[i] = root.template anchored_search_linear<pairchar_map_type>(query_span[i], max_distance_ptr[i], cost_map);
+          progress_bar.increment();
+        }
+      }, 0, nseqs, 1, nthreads);
+    } else if(gap_type == "affine") {
+      pairchar_map_type cost_map = convert_cost_matrix(cost_matrix.get());
+      do_parallel_for([&root, &query_span, max_distance_ptr, &output, &cost_map, &progress_bar](size_t begin, size_t end) {
+        for(size_t i=begin; i<end; ++i) {
+          output[i] = root.template anchored_search_affine<pairchar_map_type>(query_span[i], max_distance_ptr[i], cost_map);
+          progress_bar.increment();
+        }
+      }, 0, nseqs, 1, nthreads);
+    } else {
+      throw std::runtime_error("Internal Error: gap_type must be one of linear or affine");
+    }
+  } else {
+    throw std::runtime_error("Internal Error: mode must be one of global, anchored or hamming");
+  }
+  return seqtrie_results_to_dataframe(query, output);
+}

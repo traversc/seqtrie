@@ -8,8 +8,8 @@ generate_cost_matrix(
   alphabet,
   match = 0,
   mismatch = 1,
-  gap = 1,
-  include_gap = FALSE
+  gap = NULL,
+  gap_open = NULL
 )
 }
 \arguments{
@@ -19,9 +19,9 @@ generate_cost_matrix(
 
 \item{mismatch}{The cost of a mismatch}
 
-\item{gap}{The cost of a gap, ignored if `include_gap` is FALSE (default: 1)}
+\item{gap}{The cost of a gap or NULL if this parameter will be set later.}
 
-\item{include_gap}{Whether to encode the cost of a gap in the matrix directly (default: FALSE)}
+\item{gap_open}{The cost of a gap opening or NULL. If this parameter is set, gap must also be set.}
 }
 \value{
 A cost matrix

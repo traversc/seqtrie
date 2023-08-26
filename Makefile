@@ -59,9 +59,9 @@ vignette:
 	sed -r -i 's/\((.+)\.png/\(vignettes\/\1\.png/' README.md
 
 test:
-	IS_LOCAL=Yes Rscript tests/test_dynamic_prog.R; unset IS_LOCAL
-	IS_LOCAL=Yes Rscript tests/test_RadixTree.R; unset IS_LOCAL
-	IS_LOCAL=Yes Rscript tests/test_RadixForest.R; unset IS_LOCAL
+	IS_LOCAL=Yes Rscript tests/test_pairwise.R && unset IS_LOCAL
+	IS_LOCAL=Yes Rscript tests/test_RadixTree.R && unset IS_LOCAL
+	IS_LOCAL=Yes Rscript tests/test_RadixForest.R && unset IS_LOCAL
 
 local-bench:
 	Rscript inst/extra_tests/benchmark.r
