@@ -1,43 +1,3 @@
-# Internal function for print Roxygen documentation, since a lot of it is repeated between functions
-rdoc <- function(what) {
-    if(what == "details") {
-        cat('Three types of distance metrics are supported, based on the form of alignment performed. These are: Hamming, Global (Levenshtein) and Anchored.
-
-An anchored alignment is a form of semi-global alignment, where the query sequence is "anchored" (global) to the beginning of both the query and target sequences, 
-but is semi-global in that the end of the either the query sequence or target sequence (but not both) can be unaligned. This type of alignment is sometimes called an "extension" alignment in literature. 
-
-In contrast a global alignment must align the entire query and target sequences. When mismatch and indel costs are equal to 1, this is also known as the Levenshtein distance. 
-
-By default, if mode == "global" or "anchored", all mismatches and indels are given a cost of 1. However, you can define your own distance metric by setting the cost_matrix and gap parameters. 
-The cost_matrix is a strictly positive square integer matrix and should include all characters in query and target as column- and rownames. 
-To set the cost of a gap (insertion or deletion) you can include a row and column named "gap" in the cost_matrix _OR_ set the gap_cost parameter (a single positive integer). 
-Similarly, the affine gap alignment can be set by including a row and column named "gap_open" in the cost_matrix _OR_ setting the gap_open_cost parameter (a single positive integer).
-If affine alignment is used, the cost of a gap is defined as:
-TOTAL_GAP_COST = gap_open_cost + (gap_cost * gap_length).
-
-If mode == "hamming" all alignment parameters are ignored; z mismatch is given a distance of 1 and gaps are not allowed.
-')
-    } else if(what == "query") {
-        cat('A character vector of query sequences.')
-    } else if(what == "sequences") {
-        cat('A character vector of sequences.')
-    } else if(what == "target") {
-        cat('A character vector of target sequences.')
-    } else if(what == "mode") {
-        cat('The distance metric to use. One of hamming (hm), global (gb) or anchored (an).')
-    } else if(what == "cost_matrix") {
-        cat('A custom cost matrix for use with the "global" or "anchored" distance metrics. See details.')
-    } else if(what == "gap_cost") {
-        cat('The cost of a gap for use with the "global" or "anchored" distance metrics. See details.')
-    } else if(what == "gap_open_cost") {
-        cat('The cost of a gap opening. See details.')
-    } else if(what == "nthreads") {
-        cat('The number of threads to use for parallel computation.')
-    } else if(what == "show_progress") {
-        cat('Whether to show a progress bar.')
-    }
-}
-
 #' @title Compute distances between all combinations of two sets of sequences
 #' @description Compute distances between all combinations of query and target sequences
 #' @param query `r rdoc("query")`
@@ -45,6 +5,7 @@ If mode == "hamming" all alignment parameters are ignored; z mismatch is given a
 #' @param mode `r rdoc("mode")`
 #' @param cost_matrix `r rdoc("cost_matrix")`
 #' @param gap_cost `r rdoc("gap_cost")`
+#' @param gap_open_cost `r rdoc("gap_open_cost")`
 #' @param nthreads `r rdoc("nthreads")`
 #' @param show_progress `r rdoc("show_progress")`
 #' @details This function calculates all combinations of pairwise distances based on Hamming, Levenshtein or Anchored algorithms. The output is a NxM matrix where N = length(query) and M = length(target).  

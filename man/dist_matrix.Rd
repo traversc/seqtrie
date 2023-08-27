@@ -26,6 +26,8 @@ dist_matrix(
 
 \item{gap_cost}{`r rdoc("gap_cost")`}
 
+\item{gap_open_cost}{`r rdoc("gap_open_cost")`}
+
 \item{nthreads}{`r rdoc("nthreads")`}
 
 \item{show_progress}{`r rdoc("show_progress")`}

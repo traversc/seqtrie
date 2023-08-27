@@ -8,6 +8,9 @@ BUILD   := $(PACKAGE)_$(VERSION).tar.gz
 check: $(BUILD)
 	R CMD check --as-cran $<
 
+check-no-vignette: $(BUILD)
+	R CMD check --as-cran --no-build-vignettes --ignore-vignettes --no-manual $<
+
 check-solaris: $(BUILD)
 	Rscript -e 'rhub::check("$(BUILD)", platform = c("solaris-x86-patched"))'
 
@@ -54,9 +57,8 @@ install:
 	R CMD INSTALL $(BUILD)
 
 vignette:
-	Rscript -e "rmarkdown::render(input='vignettes/vignette.rmd', output_format='all')"
-	mv vignettes/vignette.md README.md
-	sed -r -i 's/\((.+)\.png/\(vignettes\/\1\.png/' README.md
+	Rscript -e "rmarkdown::render(input='vignettes/vignette.rmd', output_format='html_vignette')"
+	IS_GITHUB=Yes Rscript -e "rmarkdown::render(input='vignettes/vignette.rmd', output_file='../README.md', output_format=rmarkdown::github_document(html_preview=FALSE))"; unset IS_GITHUB
 
 test:
 	IS_LOCAL=Yes Rscript tests/test_pairwise.R && unset IS_LOCAL

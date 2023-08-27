@@ -49,11 +49,11 @@ constexpr int NO_ALIGN = std::numeric_limits<int>::max() / 2; // used to represe
 //   }
 // }
 
-void print_pairchar_map(pairchar_map_type & cost_map) {
-  for(auto & kv : cost_map) {
-    std::cout << static_cast<int>(kv.first.first) << " " << static_cast<int>(kv.first.second) << " " << kv.second << std::endl;
-  }
-}
+// void print_pairchar_map(pairchar_map_type & cost_map) {
+//   for(auto & kv : cost_map) {
+//     std::cout << static_cast<int>(kv.first.first) << " " << static_cast<int>(kv.first.second) << " " << kv.second << std::endl;
+//   }
+// }
 
 int hamming_distance(cspan query, cspan target) {
   if(query.size() != target.size()) return NA_INTEGER;

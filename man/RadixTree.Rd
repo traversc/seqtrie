@@ -97,7 +97,7 @@ A string representation of the tree
 \if{html}{\out{<a id="method-RadixTree-graph"></a>}}
 \if{latex}{\out{\hypertarget{method-RadixTree-graph}{}}}
 \subsection{Method \code{graph()}}{
-Plot of the tree using igraph
+Plot of the tree using igraph (needs to be installed separately)
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{RadixTree$graph(depth = -1, root_label = "root", plot = TRUE)}\if{html}{\out{</div>}}
 }

@@ -1,8 +1,50 @@
+# Internal function to print Roxygen documentation, since a lot of it is repeated between functions
+rdoc <- function(what) {
+    if(what == "details") {
+        cat('Three types of distance metrics are supported, based on the form of alignment performed. These are: Hamming, Global (Levenshtein) and Anchored.
+
+An anchored alignment is a form of semi-global alignment, where the query sequence is "anchored" (global) to the beginning of both the query and target sequences, 
+but is semi-global in that the end of the either the query sequence or target sequence (but not both) can be unaligned. This type of alignment is sometimes called an "extension" alignment in literature. 
+
+In contrast a global alignment must align the entire query and target sequences. When mismatch and indel costs are equal to 1, this is also known as the Levenshtein distance. 
+
+By default, if mode == "global" or "anchored", all mismatches and indels are given a cost of 1. However, you can define your own distance metric by setting the cost_matrix and gap parameters. 
+The cost_matrix is a strictly positive square integer matrix and should include all characters in query and target as column- and rownames. 
+To set the cost of a gap (insertion or deletion) you can include a row and column named "gap" in the cost_matrix _OR_ set the gap_cost parameter (a single positive integer). 
+Similarly, the affine gap alignment can be set by including a row and column named "gap_open" in the cost_matrix _OR_ setting the gap_open_cost parameter (a single positive integer).
+If affine alignment is used, the cost of a gap is defined as:
+TOTAL_GAP_COST = gap_open_cost + (gap_cost * gap_length).
+
+If mode == "hamming" all alignment parameters are ignored; z mismatch is given a distance of 1 and gaps are not allowed.
+')
+    } else if(what == "query") {
+        cat('A character vector of query sequences.')
+    } else if(what == "sequences") {
+        cat('A character vector of sequences.')
+    } else if(what == "target") {
+        cat('A character vector of target sequences.')
+    } else if(what == "mode") {
+        cat('The distance metric to use. One of hamming (hm), global (gb) or anchored (an).')
+    } else if(what == "cost_matrix") {
+        cat('A custom cost matrix for use with the "global" or "anchored" distance metrics. See details.')
+    } else if(what == "gap_cost") {
+        cat('The cost of a gap for use with the "global" or "anchored" distance metrics. See details.')
+    } else if(what == "gap_open_cost") {
+        cat('The cost of a gap opening. See details.')
+    } else if(what == "nthreads") {
+        cat('The number of threads to use for parallel computation.')
+    } else if(what == "show_progress") {
+        cat('Whether to show a progress bar.')
+    }
+}
+
 # Internal function for testing if a numeric or integer object of arbitrary shape contains integer-like values
 is_integerlike <- function(x) {
     if(is.integer(x)) return(TRUE)
     if(!is.numeric(x)) return(FALSE)
-    if(any(as.integer(x) != x)) {
+    same_val <- as.integer(x) == x
+    is_na <- is.na(x)
+    if(!all(same_val | is_na)) {
         return(FALSE)
     } else {
         return(TRUE)
@@ -176,7 +218,7 @@ get_gap_type <- function(finalized_cost_matrix) {
 
 #' @title Generate a simple cost matrix
 #' @description Generate a cost matrix for use with the \code{search} method
-#' @param alphabet A string representing all possible characters in both query and target sequences (e.g. "ACGT")
+#' @param charset A string representing all possible characters in both query and target sequences (e.g. "ACGT")
 #' @param match The cost of a match
 #' @param mismatch The cost of a mismatch
 #' @param gap The cost of a gap or NULL if this parameter will be set later.
@@ -185,23 +227,35 @@ get_gap_type <- function(finalized_cost_matrix) {
 #' @examples
 #' generate_cost_matrix("ACGT", match = 0, mismatch = 1)
 #' @export
-generate_cost_matrix <- function(alphabet, match = 0, mismatch = 1, gap = NULL, gap_open = NULL) {
-    alphabet <- strsplit(alphabet, "")[[1]]
+generate_cost_matrix <- function(charset, match = 0, mismatch = 1, gap = NULL, gap_open = NULL) {
+    charset <- strsplit(charset, "")[[1]]
     gap_is_defined <- !is.null(gap)
     gap_open_is_defined <- !is.null(gap_open)
+
+    if(!is_integerlike(match) || !is_integerlike(mismatch)) {
+        stop("Cost parameters must have integer values")
+    }
+    if(gap_is_defined && !is_integerlike(gap)) {
+        stop("Cost parameters must have integer values")
+    }
+    if(gap_open_is_defined && !is_integerlike(gap_open)) {
+        stop("Cost parameters must have integer values")
+    }
+
     if(gap_open_is_defined && gap_is_defined) {
-        alphabet <- c(alphabet, "gap", "gap_open")
+        charset <- c(charset, "gap", "gap_open")
     } else if(gap_is_defined) {
-        alphabet <- c(alphabet, "gap")
+        charset <- c(charset, "gap")
     } else if(gap_open_is_defined) {
         stop("If gap_open is defined, gap must also be defined")
     }
-    n <- length(alphabet)
+    n <- length(charset)
     x <- matrix(nrow = n, ncol = n)
-    rownames(x) <- alphabet
-    colnames(x) <- alphabet
+    rownames(x) <- charset
+    colnames(x) <- charset
     x[lower.tri(x)] <- mismatch
     x[upper.tri(x)] <- mismatch
+    diag(x) <- match
     if(gap_open_is_defined) {
         x["gap",] <- gap
         x[,"gap"] <- gap
@@ -215,10 +269,6 @@ generate_cost_matrix <- function(alphabet, match = 0, mismatch = 1, gap = NULL, 
         x["gap",] <- gap
         x[,"gap"] <- gap
         x["gap","gap"] <- NA_integer_
-    }
-    diag(x) <- match
-    if(!is_integerlike(x)) {
-        stop("Cost parameters must have all integer values")
     }
     x
 }

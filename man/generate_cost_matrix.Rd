@@ -5,7 +5,7 @@
 \title{Generate a simple cost matrix}
 \usage{
 generate_cost_matrix(
-  alphabet,
+  charset,
   match = 0,
   mismatch = 1,
   gap = NULL,
@@ -13,7 +13,7 @@ generate_cost_matrix(
 )
 }
 \arguments{
-\item{alphabet}{A string representing all possible characters in both query and target sequences (e.g. "ACGT")}
+\item{charset}{A string representing all possible characters in both query and target sequences (e.g. "ACGT")}
 
 \item{match}{The cost of a match}
 

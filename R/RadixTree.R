@@ -41,7 +41,7 @@ RadixTree <- R6::R6Class("RadixTree", public=list(
   to_string = function() {
     RadixTree_print(self$root_pointer)
   },
-  #' @description Plot of the tree using igraph
+  #' @description Plot of the tree using igraph (needs to be installed separately)
   #' @param depth The tree depth to plot. If -1 (default), plot the entire tree.
   #' @param root_label The label of the root node in the plot. 
   #' @param plot Whether to create a plot or return the data used to generate the plot.
@@ -51,6 +51,9 @@ RadixTree <- R6::R6Class("RadixTree", public=list(
     if(is.null(result)) {
       result <- data.frame(parent = character(0), child = character(0), stringsAsFactors=F)
     } else if(plot) {
+      if (!requireNamespace("igraph", quietly = TRUE)) {
+        stopf("igraph package is required to plot the tree.") # nocov
+      }
       result$parent <- ifelse(result$parent == "", root_label, result$parent)
       gr <- igraph::graph_from_data_frame(result)
       igraph::V(gr)$color <- ifelse(names(igraph::V(gr)) == root_label, "white", "skyblue2")
