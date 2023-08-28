@@ -4,7 +4,7 @@
 #' @details
 #' The RadixTree class is a trie implementation. The primary usage is to be able to search of similar sequences based on a dynamic programming framework. 
 #' This can be done using the _search_ method which searches for similar sequences based on the Global, Anchored or Hamming distance metrics.
-#' `r rdoc("details")`
+#' `r seqtrie:::rdoc("details")`
 #' @examples
 #' tree <- RadixTree$new()
 #' tree$insert(c("ACGT", "AAAA"))
@@ -129,15 +129,15 @@ RadixTree <- R6::R6Class("RadixTree", public=list(
     }
   },
   #' @description Search for sequences in the tree that are with a specified distance metric to a specified query.
-  #' @param query `r rdoc("query")`
+  #' @param query `r seqtrie:::rdoc("query")`
   #' @param max_distance how far to search in units of absolute distance. Can be a single value or a vector. Mutually exclusive with max_fraction.
   #' @param max_fraction how far to search in units of relative distance to each query sequence length. Can be a single value or a vector. Mutually exclusive with max_distance.
-  #' @param mode `r rdoc("mode")`
-  #' @param cost_matrix `r rdoc("cost_matrix")`
-  #' @param gap_cost `r rdoc("gap_cost")`
-  #' @param gap_open_cost `r rdoc("gap_open_cost")`
-  #' @param nthreads `r rdoc("nthreads")`
-  #' @param show_progress `r rdoc("show_progress")`
+  #' @param mode `r seqtrie:::rdoc("mode")`
+  #' @param cost_matrix `r seqtrie:::rdoc("cost_matrix")`
+  #' @param gap_cost `r seqtrie:::rdoc("gap_cost")`
+  #' @param gap_open_cost `r seqtrie:::rdoc("gap_open_cost")`
+  #' @param nthreads `r seqtrie:::rdoc("nthreads")`
+  #' @param show_progress `r seqtrie:::rdoc("show_progress")`
   #' @return The output is a data.frame of all matches with columns "query" and "target". 
   #' For anchored searches, the output also includes attributes "query_size" and "target_size" which are vectors containing the portion of the query and target sequences that are aligned.
   search = function(query, max_distance = NULL, max_fraction = NULL, mode = "levenshtein", cost_matrix = NULL, gap_cost = NULL, gap_open_cost = NULL, nthreads = 1, show_progress = FALSE) {

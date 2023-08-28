@@ -16,21 +16,21 @@ dist_matrix(
 )
 }
 \arguments{
-\item{query}{`r rdoc("query")`}
+\item{query}{A character vector of query sequences.}
 
-\item{target}{`r rdoc("target")`}
+\item{target}{A character vector of target sequences.}
 
-\item{mode}{`r rdoc("mode")`}
+\item{mode}{The distance metric to use. One of hamming (hm), global (gb) or anchored (an).}
 
-\item{cost_matrix}{`r rdoc("cost_matrix")`}
+\item{cost_matrix}{A custom cost matrix for use with the "global" or "anchored" distance metrics. See details.}
 
-\item{gap_cost}{`r rdoc("gap_cost")`}
+\item{gap_cost}{The cost of a gap for use with the "global" or "anchored" distance metrics. See details.}
 
-\item{gap_open_cost}{`r rdoc("gap_open_cost")`}
+\item{gap_open_cost}{The cost of a gap opening. See details.}
 
-\item{nthreads}{`r rdoc("nthreads")`}
+\item{nthreads}{The number of threads to use for parallel computation.}
 
-\item{show_progress}{`r rdoc("show_progress")`}
+\item{show_progress}{Whether to show a progress bar.}
 }
 \value{
 The output is a distance matrix between all query (rows) and target (columns) sequences.
@@ -40,8 +40,22 @@ For anchored searches, the output also includes attributes "query_size" and "tar
 Compute distances between all combinations of query and target sequences
 }
 \details{
-This function calculates all combinations of pairwise distances based on Hamming, Levenshtein or Anchored algorithms. The output is a NxM matrix where N = length(query) and M = length(target).  
-`r rdoc("details")`
+This function calculates all combinations of pairwise distances based on Hamming, Levenshtein or Anchored algorithms. The output is a NxM matrix where N = length(query) and M = length(target).
+Three types of distance metrics are supported, based on the form of alignment performed. These are: Hamming, Global (Levenshtein) and Anchored.
+
+An anchored alignment is a form of semi-global alignment, where the query sequence is "anchored" (global) to the beginning of both the query and target sequences,
+but is semi-global in that the end of the either the query sequence or target sequence (but not both) can be unaligned. This type of alignment is sometimes called an "extension" alignment in literature.
+
+In contrast a global alignment must align the entire query and target sequences. When mismatch and indel costs are equal to 1, this is also known as the Levenshtein distance.
+
+By default, if mode == "global" or "anchored", all mismatches and indels are given a cost of 1. However, you can define your own distance metric by setting the cost_matrix and gap parameters.
+The cost_matrix is a strictly positive square integer matrix and should include all characters in query and target as column- and rownames.
+To set the cost of a gap (insertion or deletion) you can include a row and column named "gap" in the cost_matrix \emph{OR} set the gap_cost parameter (a single positive integer).
+Similarly, the affine gap alignment can be set by including a row and column named "gap_open" in the cost_matrix \emph{OR} setting the gap_open_cost parameter (a single positive integer).
+If affine alignment is used, the cost of a gap is defined as:
+TOTAL_GAP_COST = gap_open_cost + (gap_cost * gap_length).
+
+If mode == "hamming" all alignment parameters are ignored; z mismatch is given a distance of 1 and gaps are not allowed.
 }
 \examples{
 dist_matrix(c("ACGT", "AAAA"), c("ACG", "ACGT"), mode = "global")

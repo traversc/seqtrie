@@ -1,15 +1,15 @@
 #' @title Compute distances between all combinations of two sets of sequences
 #' @description Compute distances between all combinations of query and target sequences
-#' @param query `r rdoc("query")`
-#' @param target `r rdoc("target")`
-#' @param mode `r rdoc("mode")`
-#' @param cost_matrix `r rdoc("cost_matrix")`
-#' @param gap_cost `r rdoc("gap_cost")`
-#' @param gap_open_cost `r rdoc("gap_open_cost")`
-#' @param nthreads `r rdoc("nthreads")`
-#' @param show_progress `r rdoc("show_progress")`
+#' @param query `r seqtrie:::rdoc("query")`
+#' @param target `r seqtrie:::rdoc("target")`
+#' @param mode `r seqtrie:::rdoc("mode")`
+#' @param cost_matrix `r seqtrie:::rdoc("cost_matrix")`
+#' @param gap_cost `r seqtrie:::rdoc("gap_cost")`
+#' @param gap_open_cost `r seqtrie:::rdoc("gap_open_cost")`
+#' @param nthreads `r seqtrie:::rdoc("nthreads")`
+#' @param show_progress `r seqtrie:::rdoc("show_progress")`
 #' @details This function calculates all combinations of pairwise distances based on Hamming, Levenshtein or Anchored algorithms. The output is a NxM matrix where N = length(query) and M = length(target).  
-#' `r rdoc("details")`
+#' `r seqtrie:::rdoc("details")`
 #' @return The output is a distance matrix between all query (rows) and target (columns) sequences.
 #' For anchored searches, the output also includes attributes "query_size" and "target_size" which are matrices containing the lengths of the query and target sequences that are aligned. 
 #' @examples
@@ -26,17 +26,17 @@ dist_matrix <- function(query, target, mode, cost_matrix = NULL, gap_cost = NULL
 
 #' @title Pairwise distance between two sets of sequences
 #' @description Compute the pairwise distance between two sets of sequences
-#' @param query `r rdoc("query")`
-#' @param target `r rdoc("target")`. Must be the same length as query. 
-#' @param mode `r rdoc("mode")`
-#' @param cost_matrix `r rdoc("cost_matrix")`
-#' @param gap_cost `r rdoc("gap_cost")`
-#' @param gap_open_cost `r rdoc("gap_open_cost")`
-#' @param nthreads `r rdoc("nthreads")`
-#' @param show_progress `r rdoc("show_progress")`
+#' @param query `r seqtrie:::rdoc("query")`
+#' @param target `r seqtrie:::rdoc("target")`. Must be the same length as query. 
+#' @param mode `r seqtrie:::rdoc("mode")`
+#' @param cost_matrix `r seqtrie:::rdoc("cost_matrix")`
+#' @param gap_cost `r seqtrie:::rdoc("gap_cost")`
+#' @param gap_open_cost `r seqtrie:::rdoc("gap_open_cost")`
+#' @param nthreads `r seqtrie:::rdoc("nthreads")`
+#' @param show_progress `r seqtrie:::rdoc("show_progress")`
 #' @details
 #' This function calculates pairwise distances based on Hamming, Levenshtein or Anchored algorithms. _query_ and _target_ must be the same length.
-#' `r rdoc("details")`
+#' `r seqtrie:::rdoc("details")`
 #'
 #' @return The output of this function is a vector of distances. If mode == "anchored" then the output also includes attributes "query_size" and 
 #' "target_size" which are vectors containing the lengths of the query and target sequences that are aligned.

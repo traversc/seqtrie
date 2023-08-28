@@ -124,12 +124,12 @@ RadixForest <- R6::R6Class("RadixForest", list(
     }
   },
   #' @description Search for sequences in the forest that are with a specified distance metric to a specified query.
-  #' @param query `r rdoc("query")`
+  #' @param query `r seqtrie:::rdoc("query")`
   #' @param max_distance how far to search in units of absolute distance. Can be a single value or a vector.
   #' @param max_fraction how far to search in units of relative distance to each query sequence length. Can be a single value or a vector.
-  #' @param mode `r rdoc("mode")`
-  #' @param nthreads `r rdoc("nthreads")`
-  #' @param show_progress `r rdoc("show_progress")`
+  #' @param mode `r seqtrie:::rdoc("mode")`
+  #' @param nthreads `r seqtrie:::rdoc("nthreads")`
+  #' @param show_progress `r seqtrie:::rdoc("show_progress")`
   #' @return The output is a data.frame of all matches with columns "query" and "target".
   
   search = function(query, max_distance = NULL, max_fraction = NULL, mode = "levenshtein", nthreads = 1, show_progress = FALSE) {

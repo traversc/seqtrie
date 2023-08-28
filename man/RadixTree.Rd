@@ -7,9 +7,23 @@
 Radix Tree (trie) class implementation
 }
 \details{
-The RadixTree class is a trie implementation. The primary usage is to be able to search of similar sequences based on a dynamic programming framework. 
-This can be done using the _search_ method which searches for similar sequences based on the Global, Anchored or Hamming distance metrics.
-`r rdoc("details")`
+The RadixTree class is a trie implementation. The primary usage is to be able to search of similar sequences based on a dynamic programming framework.
+This can be done using the \emph{search} method which searches for similar sequences based on the Global, Anchored or Hamming distance metrics.
+Three types of distance metrics are supported, based on the form of alignment performed. These are: Hamming, Global (Levenshtein) and Anchored.
+
+An anchored alignment is a form of semi-global alignment, where the query sequence is "anchored" (global) to the beginning of both the query and target sequences,
+but is semi-global in that the end of the either the query sequence or target sequence (but not both) can be unaligned. This type of alignment is sometimes called an "extension" alignment in literature.
+
+In contrast a global alignment must align the entire query and target sequences. When mismatch and indel costs are equal to 1, this is also known as the Levenshtein distance.
+
+By default, if mode == "global" or "anchored", all mismatches and indels are given a cost of 1. However, you can define your own distance metric by setting the cost_matrix and gap parameters.
+The cost_matrix is a strictly positive square integer matrix and should include all characters in query and target as column- and rownames.
+To set the cost of a gap (insertion or deletion) you can include a row and column named "gap" in the cost_matrix \emph{OR} set the gap_cost parameter (a single positive integer).
+Similarly, the affine gap alignment can be set by including a row and column named "gap_open" in the cost_matrix \emph{OR} setting the gap_open_cost parameter (a single positive integer).
+If affine alignment is used, the cost of a gap is defined as:
+TOTAL_GAP_COST = gap_open_cost + (gap_cost * gap_length).
+
+If mode == "hamming" all alignment parameters are ignored; z mismatch is given a distance of 1 and gaps are not allowed.
 }
 \examples{
 tree <- RadixTree$new()
@@ -246,28 +260,28 @@ Search for sequences in the tree that are with a specified distance metric to a 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{query}}{`r rdoc("query")`}
+\item{\code{query}}{A character vector of query sequences.}
 
 \item{\code{max_distance}}{how far to search in units of absolute distance. Can be a single value or a vector. Mutually exclusive with max_fraction.}
 
 \item{\code{max_fraction}}{how far to search in units of relative distance to each query sequence length. Can be a single value or a vector. Mutually exclusive with max_distance.}
 
-\item{\code{mode}}{`r rdoc("mode")`}
+\item{\code{mode}}{The distance metric to use. One of hamming (hm), global (gb) or anchored (an).}
 
-\item{\code{cost_matrix}}{`r rdoc("cost_matrix")`}
+\item{\code{cost_matrix}}{A custom cost matrix for use with the "global" or "anchored" distance metrics. See details.}
 
-\item{\code{gap_cost}}{`r rdoc("gap_cost")`}
+\item{\code{gap_cost}}{The cost of a gap for use with the "global" or "anchored" distance metrics. See details.}
 
-\item{\code{gap_open_cost}}{`r rdoc("gap_open_cost")`}
+\item{\code{gap_open_cost}}{The cost of a gap opening. See details.}
 
-\item{\code{nthreads}}{`r rdoc("nthreads")`}
+\item{\code{nthreads}}{The number of threads to use for parallel computation.}
 
-\item{\code{show_progress}}{`r rdoc("show_progress")`}
+\item{\code{show_progress}}{Whether to show a progress bar.}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-The output is a data.frame of all matches with columns "query" and "target". 
+The output is a data.frame of all matches with columns "query" and "target".
 For anchored searches, the output also includes attributes "query_size" and "target_size" which are vectors containing the portion of the query and target sequences that are aligned.
 }
 }

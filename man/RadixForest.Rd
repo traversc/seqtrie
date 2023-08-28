@@ -7,10 +7,10 @@
 Radix Forest class implementation
 }
 \details{
-The RadixForest class is a specialization of the RadixTree implementation. Instead of putting sequences into a single tree, the RadixForest class puts sequences into a tree based on sequence length. 
+The RadixForest class is a specialization of the RadixTree implementation. Instead of putting sequences into a single tree, the RadixForest class puts sequences into a tree based on sequence length.
 I.e. *map<sequence_length, RadixTree>. This allows for faster searching of similar sequences based on Hamming or Levenshtein distance metrics.
 Unlike the RadixTree class, the RadixForest class does NOT support Anchored searches or a custom cost matrix.
-See *RadixTree* for additional details.
+See \emph{RadixTree} for additional details.
 }
 \examples{
 forest <- RadixForest$new()
@@ -238,17 +238,17 @@ Search for sequences in the forest that are with a specified distance metric to 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{query}}{`r rdoc("query")`}
+\item{\code{query}}{A character vector of query sequences.}
 
 \item{\code{max_distance}}{how far to search in units of absolute distance. Can be a single value or a vector.}
 
 \item{\code{max_fraction}}{how far to search in units of relative distance to each query sequence length. Can be a single value or a vector.}
 
-\item{\code{mode}}{`r rdoc("mode")`}
+\item{\code{mode}}{The distance metric to use. One of hamming (hm), global (gb) or anchored (an).}
 
-\item{\code{nthreads}}{`r rdoc("nthreads")`}
+\item{\code{nthreads}}{The number of threads to use for parallel computation.}
 
-\item{\code{show_progress}}{`r rdoc("show_progress")`}
+\item{\code{show_progress}}{Whether to show a progress bar.}
 }
 \if{html}{\out{</div>}}
 }
