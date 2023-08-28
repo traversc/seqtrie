@@ -31,7 +31,7 @@ RadixForest <- R6::R6Class("RadixForest", list(
     }
   },
   #' @description Print the forest to screen
-  print = function() {
+  show = function() {
     cat(RadixForest_print(self$forest_pointer))
   },
   #' @description Print the forest to a string
@@ -42,22 +42,44 @@ RadixForest <- R6::R6Class("RadixForest", list(
   #' @param depth The tree depth to plot for each tree in the forest.
   #' @param root_label The label of the root node(s) in the plot.
   #' @param plot Whether to create a plot or return the data used to generate the plot.
-  #' @return a data frame of parent-child relationships used to generate the igraph plot
+  #' @return A data frame of parent-child relationships used to generate the igraph plot OR a ggplot2 object
   graph = function(depth = -1, root_label = "root", plot = TRUE) {
     result <- RadixForest_graph(self$forest_pointer, depth)
     if(is.null(result)) {
-      result <- data.frame(parent = character(0), child = character(0), stringsAsFactors=F)
+      result <- data.frame(parent = character(0), child = character(0), stringsAsFactors=FALSE)
+      return(result)
     } else if(plot) {
       if (!requireNamespace("igraph", quietly = TRUE)) {
         stopf("igraph package is required to plot the tree.") # nocov
       }
+      if (!requireNamespace("ggplot2", quietly = TRUE)) {
+        stopf("ggplot2 package is required to plot the tree.") # nocov
+      }
       result$parent <- ifelse(result$parent == "", root_label, result$parent)
       gr <- igraph::graph_from_data_frame(result)
-      igraph::V(gr)$color <- ifelse(names(igraph::V(gr)) == root_label, "white", "skyblue2")
-      igraph::V(gr)$size <- ifelse(names(igraph::V(gr)) == root_label, 21, 15)
-      plot(gr, layout=igraph::layout.fruchterman.reingold, vertex.color=igraph::V(gr)$color, vertex.label.family = "sans", margin = 0) 
+      fr <- igraph::layout.fruchterman.reingold(gr)
+      fr <- as.data.frame(fr)
+      fr$node <- names(igraph::V(gr))
+      fr$fill <- ifelse(fr$node == root_label, "white", "skyblue")
+      fr$size <- ifelse(fr$node == root_label, 16, 12)
+
+      result$parent_x <- fr$V1[match(result$parent, fr$node)]
+      result$parent_y <- fr$V2[match(result$parent, fr$node)]
+      result$child_x <- fr$V1[match(result$child, fr$node)]
+      result$child_y <- fr$V2[match(result$child, fr$node)]
+
+      g <- ggplot2::ggplot() + 
+        ggplot2::geom_segment(data=result, ggplot2::aes(x=parent_x, xend=child_x, y=parent_y, yend=child_y)) + 
+        ggplot2::geom_point(data=fr, ggplot2::aes(x=V1, y=V2, fill=fill, size=size), shape = 21, color = "black") + 
+        ggplot2::geom_text(data=fr, ggplot2::aes(x=V1, y=V2, label=node)) + 
+        ggplot2::scale_fill_identity() + 
+        ggplot2::scale_size_identity() + 
+        ggplot2::theme_bw() + 
+        ggplot2::theme(axis.title = ggplot2::element_blank())
+      return(g)
+    } else {
+      return(result)
     }
-    invisible(result)
   },
   #' @description Output all sequences held by the forest as a character vector
   #' @return A character vector of all sequences contained in the forest.
@@ -96,7 +118,7 @@ RadixForest <- R6::R6Class("RadixForest", list(
   prefix_search = function(query) {
     result <- RadixForest_prefix_search(self$forest_pointer, query)
     if(is.null(result)) {
-      data.frame(query = character(0), target = character(0), stringsAsFactors=F)
+      data.frame(query = character(0), target = character(0), stringsAsFactors=FALSE)
     } else {
       result
     }

@@ -39,7 +39,7 @@ https://en.wikipedia.org/wiki/Radix_tree
 \subsection{Public methods}{
 \itemize{
 \item \href{#method-RadixTree-new}{\code{RadixTree$new()}}
-\item \href{#method-RadixTree-print}{\code{RadixTree$print()}}
+\item \href{#method-RadixTree-show}{\code{RadixTree$show()}}
 \item \href{#method-RadixTree-to_string}{\code{RadixTree$to_string()}}
 \item \href{#method-RadixTree-graph}{\code{RadixTree$graph()}}
 \item \href{#method-RadixTree-to_vector}{\code{RadixTree$to_vector()}}
@@ -71,12 +71,12 @@ Create a new RadixTree object
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-RadixTree-print"></a>}}
-\if{latex}{\out{\hypertarget{method-RadixTree-print}{}}}
-\subsection{Method \code{print()}}{
+\if{html}{\out{<a id="method-RadixTree-show"></a>}}
+\if{latex}{\out{\hypertarget{method-RadixTree-show}{}}}
+\subsection{Method \code{show()}}{
 Print the tree to screen
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{RadixTree$print()}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{RadixTree$show()}\if{html}{\out{</div>}}
 }
 
 }
@@ -114,7 +114,7 @@ Plot of the tree using igraph (needs to be installed separately)
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-a data frame of parent-child relationships used to generate the igraph plot
+A data frame of parent-child relationships used to generate the igraph plot OR a ggplot2 object
 }
 }
 \if{html}{\out{<hr>}}

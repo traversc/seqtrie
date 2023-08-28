@@ -16,7 +16,7 @@ MAXSEQLEN <- 200
 CHARSET   <- "ACGT"
 
 random_strings <- function(N, charset = "abcdefghijklmnopqrstuvwxyz") {
-  len <- sample(0:MAXSEQLEN, N, replace=T)
+  len <- sample(0:MAXSEQLEN, N, replace=TRUE)
   result <- lapply(0:MAXSEQLEN, function(x) {
     nx <- sum(len == x)
     stringfish::random_strings(nx, x, charset = charset, vector_mode = "normal")
@@ -29,9 +29,9 @@ mutate_strings <- function(x, prob = 0.025, indel_prob = 0.025, charset = "abcde
   xsplit <- strsplit(x, "")
   sapply(xsplit, function(a) {
     r <- runif(length(a)) < prob
-    a[r] <- sample(charset, sum(r), replace=T)
+    a[r] <- sample(charset, sum(r), replace=TRUE)
     ins <- runif(length(a)) < indel_prob
-    a[ins] <- paste0(sample(charset, sum(ins), replace=T), sample(charset, sum(ins), replace=T))
+    a[ins] <- paste0(sample(charset, sum(ins), replace=TRUE), sample(charset, sum(ins), replace=TRUE))
     del <- runif(length(a)) < indel_prob
     a[del] <- ""
     paste0(a, collapse = "")
@@ -68,7 +68,7 @@ biostrings_pairwise_global <- function(query, target, cost_matrix, gap_cost, gap
 
 biostrings_matrix_anchored <- function(query, target, query_size, target_size, cost_matrix, gap_cost, gap_open_cost = 0) {
   substitutionMatrix <- -cost_matrix
-  lapply(1:length(query), function(i) {
+  lapply(seq_along(query), function(i) {
     query2 <- substring(query[i], 1, query_size[i,,drop=TRUE])
     target2 <- substring(target, 1, target_size[i,,drop=TRUE])
     -pairwiseAlignmentFix(pattern=query2, subject=target2, substitutionMatrix = substitutionMatrix, gapOpening=gap_open_cost, gapExtension=gap_cost, scoreOnly=TRUE, type="global")
@@ -139,7 +139,7 @@ for(. in 1:NITER) {
       results_seqtrie <- dist_matrix(query, target, mode = "anchored", nthreads=NTHREADS)
       query_size <- attr(results_seqtrie, "query_size")
       target_size <- attr(results_seqtrie, "target_size")
-      results_stringdist <- lapply(1:length(query), function(i) {
+      results_stringdist <- lapply(seq_along(query), function(i) {
         query_size2 <- query_size[i,,drop=TRUE]
         target_size2 <- target_size[i,,drop=TRUE]
         query2 <- substring(query[i], 1, query_size2) # query[i] is recycled
@@ -166,7 +166,7 @@ for(. in 1:NITER) {
       query <- c(mutate_strings(query, indel_prob=0, charset = CHARSET), "") %>% unique
 
       # Check matrix results
-      cost_matrix <- matrix(sample(1:3, size = nchar(CHARSET)^2, replace=T), nrow=nchar(CHARSET))
+      cost_matrix <- matrix(sample(1:3, size = nchar(CHARSET)^2, replace=TRUE), nrow=nchar(CHARSET))
       diag(cost_matrix) <- 0
       colnames(cost_matrix) <- rownames(cost_matrix) <- strsplit(CHARSET, "")[[1]]
       gap_cost <- sample(1:3, size = 1)
@@ -188,7 +188,7 @@ for(. in 1:NITER) {
       query <- c(mutate_strings(query, indel_prob=0, charset = CHARSET), "") %>% unique
 
       # Check matrix results
-      cost_matrix <- matrix(sample(1:3, size = nchar(CHARSET)^2, replace=T), nrow=nchar(CHARSET))
+      cost_matrix <- matrix(sample(1:3, size = nchar(CHARSET)^2, replace=TRUE), nrow=nchar(CHARSET))
       diag(cost_matrix) <- 0
       colnames(cost_matrix) <- rownames(cost_matrix) <- strsplit(CHARSET, "")[[1]]
       gap_cost <- sample(1:3, size = 1)
@@ -215,7 +215,7 @@ for(. in 1:NITER) {
       query <- c(mutate_strings(query, indel_prob=0, charset = CHARSET), "") %>% unique
 
       # Check matrix results
-      cost_matrix <- matrix(sample(1:3, size = nchar(CHARSET)^2, replace=T), nrow=nchar(CHARSET))
+      cost_matrix <- matrix(sample(1:3, size = nchar(CHARSET)^2, replace=TRUE), nrow=nchar(CHARSET))
       diag(cost_matrix) <- 0
       colnames(cost_matrix) <- rownames(cost_matrix) <- strsplit(CHARSET, "")[[1]]
       gap_cost <- sample(1:3, size = 1)
@@ -238,7 +238,7 @@ for(. in 1:NITER) {
       query <- c(mutate_strings(query, indel_prob=0, charset = CHARSET), "") %>% unique
 
       # Check matrix results
-      cost_matrix <- matrix(sample(1:3, size = nchar(CHARSET)^2, replace=T), nrow=nchar(CHARSET))
+      cost_matrix <- matrix(sample(1:3, size = nchar(CHARSET)^2, replace=TRUE), nrow=nchar(CHARSET))
       diag(cost_matrix) <- 0
       colnames(cost_matrix) <- rownames(cost_matrix) <- strsplit(CHARSET, "")[[1]]
       gap_cost <- sample(1:3, size = 1)

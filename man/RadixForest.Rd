@@ -37,7 +37,7 @@ forest$search("ACG", max_distance = 1, mode = "hamming")
 \subsection{Public methods}{
 \itemize{
 \item \href{#method-RadixForest-new}{\code{RadixForest$new()}}
-\item \href{#method-RadixForest-print}{\code{RadixForest$print()}}
+\item \href{#method-RadixForest-show}{\code{RadixForest$show()}}
 \item \href{#method-RadixForest-to_string}{\code{RadixForest$to_string()}}
 \item \href{#method-RadixForest-graph}{\code{RadixForest$graph()}}
 \item \href{#method-RadixForest-to_vector}{\code{RadixForest$to_vector()}}
@@ -69,12 +69,12 @@ Create a new RadixForest object
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-RadixForest-print"></a>}}
-\if{latex}{\out{\hypertarget{method-RadixForest-print}{}}}
-\subsection{Method \code{print()}}{
+\if{html}{\out{<a id="method-RadixForest-show"></a>}}
+\if{latex}{\out{\hypertarget{method-RadixForest-show}{}}}
+\subsection{Method \code{show()}}{
 Print the forest to screen
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{RadixForest$print()}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{RadixForest$show()}\if{html}{\out{</div>}}
 }
 
 }
@@ -109,7 +109,7 @@ Plot of the forest using igraph
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-a data frame of parent-child relationships used to generate the igraph plot
+A data frame of parent-child relationships used to generate the igraph plot OR a ggplot2 object
 }
 }
 \if{html}{\out{<hr>}}

@@ -11,11 +11,10 @@ notably for bioinformatics in the BLAST algorithm for K-mer lookup. It
 is a space efficient data structure where a collection of sequences are
 stored in a tree structure, where each leaf represents one sequence, and
 each node holds one character representing a shared prefix of all
-sequences descending from it.
-
-A Radix Tree (aka Compact Prefix Tree) is an improvement on a trie,
-using less memory and being generally faster. In a Radix Tree, each node
-is able to represent multiple characters instead of just one.
+sequences descending from it. A Radix Tree (aka Compact Prefix Tree) is
+an improvement on a trie, using less memory and being generally faster.
+In a Radix Tree, each node is able to represent multiple characters
+instead of just one.
 
 Tries and Radix Trees have similar complexity to a hashmap. Storing a
 sequence within the tree or looking it up are O(k) where k is the length
@@ -25,12 +24,11 @@ whereas a hashmap does not contain any sequence similarity information.
 
 See also: <https://en.wikipedia.org/wiki/Radix_tree>
 
-In `seqtrie`, there are two `R6` classes:
-
-`RadixTree` is the primary class in this package. There are three main
-methods. The `$insert()` method is used to store sequences on the tree,
-`$erase()` for erasing sequences from the tree and `$search()` for
-finding similar sequences stored on the tree.
+In `seqtrie`, there are two `R6` classes: `RadixTree` is the primary
+class in this package. There are three main methods. The `$insert()`
+method is used to store sequences on the tree, `$erase()` for erasing
+sequences from the tree and `$search()` for finding similar sequences
+stored on the tree.
 
 The second `R6` class is `RadixForest`, a derivative data structure
 where separate trees are constructed for each sequence length. This data
@@ -38,9 +36,7 @@ structure has advantages and disadvantages, discussed later.
 
 ### Install
 
-``` r
-devtools::install_github("traversc/seqtrie")
-```
+`devtools::install_github("traversc/seqtrie")`
 
 ### Simple example
 
@@ -48,13 +44,15 @@ To demonstrate the interface, below is a simple example where we insert
 some sequences (strings), erase one and then plot out the tree.
 
 ``` r
+library(seqtrie)
 tree <- RadixTree$new()
 tree$insert(c("cargo", "cart", "carburetor", "carbuncle", "bar", "zebra"))
 tree$erase("zebra")
-tree$graph()
+# tree$graph requires igraph package
+set.seed(1); tree$graph()
 ```
 
-<img src="vignettes/simple_tree.png" title="simple_tree" width="576" />
+![](vignettes/simple_tree.png "simple_tree"){width=576px}
 
 ### Levenshtein “edit distance” search
 
@@ -63,33 +61,39 @@ Biotechnologies.
 (<https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7418738/>. This data is
 licensed under CC 4.0.)
 
-Here, we find highly similar sequences within a fixed edit distance.
+Here, we find highly similar sequences within a fixed edit distance. For
+the purpose of this vignette, we sample a small selection of sequences.
+Approximate running times on the full dataset using 8 threads are listed
+in the comments.
 
 ``` r
-# create a new tree and insert 130,000 "CDR3" sequences
+# 130,000 "CDR3" sequences
+set.seed(1)
 data(covid_cdr3)
+covid_cdr3 <- sample(covid_cdr3, 1000)
 tree <- RadixTree$new()
 tree$insert(covid_cdr3)
-
-# search for similar sequences within an edit distance of 2 ~ this may take a minute or two
-results <- tree$search(covid_cdr3, max_distance=2, mode="levenshtein", nthreads=8)
+# Full data: 1 min
+results <- tree$search(covid_cdr3, max_distance=2, mode="levenshtein", nthreads=2)
+# The output is a data.frame mapping query (search sequences)
+# and target (sequences inserted into the tree).
+dplyr::filter(results, query != target)
 ```
 
-### The output
-
-The output is a data.frame mapping query (search sequences) and target
-(sequences inserted into the tree).
-
-``` r
-tail(results)
-#                                                query                                        target distance
-# 262287          TGTGCCAGCAGCCCCGGGGACAATGAGCAGTTCTTC          TGTGCCAGCAGCCCGGGGACAATTGAGCAGTTCTTC        2
-# 262288          TGTGCCAGCAGCCCCGGGGACAATGAGCAGTTCTTC          TGTGCCAGCAGCCCGGGGACTAATGAGCAGTTCTTC        2
-# 262289          TGTGCCAGCAGCCCCGGGGACAATGAGCAGTTCTTC          TGTGCCAGCAGCCTCGGGTACAATGAGCAGTTCTTC        2
-# 262290          TGTGCCAGCAGCCCCGGGGACAATGAGCAGTTCTTC          TGTGCCAGCAGCGCCCGGGACAATGAGCAGTTCTTC        2
-# 262291 TGTGCCAGCAGCCCTCGACTAGTCTCCTACAATGAGCAGTTCTTC TGTGCCAGCAGCCCTCGACTAGTCTCCTACAATGAGCAGTTCTTC        0
-# 262292 TGTGCCAGCAGCCTCGACAGGGGAAACGCCTACGAGCAGTACTTC TGTGCCAGCAGCCTCGACAGGGGAAACGCCTACGAGCAGTACTTC        0
-```
+    ##                                           query
+    ## 1    TGTGCCAGCAGTCACGGAACTAGCACAGATACGCAGTATTTT
+    ## 2          TGCAGCGTTGATCTGCCGGGAGAGACCCAGTACTTC
+    ## 3 TGTGCCAGTACTATGGGACAGGGGATGAACACTGAAGCTTTCTTT
+    ## 4 TGTGCCAGTAGTATGGGACAGGGAATGAACACTGAAGCTTTCTTT
+    ## 5    TGTGCCAGCAGTGACAGAACTAGCACAGATACGCAGTATTTT
+    ## 6          TGCAGCGTTGATCTGACGGGAGAGACCCAGTACTTC
+    ##                                          target distance
+    ## 1    TGTGCCAGCAGTGACAGAACTAGCACAGATACGCAGTATTTT        2
+    ## 2          TGCAGCGTTGATCTGACGGGAGAGACCCAGTACTTC        1
+    ## 3 TGTGCCAGTAGTATGGGACAGGGAATGAACACTGAAGCTTTCTTT        2
+    ## 4 TGTGCCAGTACTATGGGACAGGGGATGAACACTGAAGCTTTCTTT        2
+    ## 5    TGTGCCAGCAGTCACGGAACTAGCACAGATACGCAGTATTTT        2
+    ## 6          TGCAGCGTTGATCTGCCGGGAGAGACCCAGTACTTC        1
 
 ### Search parameters
 
@@ -108,29 +112,34 @@ Overall, the algorithm is significantly faster than a pairwise/matrix
 edit distance calculation for finding similar sequences.
 
 However, *care still needs to be taken when setting parameters for
-searching a large number of sequences (~100,000+).*
+searching a large number of sequences (\~100,000+).*
 
 #### Some additional examples using the `max_fraction` parameter.
 
-**Some additional examples using the max_fraction parameter.**
+**Some additional examples using the max\_fraction parameter.**
 
 ``` r
-results <- tree$search(covid_cdr3, max_fraction=0.035, mode="levenshtein", nthreads=8) # ~several seconds
-results <- tree$search(covid_cdr3, max_fraction=0.06, mode="levenshtein", nthreads=8) # ~1 minute
-results <- tree$search(covid_cdr3, max_fraction=0.15, mode="levenshtein", nthreads=8) # ~15-20 minutes
+# Full data: several seconds
+results <- tree$search(covid_cdr3, max_fraction=0.035, mode="levenshtein", nthreads=2)
+# Full data: 1 minute
+results <- tree$search(covid_cdr3, max_fraction=0.06, mode="levenshtein", nthreads=2)
+# Full data: 15-20 minutes
+results <- tree$search(covid_cdr3, max_fraction=0.15, mode="levenshtein", nthreads=2)
 ```
 
 ### Hamming distance search
 
 Hamming distance is similar to Levenshtein distance, but does not allow
-insertions or deletions. Sequences must be the same length.
-
-Because of this restriction, Hamming distance is generally a lot faster.
+insertions or deletions. Sequences must be the same length. Because of
+this restriction, Hamming distance is generally a lot faster.
 
 ``` r
-results <- tree$search(covid_cdr3, max_fraction=0.035, mode="hamming", nthreads=8) # ~1 second
-results <- tree$search(covid_cdr3, max_fraction=0.06, mode="hamming", nthreads=8) # ~ several seconds
-results <- tree$search(covid_cdr3, max_fraction=0.15, mode="hamming", nthreads=8) # ~ 1.5 minutes
+# Full data: 1 second
+results <- tree$search(covid_cdr3, max_fraction=0.035, mode="hamming", nthreads=2)
+# Full data: several seconds
+results <- tree$search(covid_cdr3, max_fraction=0.06, mode="hamming", nthreads=2)
+# Full data: 1.5 minutes
+results <- tree$search(covid_cdr3, max_fraction=0.15, mode="hamming", nthreads=2)
 ```
 
 ### Anchored alignment searches
@@ -148,22 +157,21 @@ tree$insert("CARTON")
 tree$insert("CAR")
 tree$insert("CARBON")
 tree$search("CART", max_distance = 0, mode = "anchored")
-print(results)
-#   query target distance query_size target_size
-# 1  CART    CAR        0          3           3
-# 2  CART CARTON        0          4           4
 ```
+
+    ##   query target distance query_size target_size
+    ## 1  CART    CAR        0          3           3
+    ## 2  CART CARTON        0          4           4
 
 Because the alignment is semi-global at the end of the alignment, the
 query of “CART” finds “CAR” and “CARTON” but not “CARBON” given a max
 distance of 0. Additionally, the output of an anchored search also
 returns the position of the query and target at the ends. Either the
 query or the target must fully align, so at least one of the end
-positions will be the full length of the sequence.
-
-This type of alignment is frequently useful in biology e.g. if you are
-trying to align multiple reads that are variable in length but start at
-the same genomic position or primer site.
+positions will be the full length of the sequence. This type of
+alignment is frequently useful in biology e.g. if you are trying to
+align multiple reads that are variable in length but start at the same
+genomic position or primer site.
 
 ### Custom distance searches and affine gap alignment
 
@@ -175,22 +183,44 @@ parameter. The interface is similar to the
 ``` r
 tree <- RadixTree$new()
 tree$insert(covid_cdr3)
-
 # define a custom distance matrix - generate_cost_matrix is a convienence function
 # gap and gap_open can be defined directly in the cost_matrix or as search method parameters
-cost_mat <- generate_cost_matrix("ACGT", match=0, mismatch=1, gap=2, gap_open=1)
+cost_mat <- generate_cost_matrix("ACGT", match=0, mismatch=5, gap=2, gap_open=1)
 print(cost_mat)
-#          A C G T gap gap_open
-# A        0 1 1 1   2        1
-# C        1 0 1 1   2        1
-# G        1 1 0 1   2        1
-# T        1 1 1 0   2        1
-# gap      2 2 2 2  NA       NA
-# gap_open 1 1 1 1  NA       NA
-
-# Perform a search. "Mode" can be either global or anchored. 
-results <- tree$search(covid_cdr3, max_distance=3, cost_matrix=cost_mat, mode="global", nthreads=8)
 ```
+
+    ##          A C G T gap gap_open
+    ## A        0 5 5 5   2        1
+    ## C        5 0 5 5   2        1
+    ## G        5 5 0 5   2        1
+    ## T        5 5 5 0   2        1
+    ## gap      2 2 2 2   0        0
+    ## gap_open 1 1 1 1   0        0
+
+``` r
+# Perform a search. "Mode" can be either global or anchored.
+results <- tree$search(covid_cdr3, max_distance=8, cost_matrix=cost_mat, mode="global", nthreads=2)
+dplyr::filter(results, query != target)
+```
+
+    ##                                           query
+    ## 1          TGCAGCGTTGATCTGCCGGGAGAGACCCAGTACTTC
+    ## 2          TGTGCCAGCAGTTGGGGGGGCTACGAGCAGTACTTC
+    ## 3       TGTGCCAGCAGTTTATCGGGGTCCTACGAGCAGTACTTC
+    ## 4 TGTGCCAGCAGCCTTAGCGGGGTGAGCACAGATACGCAGTATTTT
+    ## 5       TGTGCCAGCAGTTTAGGGGGTGGCTACGAGCAGTACTTC
+    ## 6          TGTGCCAGCAGTTTCGGGGCCTACGAGCAGTACTTC
+    ## 7    TGTGCCAGCAGCCTTAGCGGTAGCACAGATACGCAGTATTTT
+    ## 8          TGCAGCGTTGATCTGACGGGAGAGACCCAGTACTTC
+    ##                                          target distance
+    ## 1          TGCAGCGTTGATCTGACGGGAGAGACCCAGTACTTC        5
+    ## 2       TGTGCCAGCAGTTTAGGGGGTGGCTACGAGCAGTACTTC        8
+    ## 3          TGTGCCAGCAGTTTCGGGGCCTACGAGCAGTACTTC        8
+    ## 4    TGTGCCAGCAGCCTTAGCGGTAGCACAGATACGCAGTATTTT        8
+    ## 5          TGTGCCAGCAGTTGGGGGGGCTACGAGCAGTACTTC        8
+    ## 6       TGTGCCAGCAGTTTATCGGGGTCCTACGAGCAGTACTTC        8
+    ## 7 TGTGCCAGCAGCCTTAGCGGGGTGAGCACAGATACGCAGTATTTT        8
+    ## 8          TGCAGCGTTGATCTGCCGGGAGAGACCCAGTACTTC        5
 
 ### Radix Forest for faster Levenshtein searches
 
@@ -204,21 +234,21 @@ distance searches.
 Below is a brief comparison:
 
 ``` r
-# RadixTree ~ 45 seconds
+# RadixTree, full data: 45 seconds
 tree <- RadixTree$new()
 tree$insert(covid_cdr3)
-results_tree <- tree$search(covid_cdr3, max_distance=2, mode="levenshtein", nthreads=8)
-
-# RadixForest ~ 19 seconds
+results_tree <- tree$search(covid_cdr3, max_distance=2, mode="levenshtein", nthreads=2)
+# RadixForest, full data: 19 seconds
 frst <- RadixForest$new()
 frst$insert(covid_cdr3)
-results_frst <- frst$search(covid_cdr3, max_distance=2, mode="levenshtein", nthreads=8)
-
+results_frst <- frst$search(covid_cdr3, max_distance=2, mode="levenshtein", nthreads=2)
 # The results are the same, but order is not guaranteed
 identical(
-  results_tree %>% dplyr::arrange(query, target),
-  results_frst %>% dplyr::arrange(query, target) )
+  dplyr::arrange(results_tree, query, target),
+  dplyr::arrange(results_frst, query, target) )
 ```
+
+    ## [1] TRUE
 
 ### Finding strings that start with a pattern
 
@@ -230,18 +260,17 @@ structures, for use as a database lookup and predictive text.
 tree <- RadixTree$new()
 tree$insert(c("cargo", "cart", "carburetor", "carbuncle", "bar"))
 tree$prefix_search("car")
-
-#   query     target
-# 1   car  carbuncle
-# 2   car carburetor
-# 3   car       cart
-# 4   car      cargo
 ```
+
+    ##   query     target
+    ## 1   car  carbuncle
+    ## 2   car carburetor
+    ## 3   car      cargo
+    ## 4   car       cart
 
 ### Why not just use Bowtie2, BWA or other fast alignment software?
 
 There are no apples-to-apples comparisons thus no benchmark comparisons.
-
 With NGS alignment software, you are looking for alignments of reads
 (queries) *within* a genome reference (target). Here, we’re looking for
 alignments from the query to the *full* target.

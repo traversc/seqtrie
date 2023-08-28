@@ -1,7 +1,7 @@
 # Internal function to print Roxygen documentation, since a lot of it is repeated between functions
 rdoc <- function(what) {
     if(what == "details") {
-        cat('Three types of distance metrics are supported, based on the form of alignment performed. These are: Hamming, Global (Levenshtein) and Anchored.
+        return('Three types of distance metrics are supported, based on the form of alignment performed. These are: Hamming, Global (Levenshtein) and Anchored.
 
 An anchored alignment is a form of semi-global alignment, where the query sequence is "anchored" (global) to the beginning of both the query and target sequences, 
 but is semi-global in that the end of the either the query sequence or target sequence (but not both) can be unaligned. This type of alignment is sometimes called an "extension" alignment in literature. 
@@ -18,23 +18,23 @@ TOTAL_GAP_COST = gap_open_cost + (gap_cost * gap_length).
 If mode == "hamming" all alignment parameters are ignored; z mismatch is given a distance of 1 and gaps are not allowed.
 ')
     } else if(what == "query") {
-        cat('A character vector of query sequences.')
+        return('A character vector of query sequences.')
     } else if(what == "sequences") {
-        cat('A character vector of sequences.')
+        return('A character vector of sequences.')
     } else if(what == "target") {
-        cat('A character vector of target sequences.')
+        return('A character vector of target sequences.')
     } else if(what == "mode") {
-        cat('The distance metric to use. One of hamming (hm), global (gb) or anchored (an).')
+        return('The distance metric to use. One of hamming (hm), global (gb) or anchored (an).')
     } else if(what == "cost_matrix") {
-        cat('A custom cost matrix for use with the "global" or "anchored" distance metrics. See details.')
+        return('A custom cost matrix for use with the "global" or "anchored" distance metrics. See details.')
     } else if(what == "gap_cost") {
-        cat('The cost of a gap for use with the "global" or "anchored" distance metrics. See details.')
+        return('The cost of a gap for use with the "global" or "anchored" distance metrics. See details.')
     } else if(what == "gap_open_cost") {
-        cat('The cost of a gap opening. See details.')
+        return('The cost of a gap opening. See details.')
     } else if(what == "nthreads") {
-        cat('The number of threads to use for parallel computation.')
+        return('The number of threads to use for parallel computation.')
     } else if(what == "show_progress") {
-        cat('Whether to show a progress bar.')
+        return('Whether to show a progress bar.')
     }
 }
 
@@ -227,7 +227,7 @@ get_gap_type <- function(finalized_cost_matrix) {
 #' @examples
 #' generate_cost_matrix("ACGT", match = 0, mismatch = 1)
 #' @export
-generate_cost_matrix <- function(charset, match = 0, mismatch = 1, gap = NULL, gap_open = NULL) {
+generate_cost_matrix <- function(charset, match = 0L, mismatch = 1L, gap = NULL, gap_open = NULL) {
     charset <- strsplit(charset, "")[[1]]
     gap_is_defined <- !is.null(gap)
     gap_open_is_defined <- !is.null(gap_open)
@@ -261,14 +261,14 @@ generate_cost_matrix <- function(charset, match = 0, mismatch = 1, gap = NULL, g
         x[,"gap"] <- gap
         x["gap_open",] <- gap_open
         x[,"gap_open"] <- gap_open
-        x["gap","gap"] <- NA_integer_
-        x["gap_open","gap"] <- NA_integer_
-        x["gap","gap_open"] <- NA_integer_
-        x["gap_open","gap_open"] <- NA_integer_
+        x["gap","gap"] <- 0L
+        x["gap_open","gap"] <- 0L
+        x["gap","gap_open"] <- 0L
+        x["gap_open","gap_open"] <- 0L
     } else if(gap_is_defined) {
         x["gap",] <- gap
         x[,"gap"] <- gap
-        x["gap","gap"] <- NA_integer_
+        x["gap","gap"] <- 0L
     }
     x
 }

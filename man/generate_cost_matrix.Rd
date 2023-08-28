@@ -6,8 +6,8 @@
 \usage{
 generate_cost_matrix(
   charset,
-  match = 0,
-  mismatch = 1,
+  match = 0L,
+  mismatch = 1L,
   gap = NULL,
   gap_open = NULL
 )

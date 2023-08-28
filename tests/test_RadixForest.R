@@ -26,7 +26,7 @@ forest_equal <- function(x, y) {
 }
 
 random_strings <- function(N, charset = "abcdefghijklmnopqrstuvwxyz") {
-  len <- sample(0:MAXSEQLEN, N, replace=T)
+  len <- sample(0:MAXSEQLEN, N, replace=TRUE)
   result <- lapply(0:MAXSEQLEN, function(x) {
     nx <- sum(len == x)
     stringfish::random_strings(nx, x, charset = charset, vector_mode = "normal")
@@ -39,9 +39,9 @@ mutate_strings <- function(x, prob = 0.025, indel_prob = 0.025, charset = "abcde
   xsplit <- strsplit(x, "")
   sapply(xsplit, function(a) {
     r <- runif(length(a)) < prob
-    a[r] <- sample(charset, sum(r), replace=T)
+    a[r] <- sample(charset, sum(r), replace=TRUE)
     ins <- runif(length(a)) < indel_prob
-    a[ins] <- paste0(sample(charset, sum(ins), replace=T), sample(charset, sum(ins), replace=T))
+    a[ins] <- paste0(sample(charset, sum(ins), replace=TRUE), sample(charset, sum(ins), replace=TRUE))
     del <- runif(length(a)) < indel_prob
     a[del] <- ""
     paste0(a, collapse = "")
@@ -101,7 +101,7 @@ for(. in 1:NITER) {
     fin <- c(fin, paste0(fin, substr(fin,1,1)))
     ins2 <- setdiff(ins, era)
     expected <- lapply(fin, function(f) {
-      ex <- grep(paste0("^", f), ins2, value=T)
+      ex <- grep(paste0("^", f), ins2, value=TRUE)
       if(length(ex) == 0) return(NULL)
       data.frame(query = f, target = ex, stringsAsFactors = F)
     })
