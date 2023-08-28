@@ -379,11 +379,8 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 </div>
 <div id="search-parameters" class="section level3">
 <h3>Search parameters</h3>
-<p>The <code>$search()</code> function contains two mutually exclusive parameters: <code>max_distance</code> and <code>max_fraction</code>.</p>
-<p>The former parameter sets an absolute threshold that limits the distance between pairs of sequences in the output, and the latter parameter sets a threshold relative to the query sequence length.</p>
-<p>The search time is monotonically increasing with the distance threshold, logarithmically increasing with tree size and linearly increasing with the number of query sequences and the length of each sequence.</p>
-<p>Overall, the algorithm is significantly faster than a pairwise/matrix edit distance calculation for finding similar sequences.</p>
-<p>However, <em>care still needs to be taken when setting parameters for searching a large number of sequences (~100,000+).</em></p>
+<p>The <code>$search()</code> function contains two mutually exclusive parameters: <code>max_distance</code> and <code>max_fraction</code>.The former parameter sets an absolute threshold that limits the distance between pairs of sequences in the output, and the latter parameter sets a threshold relative to the query sequence length.</p>
+<p>The search time is monotonically increasing with the distance threshold, logarithmically increasing with tree size and linearly increasing with the number of query sequences and the length of each sequence. Overall, the algorithm is significantly faster than a pairwise/matrix edit distance calculation for finding similar sequences. However, <em>care still needs to be taken when setting parameters for searching a large number of sequences (~100,000+).</em></p>
 <div id="some-additional-examples-using-the-max_fraction-parameter." class="section level4">
 <h4>Some additional examples using the <code>max_fraction</code> parameter.</h4>
 <p><strong>Some additional examples using the max_fraction parameter.</strong></p>

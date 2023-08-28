@@ -52,7 +52,7 @@ tree$erase("zebra")
 set.seed(1); tree$graph()
 ```
 
-![](vignettes/simple_tree.png "simple_tree"){width=576px}
+![](vignettes/simple_tree.png "simple_tree")
 
 ### Levenshtein “edit distance” search
 
@@ -98,21 +98,18 @@ dplyr::filter(results, query != target)
 ### Search parameters
 
 The `$search()` function contains two mutually exclusive parameters:
-`max_distance` and `max_fraction`.
-
-The former parameter sets an absolute threshold that limits the distance
-between pairs of sequences in the output, and the latter parameter sets
-a threshold relative to the query sequence length.
+`max_distance` and `max_fraction`.The former parameter sets an absolute
+threshold that limits the distance between pairs of sequences in the
+output, and the latter parameter sets a threshold relative to the query
+sequence length.
 
 The search time is monotonically increasing with the distance threshold,
 logarithmically increasing with tree size and linearly increasing with
-the number of query sequences and the length of each sequence.
-
-Overall, the algorithm is significantly faster than a pairwise/matrix
-edit distance calculation for finding similar sequences.
-
-However, *care still needs to be taken when setting parameters for
-searching a large number of sequences (\~100,000+).*
+the number of query sequences and the length of each sequence. Overall,
+the algorithm is significantly faster than a pairwise/matrix edit
+distance calculation for finding similar sequences. However, *care still
+needs to be taken when setting parameters for searching a large number
+of sequences (\~100,000+).*
 
 #### Some additional examples using the `max_fraction` parameter.
 
