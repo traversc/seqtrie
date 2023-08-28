@@ -6,7 +6,7 @@ Authors@R: c(
     person("Travers", "Ching", email = "traversc@gmail.com", role = c("aut", "cre", "cph")),
     person("Martin", "Moene", role = c("ctb", "cph"), comment = "span-lite C++ library")
 	)
-Description: A colection of Radix Tree and trie algorithms for finding similar sequences and calculating sequence distances. 
+Description: A collection of Radix Tree and trie algorithms for finding similar sequences and calculating sequence distances. 
 License: GPL-3
 Biarch: true
 Encoding: UTF-8

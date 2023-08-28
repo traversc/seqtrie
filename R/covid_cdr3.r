@@ -10,10 +10,7 @@
 #'
 #' @keywords datasets
 #'
-#' @references Nolan, Sean, et al. "A large-scale database of T-cell receptor beta (TCR??) sequences and binding associations from natural and synthetic exposure to SARS-CoV-2." (2020).
-#' (\href{https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7418738/}{PubMed})
-#'
-#' @source \href{https://clients.adaptivebiotech.com/pub/covid-2020}{ImmuneACCESS Data}
+#' @references Nolan, Sean, et al. "A large-scale database of T-cell receptor beta (TCRB) sequences and binding associations from natural and synthetic exposure to SARS-CoV-2." (2020). doi: 10.21203/rs.3.rs-51964/v1. 
 #'
 #' @examples
 #' data(covid_cdr3)

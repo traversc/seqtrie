@@ -82,8 +82,7 @@ cat('![](vignettes/simple_tree.png "simple_tree")')
 ### Levenshtein "edit distance" search
 
 Below is an example using COVID19 T-cell data from Adaptive Biotechnologies.
-(<https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7418738/>. This data is licensed
-under CC 4.0.)
+(doi: 10.21203/rs.3.rs-51964/v1. This data is licensed under CC 4.0.)
 
 Here, we find highly similar sequences within a fixed edit distance. For the
 purpose of this vignette, we sample a small selection of sequences. Approximate
