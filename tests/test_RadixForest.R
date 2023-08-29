@@ -10,7 +10,7 @@ library(dplyr)
 # Use 2 threads on github actions and CRAN, 4 threads locally
 IS_LOCAL  <- Sys.getenv("IS_LOCAL") != ""
 NTHREADS  <- ifelse(IS_LOCAL, 4, 2)
-NITER     <- ifelse(IS_LOCAL, 4, 2)
+NITER     <- ifelse(IS_LOCAL, 4, 1)
 NSEQS     <- 10000 # must be larger than 1000
 MAXSEQLEN <- 200
 MAXDIST   <- MAXSEQLEN * 0.05

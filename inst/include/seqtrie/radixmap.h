@@ -5,16 +5,16 @@
 
 namespace seqtrie {
 
-inline void print_vec(const std::vector<int> & v) {
-  for(auto & x : v) {
-    if(x > 100000) {
-      std::cout << "Z ";
-    } else {
-      std::cout << x << " ";
-    }
-  }
-  std::cout << "\t";
-}
+// inline void print_vec(const std::vector<int> & v) {
+//   for(auto & x : v) {
+//     if(x > 100000) {
+//       std::cout << "Z ";
+//     } else {
+//       std::cout << x << " ";
+//     }
+//   }
+//   std::cout << "\t";
+// }
 
 #define TEMPLATE_LIST template <class A, template<typename...> class M, template<typename...> class B, class I>
 #define RADIXMAP_T RadixMap<A,M,B,I>

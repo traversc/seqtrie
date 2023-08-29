@@ -12,6 +12,7 @@
 #include <limits.h> // INT_MAX
 #include <iterator>
 #include <utility>
+#include <cstdint>
 
 #ifdef span_CONFIG_CONTRACT_VIOLATION_TERMINATES
 #undef span_CONFIG_CONTRACT_VIOLATION_TERMINATES
