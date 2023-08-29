@@ -15,7 +15,7 @@ Similarly, the affine gap alignment can be set by including a row and column nam
 If affine alignment is used, the cost of a gap is defined as:
 TOTAL_GAP_COST = gap_open_cost + (gap_cost * gap_length).
 
-If mode == "hamming" all alignment parameters are ignored; z mismatch is given a distance of 1 and gaps are not allowed.
+If mode == "hamming" all alignment parameters are ignored; mismatch is given a distance of 1 and gaps are not allowed.
 ')
   } else if (what == "query") {
     return("A character vector of query sequences.")

@@ -2,9 +2,10 @@
 #' @description Radix Forest class implementation
 #' 
 #' @details
-#' The RadixForest class is a specialization of the RadixTree implementation. Instead of putting sequences into a single tree, the RadixForest class puts sequences into a tree based on sequence length. 
-#' I.e. *map<sequence_length, RadixTree>. This allows for faster searching of similar sequences based on Hamming or Levenshtein distance metrics.
-#' Unlike the RadixTree class, the RadixForest class does NOT support Anchored searches or a custom cost matrix.
+#' The RadixForest class is a specialization of the RadixTree implementation. Instead of putting sequences into 
+#' a single tree, the RadixForest class puts sequences into separate trees based on sequence length. This allows for faster 
+#' searching of similar sequences based on Hamming or Levenshtein distance metrics.
+#' Unlike the RadixTree class, the RadixForest class does not support anchored searches or a custom cost matrix.
 #' See *RadixTree* for additional details. 
 #' @examples
 #' forest <- RadixForest$new()
@@ -18,9 +19,9 @@
 #'  # query    target   distance
 #'  # <0 rows> (or 0-length row.names)
 RadixForest <- R6::R6Class("RadixForest", list(
-  #' @field forest_pointer Pointer C++ implementation (holds trie map)
+  #' @field forest_pointer Map of sequence length to RadixTree
   forest_pointer = NULL,
-  #' @field char_counter_pointer Pointer to C++ object (holds character counts for the purpose of validating input)
+  #' @field char_counter_pointer Character count data for the purpose of validating input
   char_counter_pointer = NULL,
   #' @description Create a new RadixForest object
   #' @param sequences A character vector of sequences to insert into the forest
@@ -158,5 +159,6 @@ RadixForest <- R6::R6Class("RadixForest", list(
   validate = function() {
     RadixForest_validate(self$forest_pointer)
   }
-))
+), 
+cloneable=FALSE)
 

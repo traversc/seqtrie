@@ -70,3 +70,15 @@ test:
 local-bench:
 	Rscript inst/extra_tests/benchmark.r
 
+
+R_INCLUDE=$(shell R CMD config --cppflags)
+Rcpp_INCLUDE=$(shell Rscript -e 'cat(system.file("include", package = "Rcpp"))')
+BH_INCLUDE=$(shell Rscript -e 'cat(system.file("include", package = "BH"))')
+RcppParallel_INCLUDE=$(shell Rscript -e 'cat(system.file("include", package = "RcppParallel"))')
+
+clang-tidy:
+	clang-tidy src/CharCounter.cpp -header-filter=inst/include/.* -checks=-*,clang-analyzer-*,clang-analyzer-cplusplus* -extra-arg=-std=c++11 -- $(R_INCLUDE) -Iinst/include -I$(Rcpp_INCLUDE) -I$(BH_INCLUDE) -I$(RcppParallel_INCLUDE)
+	clang-tidy src/RadixForest.cpp -header-filter=inst/include/.* -checks=-*,clang-analyzer-*,clang-analyzer-cplusplus* -extra-arg=-std=c++11 -- $(R_INCLUDE) -Iinst/include -I$(Rcpp_INCLUDE) -I$(BH_INCLUDE) -I$(RcppParallel_INCLUDE)
+	clang-tidy src/RadixTree.cpp -header-filter=inst/include/.* -checks=-*,clang-analyzer-*,clang-analyzer-cplusplus* -extra-arg=-std=c++11 -- $(R_INCLUDE) -Iinst/include -I$(Rcpp_INCLUDE) -I$(BH_INCLUDE) -I$(RcppParallel_INCLUDE)
+	clang-tidy src/pairwise.cpp -header-filter=inst/include/.* -checks=-*,clang-analyzer-*,clang-analyzer-cplusplus* -extra-arg=-std=c++11 -- $(R_INCLUDE) -Iinst/include -I$(Rcpp_INCLUDE) -I$(BH_INCLUDE) -I$(RcppParallel_INCLUDE)
+

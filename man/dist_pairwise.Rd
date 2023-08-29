@@ -41,6 +41,7 @@ Compute the pairwise distance between two sets of sequences
 }
 \details{
 This function calculates pairwise distances based on Hamming, Levenshtein or Anchored algorithms. \emph{query} and \emph{target} must be the same length.
+
 Three types of distance metrics are supported, based on the form of alignment performed. These are: Hamming, Global (Levenshtein) and Anchored.
 
 An anchored alignment is a form of semi-global alignment, where the query sequence is "anchored" (global) to the beginning of both the query and target sequences,
@@ -55,7 +56,7 @@ Similarly, the affine gap alignment can be set by including a row and column nam
 If affine alignment is used, the cost of a gap is defined as:
 TOTAL_GAP_COST = gap_open_cost + (gap_cost * gap_length).
 
-If mode == "hamming" all alignment parameters are ignored; z mismatch is given a distance of 1 and gaps are not allowed.
+If mode == "hamming" all alignment parameters are ignored; mismatch is given a distance of 1 and gaps are not allowed.
 }
 \examples{
 dist_pairwise(c("ACGT", "AAAA"), c("ACG", "ACGT"), mode = "global")

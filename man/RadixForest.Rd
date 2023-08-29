@@ -7,9 +7,10 @@
 Radix Forest class implementation
 }
 \details{
-The RadixForest class is a specialization of the RadixTree implementation. Instead of putting sequences into a single tree, the RadixForest class puts sequences into a tree based on sequence length.
-I.e. *map<sequence_length, RadixTree>. This allows for faster searching of similar sequences based on Hamming or Levenshtein distance metrics.
-Unlike the RadixTree class, the RadixForest class does NOT support Anchored searches or a custom cost matrix.
+The RadixForest class is a specialization of the RadixTree implementation. Instead of putting sequences into
+a single tree, the RadixForest class puts sequences into separate trees based on sequence length. This allows for faster
+searching of similar sequences based on Hamming or Levenshtein distance metrics.
+Unlike the RadixTree class, the RadixForest class does not support anchored searches or a custom cost matrix.
 See \emph{RadixTree} for additional details.
 }
 \examples{
@@ -27,9 +28,9 @@ forest$search("ACG", max_distance = 1, mode = "hamming")
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}
 \describe{
-\item{\code{forest_pointer}}{Pointer C++ implementation (holds trie map)}
+\item{\code{forest_pointer}}{Map of sequence length to RadixTree}
 
-\item{\code{char_counter_pointer}}{Pointer to C++ object (holds character counts for the purpose of validating input)}
+\item{\code{char_counter_pointer}}{Character count data for the purpose of validating input}
 }
 \if{html}{\out{</div>}}
 }
@@ -48,7 +49,6 @@ forest$search("ACG", max_distance = 1, mode = "hamming")
 \item \href{#method-RadixForest-prefix_search}{\code{RadixForest$prefix_search()}}
 \item \href{#method-RadixForest-search}{\code{RadixForest$search()}}
 \item \href{#method-RadixForest-validate}{\code{RadixForest$validate()}}
-\item \href{#method-RadixForest-clone}{\code{RadixForest$clone()}}
 }
 }
 \if{html}{\out{<hr>}}
@@ -267,23 +267,6 @@ Validate the forest
 
 \subsection{Returns}{
 A logical indicating whether the forest is valid (TRUE) or not (FALSE). This is mostly an internal function for debugging purposes and should always return TRUE.
-}
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-RadixForest-clone"></a>}}
-\if{latex}{\out{\hypertarget{method-RadixForest-clone}{}}}
-\subsection{Method \code{clone()}}{
-The objects of this class are cloneable with this method.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{RadixForest$clone(deep = FALSE)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{deep}}{Whether to make a deep clone.}
-}
-\if{html}{\out{</div>}}
 }
 }
 }

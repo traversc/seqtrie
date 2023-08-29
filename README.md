@@ -69,10 +69,10 @@ Here, we find highly similar sequences within a fixed edit distance. For
 the purpose of this vignette, we sample a small selection of sequences.
 
 On the full dataset, if you tried to calculate an edit distance matrix,
-it would take hours, not to mention requiring a lot of memory. A
-trie-based method could be used to find similar sequences in a fraction
-of the time. Approximate running times on the full dataset using 8
-threads are listed in the comments.
+it would take a pretty long time, not to mention requiring a lot of
+memory. A trie-based method could be used to find similar sequences in a
+fraction of the time. Approximate running times on the full dataset
+using 8 threads are listed in the comments.
 
 ``` r
 # 130,000 "CDR3" sequences
@@ -122,11 +122,9 @@ the number of query sequences and the length of each sequence. Overall,
 the algorithm is significantly faster than a pairwise/matrix edit
 distance calculation for finding similar sequences. However, *care still
 needs to be taken when setting parameters for searching a large number
-of sequences (~100,000+).*
+of sequences (\~100,000+).*
 
-#### Some additional examples using the `max_fraction` parameter.
-
-**Some additional examples using the max_fraction parameter.**
+**Some additional examples using the max\_fraction parameter.**
 
 ``` r
 # Full data: several seconds

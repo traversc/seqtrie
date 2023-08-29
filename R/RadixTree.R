@@ -4,6 +4,7 @@
 #' @details
 #' The RadixTree class is a trie implementation. The primary usage is to be able to search of similar sequences based on a dynamic programming framework.
 #' This can be done using the _search_ method which searches for similar sequences based on the Global, Anchored or Hamming distance metrics.
+#' 
 #' `r rdoc("details")`
 #' @examples
 #' tree <- RadixTree$new()
@@ -19,9 +20,9 @@
 #' @seealso
 #' https://en.wikipedia.org/wiki/Radix_tree
 RadixTree <- R6::R6Class("RadixTree", public = list(
-  #' @field root_pointer Pointer C++ implementation (holds trie map)
+  #' @field root_pointer Root of the RadixTree
   root_pointer = NULL,
-  #' @field char_counter_pointer Pointer to C++ object (holds character counts for the purpose of validating input)
+  #' @field char_counter_pointer Character count data for the purpose of validating input
   char_counter_pointer = NULL,
   #' @description Create a new RadixTree object
   #' @param sequences A character vector of sequences to insert into the tree
@@ -176,4 +177,5 @@ RadixTree <- R6::R6Class("RadixTree", public = list(
   validate = function() {
     RadixTree_validate(self$root_pointer)
   }
-))
+),
+cloneable=FALSE)

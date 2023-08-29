@@ -10,7 +10,8 @@
 #' @param show_progress `r rdoc("show_progress")`
 #' @details This function calculates all combinations of pairwise distances based on Hamming, Levenshtein or Anchored algorithms.
 #' The output is a NxM matrix where N = length(query) and M = length(target).
-#' Note: this can take a _really_ long time, so be careful with input size.
+#' Note: this can take a _really_ long time; be careful with input size.
+#' 
 #' `r rdoc("details")`
 #' @return The output is a distance matrix between all query (rows) and target (columns) sequences.
 #' For anchored searches, the output also includes attributes "query_size" and "target_size" which are matrices containing the lengths of the query and target sequences that are aligned.
@@ -38,6 +39,7 @@ dist_matrix <- function(query, target, mode, cost_matrix = NULL, gap_cost = NULL
 #' @param show_progress `r rdoc("show_progress")`
 #' @details
 #' This function calculates pairwise distances based on Hamming, Levenshtein or Anchored algorithms. _query_ and _target_ must be the same length.
+#' 
 #' `r rdoc("details")`
 #'
 #' @return The output of this function is a vector of distances. If mode == "anchored" then the output also includes attributes "query_size" and
@@ -73,6 +75,7 @@ dist_pairwise <- function(query, target, mode, cost_matrix = NULL, gap_cost = NU
 #' @details
 #' This function finds all sequences in _target_ that are within a distance threshold of any sequence in _query_.
 #' This function uses either a RadixTree or RadixForest to store _target_ sequences. See the R6 class documentation for additional details.
+#' 
 #' `r rdoc("details")`
 #' @return The output is a data.frame of all matches with columns "query" and "target".
 #' For anchored searches, the output also includes attributes "query_size" and "target_size"

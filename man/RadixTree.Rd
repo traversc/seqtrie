@@ -9,6 +9,7 @@ Radix Tree (trie) class implementation
 \details{
 The RadixTree class is a trie implementation. The primary usage is to be able to search of similar sequences based on a dynamic programming framework.
 This can be done using the \emph{search} method which searches for similar sequences based on the Global, Anchored or Hamming distance metrics.
+
 Three types of distance metrics are supported, based on the form of alignment performed. These are: Hamming, Global (Levenshtein) and Anchored.
 
 An anchored alignment is a form of semi-global alignment, where the query sequence is "anchored" (global) to the beginning of both the query and target sequences,
@@ -23,7 +24,7 @@ Similarly, the affine gap alignment can be set by including a row and column nam
 If affine alignment is used, the cost of a gap is defined as:
 TOTAL_GAP_COST = gap_open_cost + (gap_cost * gap_length).
 
-If mode == "hamming" all alignment parameters are ignored; z mismatch is given a distance of 1 and gaps are not allowed.
+If mode == "hamming" all alignment parameters are ignored; mismatch is given a distance of 1 and gaps are not allowed.
 }
 \examples{
 tree <- RadixTree$new()
@@ -43,9 +44,9 @@ https://en.wikipedia.org/wiki/Radix_tree
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}
 \describe{
-\item{\code{root_pointer}}{Pointer C++ implementation (holds trie map)}
+\item{\code{root_pointer}}{Root of the RadixTree}
 
-\item{\code{char_counter_pointer}}{Pointer to C++ object (holds character counts for the purpose of validating input)}
+\item{\code{char_counter_pointer}}{Character count data for the purpose of validating input}
 }
 \if{html}{\out{</div>}}
 }
@@ -64,7 +65,6 @@ https://en.wikipedia.org/wiki/Radix_tree
 \item \href{#method-RadixTree-prefix_search}{\code{RadixTree$prefix_search()}}
 \item \href{#method-RadixTree-search}{\code{RadixTree$search()}}
 \item \href{#method-RadixTree-validate}{\code{RadixTree$validate()}}
-\item \href{#method-RadixTree-clone}{\code{RadixTree$clone()}}
 }
 }
 \if{html}{\out{<hr>}}
@@ -296,23 +296,6 @@ Validate the tree
 
 \subsection{Returns}{
 A logical indicating whether the tree is valid (TRUE) or not (FALSE). This is mostly an internal function for debugging purposes and should always return TRUE.
-}
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-RadixTree-clone"></a>}}
-\if{latex}{\out{\hypertarget{method-RadixTree-clone}{}}}
-\subsection{Method \code{clone()}}{
-The objects of this class are cloneable with this method.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{RadixTree$clone(deep = FALSE)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{deep}}{Whether to make a deep clone.}
-}
-\if{html}{\out{</div>}}
 }
 }
 }

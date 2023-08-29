@@ -52,6 +52,7 @@ Find similar sequences within a distance threshold
 \details{
 This function finds all sequences in \emph{target} that are within a distance threshold of any sequence in \emph{query}.
 This function uses either a RadixTree or RadixForest to store \emph{target} sequences. See the R6 class documentation for additional details.
+
 Three types of distance metrics are supported, based on the form of alignment performed. These are: Hamming, Global (Levenshtein) and Anchored.
 
 An anchored alignment is a form of semi-global alignment, where the query sequence is "anchored" (global) to the beginning of both the query and target sequences,
@@ -66,7 +67,7 @@ Similarly, the affine gap alignment can be set by including a row and column nam
 If affine alignment is used, the cost of a gap is defined as:
 TOTAL_GAP_COST = gap_open_cost + (gap_cost * gap_length).
 
-If mode == "hamming" all alignment parameters are ignored; z mismatch is given a distance of 1 and gaps are not allowed.
+If mode == "hamming" all alignment parameters are ignored; mismatch is given a distance of 1 and gaps are not allowed.
 }
 \examples{
 dist_search(c("ACGT", "AAAA"), c("ACG", "ACGT"), max_distance = 1, mode = "levenshtein")
