@@ -12,7 +12,7 @@ toc <- function() { as.numeric(Sys.time() - .time, units = "secs") }
 
 encode_source <- function(file, width = 160) {
   n <- file.info(file)$size
-  x <- readChar(con = file, nchars=n, useBytes = T)
+  x <- readChar(con = file, nchars=n, useBytes = TRUE)
   x <- qserialize(x, preset = "custom", algorithm = "zstd", compress_level = 22)
   x <- base91_encode(x)
   starts <- seq(1,nchar(x), by=width)
@@ -60,28 +60,28 @@ run_og <- function(query, target, max_distance, show_progress = F) {
   results %>% arrange(query, target)
 }
 
-run_dnatree <- function(query, target, max_distance=NULL, max_fraction=NULL, mode = "levenshtein", show_progress = F, nthreads = 8) {
+run_dnatree <- function(query, target, max_distance=NULL, max_fraction=NULL, mode = "levenshtein", show_progress = FALSE, nthreads = 8) {
   x <- treedist::DNATree$new()
   x$insert(target)
   x$search(query, max_distance = max_distance, max_fraction = max_fraction, mode = mode, show_progress=show_progress, nthreads=nthreads) %>%
     arrange(query, target)
 }
 
-run_radixtree <- function(query, target, max_distance=NULL, max_fraction=NULL, mode = "levenshtein", show_progress = F, nthreads = 8) {
+run_radixtree <- function(query, target, max_distance=NULL, max_fraction=NULL, mode = "levenshtein", show_progress = FALSE, nthreads = 8) {
   x <- seqtrie::RadixTree$new()
   x$insert(target)
   x$search(query, max_distance = max_distance, max_fraction = max_fraction, mode = mode, show_progress=show_progress, nthreads=nthreads) %>% 
     arrange(query, target)
 }
 
-run_radixforest <- function(query, target, max_distance=NULL, max_fraction=NULL, mode = "levenshtein", show_progress = F, nthreads = 8) {
+run_radixforest <- function(query, target, max_distance=NULL, max_fraction=NULL, mode = "levenshtein", show_progress = FALSE, nthreads = 8) {
   x <- seqtrie::RadixForest$new()
   x$insert(target)
   x$search(query, max_distance = max_distance, max_fraction = max_fraction, mode = mode, show_progress=show_progress, nthreads=nthreads) %>% 
     arrange(query, target)
 }
 
-run_prefixtree <- function(query, target, max_distance=NULL, max_fraction=NULL, mode = "levenshtein", show_progress = F, nthreads = 8) {
+run_prefixtree <- function(query, target, max_distance=NULL, max_fraction=NULL, mode = "levenshtein", show_progress = FALSE, nthreads = 8) {
   x <- treedist::PrefixTree$new()
   x$insert(target)
   x$search(query, max_distance = max_distance, max_fraction = max_fraction, mode = mode, show_progress=show_progress, nthreads=nthreads) %>%
@@ -132,7 +132,7 @@ for(i in 1:nrow(grid)) {
   set.seed(grid$iter[i])
   x <- sample(covid_cdr3, size = grid$nseqs[i])
   tic()
-  methods[[grid$method[i]]](x, x, max_distance = grid$maxdist[i], show_progres = T)
+  methods[[grid$method[i]]](x, x, max_distance = grid$maxdist[i], show_progres = TRUE)
   grid$time[i] <- toc()
   if(grid$method[i] != "OG") grid$time[i] <- grid$time[i] * 8
 }
@@ -145,7 +145,7 @@ for(i in 1:nrow(grid)) {
   set.seed(grid$iter[i])
   x <- sample(covid_cdr3, size = grid$nseqs[i])
   tic()
-  methods[[grid$method[i]]](x, x, max_fraction = grid$maxfrac[i], show_progres = T)
+  methods[[grid$method[i]]](x, x, max_fraction = grid$maxfrac[i], show_progres = TRUE)
   grid$time[i] <- toc()
   if(grid$method[i] != "OG") grid$time[i] <- grid$time[i] * 8
 }
