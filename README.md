@@ -24,15 +24,20 @@ whereas a hashmap does not contain any sequence similarity information.
 
 See also: <https://en.wikipedia.org/wiki/Radix_tree>
 
-In `seqtrie`, there are two `R6` classes: `RadixTree` is the primary
-class in this package. There are three main methods. The `$insert()`
-method is used to store sequences on the tree, `$erase()` for erasing
-sequences from the tree and `$search()` for finding similar sequences
-stored on the tree.
+In `seqtrie`, there are two `R6` classes:
+
+`RadixTree` is the primary class in this package. There are three main
+methods. The `$insert()` method is used to store sequences on the tree,
+`$erase()` for erasing sequences from the tree and `$search()` for
+finding similar sequences stored on the tree.
 
 The second `R6` class is `RadixForest`, a derivative data structure
 where separate trees are constructed for each sequence length. This data
 structure has advantages and disadvantages, discussed later.
+
+Finally, there’s a simple convienence function `dist_search` to find
+similar sequences using a `RadixTree` or `RadixForest` object. This is a
+wrapper around the `$new`, `$insert` and `$search()` methods.
 
 ### Install
 
@@ -57,14 +62,17 @@ set.seed(1); tree$graph()
 ### Levenshtein “edit distance” search
 
 Below is an example using COVID19 T-cell data from Adaptive
-Biotechnologies.
-(<https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7418738/>. This data is
-licensed under CC 4.0.)
+Biotechnologies. (doi: 10.21203/rs.3.rs-51964/v1. This data is licensed
+under CC 4.0.)
 
 Here, we find highly similar sequences within a fixed edit distance. For
 the purpose of this vignette, we sample a small selection of sequences.
-Approximate running times on the full dataset using 8 threads are listed
-in the comments.
+
+On the full dataset, if you tried to calculate an edit distance matrix,
+it would take hours, not to mention requiring a lot of memory. A
+trie-based method could be used to find similar sequences in a fraction
+of the time. Approximate running times on the full dataset using 8
+threads are listed in the comments.
 
 ``` r
 # 130,000 "CDR3" sequences
@@ -75,6 +83,11 @@ tree <- RadixTree$new()
 tree$insert(covid_cdr3)
 # Full data: 1 min
 results <- tree$search(covid_cdr3, max_distance=2, mode="levenshtein", nthreads=2)
+
+# Alternatively, instead of using the RadixTree object directly, you can use the
+# dist_search function, which is a wrapper around the RadixTree object.
+results <- dist_search(covid_cdr3, covid_cdr3, max_distance=2)
+
 # The output is a data.frame mapping query (search sequences)
 # and target (sequences inserted into the tree).
 dplyr::filter(results, query != target)
@@ -109,11 +122,11 @@ the number of query sequences and the length of each sequence. Overall,
 the algorithm is significantly faster than a pairwise/matrix edit
 distance calculation for finding similar sequences. However, *care still
 needs to be taken when setting parameters for searching a large number
-of sequences (\~100,000+).*
+of sequences (~100,000+).*
 
 #### Some additional examples using the `max_fraction` parameter.
 
-**Some additional examples using the max\_fraction parameter.**
+**Some additional examples using the max_fraction parameter.**
 
 ``` r
 # Full data: several seconds

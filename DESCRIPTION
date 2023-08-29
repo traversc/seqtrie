@@ -1,7 +1,7 @@
 Package: seqtrie
 Title: Radix Tree and Trie-Based String Distances
 Version: 0.2.1
-Date: 2023-8-26
+Date: 2023-8-28
 Authors@R: c(
     person("Travers", "Ching", email = "traversc@gmail.com", role = c("aut", "cre", "cph")),
     person("Martin", "Moene", role = c("ctb", "cph"), comment = "span-lite C++ library")

@@ -112,7 +112,7 @@ DataFrame RadixTree_graph(RadixTreeRXPtr xp, const double max_depth) {
   size_t depth2;
   if(max_depth < 0) {
     depth2 = -1;
-  } else if(max_depth >= std::numeric_limits<size_t>::max()) {
+  } else if(max_depth >= static_cast<double>(std::numeric_limits<size_t>::max())) {
     depth2 = -1;
   } else {
     depth2 = static_cast<size_t>(max_depth);

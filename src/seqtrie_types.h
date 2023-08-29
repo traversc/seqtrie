@@ -22,8 +22,8 @@ using pairchar_type = std::pair<char, char>;
 using pairchar_map_type = std::unordered_map<pairchar_type, int>;
 using cspan = nonstd::span<const char>;
 constexpr char GAP_CHAR = '\0';                                     // '\0' any gap cost for non-affine
-constexpr char GAP_OPEN_CHAR = std::numeric_limits<char>::min(); // '\255' gap open cost for affine
-constexpr char GAP_EXTN_CHAR = '\0';                                // '\0' extension for affine
+constexpr char GAP_OPEN_CHAR = std::numeric_limits<char>::min();    // '\255' gap open cost for affine
+constexpr char GAP_EXTN_CHAR = '\0';    
 
 // used in utils.cpp, a map for counting chars, to make sure input cost_matrix contains all chars in a trie
 using CharCounter = std::unordered_map<char, size_t>;

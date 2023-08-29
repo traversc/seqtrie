@@ -240,9 +240,9 @@ Search for sequences in the forest that are with a specified distance metric to 
 \describe{
 \item{\code{query}}{A character vector of query sequences.}
 
-\item{\code{max_distance}}{how far to search in units of absolute distance. Can be a single value or a vector.}
+\item{\code{max_distance}}{how far to search in units of absolute distance. Can be a single value or a vector. Mutually exclusive with max_fraction.}
 
-\item{\code{max_fraction}}{how far to search in units of relative distance to each query sequence length. Can be a single value or a vector.}
+\item{\code{max_fraction}}{how far to search in units of relative distance to each query sequence length. Can be a single value or a vector. Mutually exclusive with max_distance.}
 
 \item{\code{mode}}{The distance metric to use. One of hamming (hm), global (gb) or anchored (an).}
 

@@ -30,12 +30,12 @@ tree <- RadixTree$new()
 tree$insert(c("ACGT", "AAAA"))
 tree$erase("AAAA")
 tree$search("ACG", max_distance = 1, mode = "levenshtein")
- #   query target distance
- # 1   ACG   ACGT        1
- 
+#   query target distance
+# 1   ACG   ACGT        1
+
 tree$search("ACG", max_distance = 1, mode = "hamming")
- # query    target   distance
- # <0 rows> (or 0-length row.names)
+# query    target   distance
+# <0 rows> (or 0-length row.names)
 }
 \seealso{
 https://en.wikipedia.org/wiki/Radix_tree
