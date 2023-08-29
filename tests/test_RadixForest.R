@@ -49,7 +49,7 @@ mutate_strings <- function(x, prob = 0.025, indel_prob = 0.025, charset = "abcde
 }
 
 sd_search <- function(query, target, method = "lv") {
-  results <- stringdist::stringdistmatrix(query, target, method = method, nthread=2)
+  results <- stringdist::stringdistmatrix(query, target, method = method, nthread=NTHREADS)
   results <- data.frame(query = rep(query, times=length(target)), 
                         target = rep(target, each=length(query)), 
                         distance = as.vector(results), stringsAsFactors = FALSE)
