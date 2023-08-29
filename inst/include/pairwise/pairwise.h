@@ -183,8 +183,8 @@ int global_distance_affine(cspan query, cspan target, pairchar_map_type & cost_m
 std::tuple<int, int, int> anchored_distance(cspan query, cspan target) {
   IMatrix mat = get_dprog_matrix(query, target);
   int distance = NO_ALIGN;
-  int query_size;
-  int target_size;
+  int query_size = 0;
+  int target_size = 0;
   for(size_t i=0; i<mat.size1(); ++i) {
     int new_dist = mat(i, mat.size2()-1);
     if(new_dist < distance) {
@@ -207,8 +207,8 @@ std::tuple<int, int, int> anchored_distance(cspan query, cspan target) {
 std::tuple<int, int, int> anchored_distance_linear(cspan query, cspan target, pairchar_map_type & cost_map) {
   IMatrix mat = get_dprog_matrix_linear(query, target, cost_map);
   int distance = NO_ALIGN;
-  int query_size;
-  int target_size;
+  int query_size = 0;
+  int target_size = 0;
   for(size_t i=0; i<mat.size1(); ++i) {
     int new_dist = mat(i, mat.size2()-1);
     if(new_dist < distance) {
@@ -234,8 +234,8 @@ std::tuple<int, int, int> anchored_distance_affine(cspan query, cspan target, pa
   IMatrix & X = std::get<1>(mats);
   IMatrix & Y = std::get<2>(mats);
   int distance = NO_ALIGN;
-  int query_size;
-  int target_size;
+  int query_size = 0;
+  int target_size = 0;
   size_t xlast = M.size1()-1;
   size_t ylast = M.size2()-1;
   for(size_t i=0; i<=xlast; ++i) {

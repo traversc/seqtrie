@@ -22,7 +22,7 @@ public:
   typedef S       size_type;
 private:
   struct Members : Allocator { // derive from Allocator to use empty base optimization
-    value_type      _stack[stack_size::value];
+    value_type      _stack[stack_size::value] = {0}; // zero initialize
     pointer_type    _data;
     size_type       _size;
 #if __cplusplus >= 201402L
