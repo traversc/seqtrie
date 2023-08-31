@@ -288,11 +288,11 @@ takes much longer, but on the other hand gives you more information.
 
 ### References and literature
 
-  - “Fast and Easy Levenshtein distance using a Trie” (2001)
-    \<<http://stevehanov.ca/blog/index.php?id=114>\>
   - “Fast string correction with Levenshtein automata” (2002)
     \<<doi:10.1007/s10032-002-0082-8>\>
   - “A survey of sequence alignment algorithms for next-generation
     sequencing” (2010) \<<doi:10.1093/bib/bbq015>\>
+  - “Fast and Easy Levenshtein distance using a Trie” (2011)
+    \<<http://stevehanov.ca/blog/index.php?id=114>\>
   - “Spell Checker Application Based on Levenshtein Automaton” (2021)
     \<<doi:10.1007/978-3-030-91608-4_5>\>
