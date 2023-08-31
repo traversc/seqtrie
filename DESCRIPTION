@@ -1,12 +1,12 @@
 Package: seqtrie
 Title: Radix Tree and Trie-Based String Distances
-Version: 0.2.3
-Date: 2023-8-29
+Version: 0.2.4
+Date: 2023-8-30
 Authors@R: c(
     person("Travers", "Ching", email = "traversc@gmail.com", role = c("aut", "cre", "cph")),
     person("Martin", "Moene", role = c("ctb", "cph"), comment = "span-lite C++ library")
 	)
-Description: A collection of Radix Tree and trie algorithms for finding similar sequences and calculating sequence distances. 
+Description: A collection of Radix Tree and Trie algorithms for finding similar sequences and calculating sequence distances (Levenshtein and other distance metrics). Existing literature on computing distance with Trie algorithms: "Fast and Easy Levenshtein distance using a Trie" (2001) <http://stevehanov.ca/blog/index.php?id=114>, "Fast string correction with Levenshtein automata" (2002) <doi:10.1007/s10032-002-0082-8>, "Spell Checker Application Based on Levenshtein Automaton" (2021) <doi:10.1007/978-3-030-91608-4_5>.
 License: GPL-3
 Biarch: true
 Encoding: UTF-8

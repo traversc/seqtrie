@@ -327,7 +327,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 
 
 <p><code>seqtrie</code> is a collection of Radix Tree algorithms. These include some classic algorithms like prefix lookup and more bioinformatics focused algorithms such as alignment algorithms and sequence distance calculations (Hamming and Levenshtein distances).</p>
-<p>A trie (aka Prefix Tree) is a data structure used in many applications, notably for bioinformatics in the BLAST algorithm for K-mer lookup. It is a space efficient data structure where a collection of sequences are stored in a tree structure, where each leaf represents one sequence, and each node holds one character representing a shared prefix of all sequences descending from it. A Radix Tree (aka Compact Prefix Tree) is an improvement on a trie, using less memory and being generally faster. In a Radix Tree, each node is able to represent multiple characters instead of just one.</p>
+<p>A trie (aka Prefix Tree) is a data structure used in many applications. It is a space efficient data structure where a collection of sequences are stored in a tree structure, where each leaf represents one sequence, and each node holds one character representing a shared prefix of all sequences descending from it. A Radix Tree (aka Compact Prefix Tree) is an improvement on a trie, using less memory and being generally faster. In a Radix Tree, each node is able to represent multiple characters instead of just one.</p>
 <p>Tries and Radix Trees have similar complexity to a hashmap. Storing a sequence within the tree or looking it up are O(k) where k is the length of the sequence. The main advantage of a trie is that it can be used to quickly find similar sequences by various algorithms and metrics, whereas a hashmap does not contain any sequence similarity information.</p>
 <p>See also: <a href="https://en.wikipedia.org/wiki/Radix_tree" class="uri">https://en.wikipedia.org/wiki/Radix_tree</a></p>
 <p>In <code>seqtrie</code>, there are two <code>R6</code> classes:</p>
@@ -490,9 +490,17 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 </div>
 <div id="why-not-just-use-bowtie2-bwa-or-other-fast-alignment-software" class="section level3">
 <h3>Why not just use Bowtie2, BWA or other fast alignment software?</h3>
-<p>There are no apples-to-apples comparisons thus no benchmark comparisons. With NGS alignment software, you are looking for alignments of reads (queries) <em>within</em> a genome reference (target). Here, we’re looking for alignments from the query to the <em>full</em> target.</p>
+<p>There are no apples-to-apples comparisons thus no benchmark comparisons. With NGS alignment software, you are looking for alignments of reads (queries) <em>within</em> a genome reference (target). Here, we’re looking for alignments from the query to the <em>full</em> target. However, many NGS aligners do use Tries and similar data structures.</p>
 <p>Compared to pairwise alignment software, calculating all alignment pairs takes much longer, but on the other hand gives you more information.</p>
-<p>Use the right tool for the right task. Trie-based methods are competitive on the tasks they are designed for.</p>
+</div>
+<div id="references-and-literature" class="section level3">
+<h3>References and literature</h3>
+<ul>
+<li>“Fast and Easy Levenshtein distance using a Trie” (2001) &lt;<a href="http://stevehanov.ca/blog/index.php?id=114" class="uri">http://stevehanov.ca/blog/index.php?id=114</a>&gt;</li>
+<li>“Fast string correction with Levenshtein automata” (2002) &lt;<a href="doi:10.1007/s10032-002-0082-8" class="uri">doi:10.1007/s10032-002-0082-8</a>&gt;</li>
+<li>“A survey of sequence alignment algorithms for next-generation sequencing” (2010) &lt;<a href="doi:10.1093/bib/bbq015" class="uri">doi:10.1093/bib/bbq015</a>&gt;</li>
+<li>“Spell Checker Application Based on Levenshtein Automaton” (2021) &lt;<a href="doi:10.1007/978-3-030-91608-4_5" class="uri">doi:10.1007/978-3-030-91608-4_5</a>&gt;</li>
+</ul>
 </div>
 
 

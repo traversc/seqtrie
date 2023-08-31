@@ -12,3 +12,4 @@ aclocal.m4
 Makefile
 ^.vscode
 ^.github
+^inst/extra_tests
