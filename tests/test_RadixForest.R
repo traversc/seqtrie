@@ -49,10 +49,10 @@ mutate_strings <- function(x, prob = 0.025, indel_prob = 0.025, charset = "abcde
 }
 
 sd_search <- function(query, target, method = "lv") {
-  results <- stringdist::stringdistmatrix(query, target, method = method, nthread=4)
+  results <- stringdist::stringdistmatrix(query, target, method = method, nthread=NTHREADS)
   results <- data.frame(query = rep(query, times=length(target)), 
                         target = rep(target, each=length(query)), 
-                        distance = as.vector(results), stringsAsFactors = F)
+                        distance = as.vector(results), stringsAsFactors = FALSE)
   results <- dplyr::filter(results, is.finite(distance))
   results$distance <- as.integer(results$distance)
   dplyr::arrange(results, query, target)

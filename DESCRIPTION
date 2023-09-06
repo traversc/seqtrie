@@ -1,12 +1,13 @@
 Package: seqtrie
 Title: Radix Tree and Trie-Based String Distances
-Version: 0.2.2
-Date: 2023-8-29
+Version: 0.2.5
+Date: 2023-8-31
 Authors@R: c(
     person("Travers", "Ching", email = "traversc@gmail.com", role = c("aut", "cre", "cph")),
-    person("Martin", "Moene", role = c("ctb", "cph"), comment = "span-lite C++ library")
+    person("Martin", "Moene", role = c("ctb", "cph"), comment = "span-lite C++ library"),
+    person("Hanov", "Steve", role = c("ctb"), comment = "Trie levenshtein implementation in Python")
 	)
-Description: A collection of Radix Tree and trie algorithms for finding similar sequences and calculating sequence distances. 
+Description: A collection of Radix Tree and Trie algorithms for finding similar sequences and calculating sequence distances (Levenshtein and other distance metrics). This work was inspired by a trie implementation in Python: "Fast and Easy Levenshtein distance using a Trie." Hanov (2011) <http://stevehanov.ca/blog/index.php?id=114>.
 License: GPL-3
 Biarch: true
 Encoding: UTF-8

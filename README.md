@@ -6,11 +6,10 @@ classic algorithms like prefix lookup and more bioinformatics focused
 algorithms such as alignment algorithms and sequence distance
 calculations (Hamming and Levenshtein distances).
 
-A trie (aka Prefix Tree) is a data structure used in many applications,
-notably for bioinformatics in the BLAST algorithm for K-mer lookup. It
-is a space efficient data structure where a collection of sequences are
-stored in a tree structure, where each leaf represents one sequence, and
-each node holds one character representing a shared prefix of all
+A trie (aka Prefix Tree) is a data structure used in many applications.
+It is a space efficient data structure where a collection of sequences
+are stored in a tree structure, where each leaf represents one sequence,
+and each node holds one character representing a shared prefix of all
 sequences descending from it. A Radix Tree (aka Compact Prefix Tree) is
 an improvement on a trie, using less memory and being generally faster.
 In a Radix Tree, each node is able to represent multiple characters
@@ -281,10 +280,19 @@ tree$prefix_search("car")
 There are no apples-to-apples comparisons thus no benchmark comparisons.
 With NGS alignment software, you are looking for alignments of reads
 (queries) *within* a genome reference (target). Here, we’re looking for
-alignments from the query to the *full* target.
+alignments from the query to the *full* target. However, many NGS
+aligners do use Tries and similar data structures.
 
 Compared to pairwise alignment software, calculating all alignment pairs
 takes much longer, but on the other hand gives you more information.
 
-Use the right tool for the right task. Trie-based methods are
-competitive on the tasks they are designed for.
+### References and literature
+
+  - “Fast string correction with Levenshtein automata” (2002)
+    \<<doi:10.1007/s10032-002-0082-8>\>
+  - “A survey of sequence alignment algorithms for next-generation
+    sequencing” (2010) \<<doi:10.1093/bib/bbq015>\>
+  - “Fast and Easy Levenshtein distance using a Trie” (2011)
+    \<<http://stevehanov.ca/blog/index.php?id=114>\>
+  - “Spell Checker Application Based on Levenshtein Automaton” (2021)
+    \<<doi:10.1007/978-3-030-91608-4_5>\>
