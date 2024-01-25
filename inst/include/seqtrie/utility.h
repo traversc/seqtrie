@@ -71,11 +71,13 @@ template<class T, std::size_t N> struct is_std_array<std::array<T,N>> : std::tru
 // also nonstd::span doesn't play nice with std::string, so it's probably not worth it
 template <typename T> inline T array_allocate(const size_t size) { return T(size); }
 template <> inline std::string array_allocate(const size_t size) { return std::string(size, 0); }
-template <> inline std::basic_string<uint8_t> array_allocate(const size_t size) { return std::basic_string<uint8_t>(size, 0); }
+// clang 18 deprecated
+// template <> inline std::basic_string<uint8_t> array_allocate(const size_t size) { return std::basic_string<uint8_t>(size, 0); }
 
 template <typename T> inline typename T::value_type * array_data(T & x) { return x.data(); }
 template <> inline char * array_data(std::string & x) { return &x[0]; }
-template <> inline uint8_t * array_data(std::basic_string<uint8_t> & x) { return &x[0]; }
+// clang 18 deprecated
+// template <> inline uint8_t * array_data(std::basic_string<uint8_t> & x) { return &x[0]; }
   
 // subvector
 template <typename T, typename F> T subvector(const F & x, const size_t start, const size_t len = -1) {

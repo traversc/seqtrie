@@ -4,7 +4,7 @@
 
 library(seqtrie)
 library(stringdist)
-library(stringfish)
+library(stringi)
 library(dplyr)
 
 # Use 2 threads on github actions and CRAN, 4 threads locally
@@ -26,13 +26,16 @@ tree_equal <- function(x, y) {
 }
 
 random_strings <- function(N, charset = "abcdefghijklmnopqrstuvwxyz") {
+  charset_stri <- paste0("[", charset, "]")
   len <- sample(0:MAXSEQLEN, N, replace=TRUE)
   result <- lapply(0:MAXSEQLEN, function(x) {
     nx <- sum(len == x)
-    stringfish::random_strings(nx, x, charset = charset, vector_mode = "normal")
+    if(nx == 0) return(character())
+    stringi::stri_rand_strings(nx, x, pattern = charset_stri)
   })
   sample(unlist(result))
 }
+
 
 mutate_strings <- function(x, prob = 0.025, indel_prob = 0.025, charset = "abcdefghijklmnopqrstuvwxyz") {
   charset <- unlist(strsplit(charset, ""))

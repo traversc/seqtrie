@@ -3,6 +3,7 @@
 # the RadixTree imeplementation (see test_radix_tree.R)
 
 library(seqtrie)
+library(stringi)
 library(stringdist)
 library(Biostrings)
 library(dplyr)
@@ -16,10 +17,12 @@ MAXSEQLEN <- 200
 CHARSET   <- "ACGT"
 
 random_strings <- function(N, charset = "abcdefghijklmnopqrstuvwxyz") {
+  charset_stri <- paste0("[", charset, "]")
   len <- sample(0:MAXSEQLEN, N, replace=TRUE)
   result <- lapply(0:MAXSEQLEN, function(x) {
     nx <- sum(len == x)
-    stringfish::random_strings(nx, x, charset = charset, vector_mode = "normal")
+    if(nx == 0) return(character())
+    stringi::stri_rand_strings(nx, x, pattern = charset_stri)
   })
   sample(unlist(result))
 }

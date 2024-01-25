@@ -1,6 +1,18 @@
 seqtrie
 ================
 
+### Basic usage
+
+``` r
+results <- dist_search(strings1, strings2, max_distance=2, nthreads = 1)
+```
+
+The above code will find all similar sequences between `strings1` and
+`strings2`. This will generally be significantly faster than calculating
+pairwise distance or pairwise alignment.
+
+### Background
+
 `seqtrie` is a collection of Radix Tree algorithms. These include some
 classic algorithms like prefix lookup and more bioinformatics focused
 algorithms such as alignment algorithms and sequence distance
@@ -40,12 +52,12 @@ wrapper around the `$new`, `$insert` and `$search()` methods.
 
 ### Install
 
-`devtools::install_github("traversc/seqtrie")`
+`install.packages("seqtrie")`
 
-### Simple example
+### More examples
 
-To demonstrate the interface, below is a simple example where we insert
-some sequences (strings), erase one and then plot out the tree.
+Below is a simple example where we insert some sequences (strings),
+erase one and then plot out the tree.
 
 ``` r
 library(seqtrie)
@@ -277,13 +289,13 @@ tree$prefix_search("car")
 
 ### Why not just use Bowtie2, BWA or other fast alignment software?
 
-There are no apples-to-apples comparisons thus no benchmark comparisons.
-With NGS alignment software, you are looking for alignments of reads
-(queries) *within* a genome reference (target). Here, we’re looking for
-alignments from the query to the *full* target. However, many NGS
-aligners do use Tries and similar data structures.
+There are no apples-to-apples comparisons. With NGS alignment software,
+you are looking for alignments of reads (queries) *within* a genome
+reference (target). Here, we’re looking for alignments from the query to
+the *full* target. However, many NGS aligners do use Tries and similar
+data structures.
 
-Compared to pairwise alignment software, calculating all alignment pairs
+Compared to pairwise alignment packages, calculating all alignment pairs
 takes much longer, but on the other hand gives you more information.
 
 ### References and literature
