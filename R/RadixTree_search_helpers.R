@@ -64,8 +64,10 @@ dist_search <- function(query, target, max_distance = NULL, max_fraction = NULL,
 #' # target1 AAGACCTAA CC
 #' # query2   GGGTGTAA CCACCC
 #' # target2   GGTGTAA CCAC
-#' # Despite having different frames, query1 and query2 and clearly match to target1 and target2, respectively.
-#' # One could consider splitting based on a common core sequence, e.g. a common TAA stop codon. 
+#' # Despite having different frames, query1 and query2 and clearly 
+#' # match to target1 and target2, respectively.
+#' # One could consider splitting based on a common core sequence, 
+#' # e.g. a common TAA stop codon. 
 #' split_search(query=c(  "AGACCTAACCC", "GGGTGTAACCACCC"),
 #'              target=c("AAGACCTAACC",   "GGTGTAACCAC"),
 #'              query_split=c(8, 8),
@@ -89,9 +91,9 @@ split_search <- function(query, target, query_split, target_split, edge_trim = 0
   
   # Search for similar sequences between lefts and rights
   left_matches <- left_tree$search(unique(query_left), max_distance = max_distance, mode = "anchored", ...)
-  left_matches <- dplyr::rename(left_matches, query_left=query, target_left=target)
+  left_matches <- dplyr::rename(left_matches, query_left=.data$query, target_left=.data$target)
   right_matches <- right_tree$search(unique(query_right), max_distance = max_distance, mode = "anchored", ...)
-  right_matches <- dplyr::rename(right_matches, query_right=query, target_right=target)
+  right_matches <- dplyr::rename(right_matches, query_right=.data$query, target_right=.data$target)
   
   # If either left or right finds no matches, return empty dataframe
   if(nrow(left_matches) == 0 || nrow(right_matches) == 0) {
@@ -101,9 +103,9 @@ split_search <- function(query, target, query_split, target_split, edge_trim = 0
   # construct map of full sequence to left and right
   # filter in only potential matches, i.e. queries or targets that are in both left_matches and right_matches data.frame
   df_query <- data.frame(query, query_left, query_right)
-  df_query <- dplyr::filter(df_query, query_left %in% left_matches$query_left, query_right %in% right_matches$query_right)
+  df_query <- dplyr::filter(df_query, .data$query_left %in% left_matches$query_left, .data$query_right %in% right_matches$query_right)
   df_target <- data.frame(target, target_left, target_right)
-  df_target <- dplyr::filter(df_target, target_left %in% left_matches$target_left, target_right %in% right_matches$target_right)
+  df_target <- dplyr::filter(df_target, .data$target_left %in% left_matches$target_left, .data$target_right %in% right_matches$target_right)
   
   # Join results together, append full query and target sequences to left and right matches
   left_matches <- dplyr::inner_join(left_matches, df_query, by = "query_left")
@@ -112,8 +114,7 @@ split_search <- function(query, target, query_split, target_split, edge_trim = 0
   right_matches <- dplyr::inner_join(right_matches, df_target, by = "target_right")
   
   results <- dplyr::inner_join(left_matches, right_matches, by = c("query", "target"), suffix=c(".left", ".right"))
-  results <- dplyr::mutate(results, distance = distance.left + distance.right)
-  results <- dplyr::filter(results, distance <= max_distance)
-  results <- dplyr::select(results, query, target, distance)
-  as.data.frame(results)
+  results <- dplyr::mutate(results, distance = .data$distance.left + .data$distance.right)
+  results <- dplyr::filter(results, .data$distance <= max_distance)
+  as.data.frame(results[c("query", "target", "distance")])
 }

@@ -17,9 +17,9 @@ SystemRequirements: GNU make
 LinkingTo: 
     Rcpp, RcppParallel, BH
 Imports: 
-    Rcpp (>= 0.12.18.3), RcppParallel (>= 5.1.3), R6
+    Rcpp (>= 0.12.18.3), RcppParallel (>= 5.1.3), R6, rlang, dplyr, stringi
 Suggests:
-    knitr, rmarkdown, stringdist, qs, dplyr, Biostrings, igraph, ggplot2, stringi
+    knitr, rmarkdown, stringdist, qs, Biostrings, igraph, ggplot2
 VignetteBuilder: knitr
 RoxygenNote: 7.2.3
 Roxygen: list(markdown = TRUE)

@@ -48,8 +48,10 @@ where left = stri_sub(sequence, edge_trim+1, split) and right = stri_sub(query, 
 # target1 AAGACCTAA CC
 # query2   GGGTGTAA CCACCC
 # target2   GGTGTAA CCAC
-# Despite having different frames, query1 and query2 and clearly match to target1 and target2, respectively.
-# One could consider splitting based on a common core sequence, e.g. a common TAA stop codon. 
+# Despite having different frames, query1 and query2 and clearly 
+# match to target1 and target2, respectively.
+# One could consider splitting based on a common core sequence, 
+# e.g. a common TAA stop codon. 
 split_search(query=c(  "AGACCTAACCC", "GGGTGTAACCACCC"),
              target=c("AAGACCTAACC",   "GGTGTAACCAC"),
              query_split=c(8, 8),

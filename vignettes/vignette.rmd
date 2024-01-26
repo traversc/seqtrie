@@ -18,10 +18,10 @@ knitr::opts_chunk$set(dpi=96,fig.width=6.5)
 ### Basic usage
 
 ```{r, basic_usage, eval=FALSE}
-results <- dist_search(strings1, strings2, max_distance=2, nthreads = 1)
+results <- dist_search(x, y, max_distance = 2, nthreads = 1)
 ```
 
-The above code will find all similar sequences between `strings1` and `strings2`. 
+The above code will find all similar sequences/strings between `x` and `y`. 
 This will generally be significantly faster than calculating pairwise distance or
 pairwise alignment. 
 
