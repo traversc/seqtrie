@@ -1,16 +1,5 @@
-#include <Rcpp.h>
-#include <RcppParallel.h>
-
-#include <set>
-#include <memory>
-#include <tuple>
 #include "seqtrie_types.h"
-#include "seqtrie_utils.h"
-
 #include "simple_progress/simple_progress.h"
-
-using namespace Rcpp;
-using namespace RcppParallel;
 
 ////////////////////////////////////////////////////////////////////////////////
 // RadixForest
@@ -121,7 +110,7 @@ DataFrame RadixForest_prefix_search(RadixForestRXPtr xp, CharacterVector sequenc
     auto & targets = output[i];
     for(size_t j=0; j<targets.size(); ++j) {
       SET_STRING_ELT(query_results, q, STRING_ELT(sequences, queries[i]));
-      auto s = targets[j]->template sequence<trqwe::small_array<char>>();
+      auto s = targets[j]->template sequence<SeqTrie::array_r<char>>();
       SET_STRING_ELT(target_results, q, to_charsxp(s));
       q++;
     }
@@ -178,7 +167,7 @@ CharacterVector RadixForest_to_vector(RadixForestRXPtr xp) {
   }
   CharacterVector sequence(seqs.size());
   for(size_t i=0; i<seqs.size(); ++i) {
-    auto s = seqs[i]->template sequence<trqwe::small_array<char>>();
+    auto s = seqs[i]->template sequence<SeqTrie::array_r<char>>();
     SET_STRING_ELT(sequence, i, to_charsxp(s));
   }
   return sequence;

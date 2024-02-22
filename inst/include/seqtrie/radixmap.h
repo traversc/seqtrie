@@ -5,16 +5,7 @@
 
 namespace seqtrie {
 
-// inline void print_vec(const std::vector<int> & v) {
-//   for(auto & x : v) {
-//     if(x > 100000) {
-//       std::cout << "Z ";
-//     } else {
-//       std::cout << x << " ";
-//     }
-//   }
-//   std::cout << "\t";
-// }
+
 
 #define TEMPLATE_LIST template <class A, template<typename...> class M, template<typename...> class B, class I>
 #define RADIXMAP_T RadixMap<A,M,B,I>
@@ -93,7 +84,6 @@ public:
 
   // search using a custom edit distance cost matrix
   // MT is a map type, e.g. std::map<pairchar_type, int>
-  // (pairchar_type is defined as std::pair<char, char> in utility.h)
   // the map key is the pair of characters (query, target) to compare
   // All possibile pairs of characters must be included in the map, or else it return an error
   // The map value is the cost of the edit operation and must be non-negative
@@ -209,6 +199,8 @@ TEMPLATE_LIST std::string RADIXMAP_T::print_impl(size_t depth) const {
     result += ":";
     result += std::to_string(terminal_idx);
   }
+  // result += ",";
+  // result += ptr_tostring(this);
   result += "\n";
   std::vector<atomic_type> child_node_keys;
   for(auto & ch : child_nodes) {

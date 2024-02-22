@@ -1,9 +1,4 @@
-#include <set>
-#include <Rcpp.h>
 #include "seqtrie_types.h"
-#include "seqtrie_utils.h"
-
-using namespace Rcpp;
 
 // [[Rcpp::export(rng = false)]]
 CharCounterXPtr CharCounter_create() {

@@ -80,7 +80,7 @@ template <> inline char * array_data(std::string & x) { return &x[0]; }
 // template <> inline uint8_t * array_data(std::basic_string<uint8_t> & x) { return &x[0]; }
   
 // subvector
-template <typename T, typename F> T subvector(const F & x, const size_t start, const size_t len = -1) {
+template <typename T, typename F> inline T subvector(const F & x, const size_t start, const size_t len = -1) {
   size_t rlen = std::min(len, x.size() - start);
   T result(rlen);
   std::copy(x.data() + start, x.data() + start + rlen, result.data());
@@ -88,14 +88,14 @@ template <typename T, typename F> T subvector(const F & x, const size_t start, c
 }
 
 // appendspan -- append span to vector
-template <typename T, typename S> void appendspan(T & x, const S & y) {
+template <typename T, typename S> inline void appendspan(T & x, const S & y) {
   static_assert(std::is_same<typename T::value_type, typename S::value_type>::value, "appendspan x and y value_type must be the same");
   size_t xs = x.size();
   x.resize(xs + y.size());
   std::copy(y.data(), y.data() + y.size(), x.data() + xs);
 }
 
-template <typename T> T iota_range(const typename T::value_type value, const size_t len) {
+template <typename T> inline T iota_range(const typename T::value_type value, const size_t len) {
   T result(len);
   std::iota(result.begin(), result.end(), value);
   return result;
@@ -115,14 +115,10 @@ template <typename T> T iota_range(const typename T::value_type value, const siz
 // }
 }
 
-// hash for unordered_map with std::pair<char, char> as key
-namespace std {
-  template <>
-  struct hash<std::pair<char, char>> {
-    size_t operator()(const std::pair<char, char> & p) const {
-      return ((p.first + 128) << 8) + (p.second + 128);
-    }
-  };
+inline std::string ptr_tostring(const void * ptr) {
+  std::stringstream ss;
+  ss << ptr;
+  return ss.str();
 }
 
 #endif // include guard

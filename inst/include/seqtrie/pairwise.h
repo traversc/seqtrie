@@ -11,8 +11,8 @@
 // tuple anchored_distance_linear(query, target, cost_map) // Anchored alignment, gap penalty is linear
 // tuple anchored_distance_affine(query, target, cost_map) // Anchored alignment, gap penalty is affine
 
-#ifndef pairwise_PAIRWISE_H
-#define pairwise_PAIRWISE_H
+#ifndef seqtrie_PAIRWISE_H
+#define seqtrie_PAIRWISE_H
 
 #include <set>
 #include <memory>
@@ -21,11 +21,13 @@
 #include <nonstd/span.hpp>
 #include <limits>
 #include <boost/numeric/ublas/matrix.hpp>
+// #include <boost/functional/hash.hpp>
 
 namespace pairwise {
 using IMatrix = boost::numeric::ublas::matrix<int>;
 using pairchar_type = std::pair<char, char>;
-using pairchar_map_type = std::unordered_map<pairchar_type, int>;
+// make this template'd
+// using pairchar_map_type = std::unordered_map<pairchar_type, int, boost::hash<pairchar_type>>;
 using cspan = nonstd::span<const char>;
 
 constexpr int R_NA_INTEGER = std::numeric_limits<int>::min();
@@ -34,6 +36,7 @@ constexpr char GAP_CHAR = '\0'; // any gap cost for non-affine
 constexpr char GAP_OPEN_CHAR = std::numeric_limits<char>::min(); // gap open cost for affine
 constexpr char GAP_EXTN_CHAR = '\0'; // extension for affine
 constexpr int NO_ALIGN = std::numeric_limits<int>::max() / 2; // used to represent impossible affine positions; use half INT_MAX so we dont overflow
+
 // GAP_COST = GAP_OPEN_COST + GAP_EXTN_COST * (LENGTH - 1)
 
 // void print_matrix(IMatrix & mat) {
@@ -56,7 +59,7 @@ constexpr int NO_ALIGN = std::numeric_limits<int>::max() / 2; // used to represe
 // }
 
 int hamming_distance(cspan query, cspan target) {
-  if(query.size() != target.size()) return NA_INTEGER;
+  if(query.size() != target.size()) return R_NA_INTEGER;
   int distance = 0;
   for(size_t i=0; i<query.size(); ++i) {
     if(query[i] != target[i]) distance++;
@@ -82,7 +85,7 @@ IMatrix get_dprog_matrix(cspan query, cspan target) {
   return mat;
 }
 
-IMatrix get_dprog_matrix_linear(cspan query, cspan target, pairchar_map_type & cost_map) {
+template <typename pairchar_map_type> IMatrix get_dprog_matrix_linear(cspan query, cspan target, pairchar_map_type & cost_map) {
   IMatrix mat(query.size()+1, target.size()+1);
   mat(0,0) = 0;
   for(size_t j=1; j<mat.size2(); ++j) mat(0,j) = mat(0,j-1) + cost_map.at(pairchar_type(GAP_CHAR, target[j-1])); // gap in query
@@ -100,7 +103,7 @@ IMatrix get_dprog_matrix_linear(cspan query, cspan target, pairchar_map_type & c
   return mat;
 }
 
-std::tuple<IMatrix, IMatrix, IMatrix> get_dprog_matrix_affine(cspan query, cspan target, pairchar_map_type & cost_map) {
+template <typename pairchar_map_type> std::tuple<IMatrix, IMatrix, IMatrix> get_dprog_matrix_affine(cspan query, cspan target, pairchar_map_type & cost_map) {
   size_t size1 = query.size()+1;
   size_t size2 = target.size()+1;
   std::tuple<IMatrix, IMatrix, IMatrix> mats = std::make_tuple(IMatrix(size1, size2), IMatrix(size1, size2), IMatrix(size1, size2));
@@ -157,12 +160,12 @@ int global_distance(cspan query, cspan target) {
 }
 const auto& levenshtein_distance = global_distance; // alias
 
-int global_distance_linear(cspan query, cspan target, pairchar_map_type & cost_map) {
+template <typename pairchar_map_type> int global_distance_linear(cspan query, cspan target, pairchar_map_type & cost_map) {
   IMatrix mat = get_dprog_matrix_linear(query, target, cost_map);
   return mat(mat.size1()-1, mat.size2()-1);
 }
 
-int global_distance_affine(cspan query, cspan target, pairchar_map_type & cost_map) {
+template <typename pairchar_map_type> int global_distance_affine(cspan query, cspan target, pairchar_map_type & cost_map) {
   // print_pairchar_map(cost_map);
   auto mats = get_dprog_matrix_affine(query, target, cost_map);
   IMatrix & M = std::get<0>(mats);
@@ -204,7 +207,7 @@ std::tuple<int, int, int> anchored_distance(cspan query, cspan target) {
   return std::tuple<int, int, int>(distance, query_size, target_size);
 }
 
-std::tuple<int, int, int> anchored_distance_linear(cspan query, cspan target, pairchar_map_type & cost_map) {
+template <typename pairchar_map_type> std::tuple<int, int, int> anchored_distance_linear(cspan query, cspan target, pairchar_map_type & cost_map) {
   IMatrix mat = get_dprog_matrix_linear(query, target, cost_map);
   int distance = NO_ALIGN;
   int query_size = 0;
@@ -228,7 +231,7 @@ std::tuple<int, int, int> anchored_distance_linear(cspan query, cspan target, pa
   return std::tuple<int, int, int>(distance, query_size, target_size);
 }
 
-std::tuple<int, int, int> anchored_distance_affine(cspan query, cspan target, pairchar_map_type & cost_map) {
+template <typename pairchar_map_type> std::tuple<int, int, int> anchored_distance_affine(cspan query, cspan target, pairchar_map_type & cost_map) {
   auto mats = get_dprog_matrix_affine(query, target, cost_map);
   IMatrix & M = std::get<0>(mats);
   IMatrix & X = std::get<1>(mats);

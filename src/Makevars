@@ -1,3 +1,5 @@
-PKG_CPPFLAGS = -DRCPP_USE_UNWIND_PROTECT -I. -I../inst/include
-PKG_LIBS     += $(shell ${R_HOME}/bin/Rscript -e "RcppParallel::RcppParallelLibs()")
+CXX_STD=CXX17
 
+PKG_CPPFLAGS = -DRCPP_USE_UNWIND_PROTECT -DSEQTRIE_SMALL_ARRAY_SIZE=$(shell ${R_HOME}/bin/Rscript -e "cat(Sys.getenv('SEQTRIE_SMALL_ARRAY_SIZE',unset=32))")
+PKG_CPPFLAGS += -I. -I../inst/include
+PKG_LIBS += $(shell ${R_HOME}/bin/Rscript -e "RcppParallel::RcppParallelLibs()")

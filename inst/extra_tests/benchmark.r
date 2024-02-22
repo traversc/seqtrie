@@ -60,12 +60,12 @@ run_og <- function(query, target, max_distance, show_progress = F) {
   results %>% arrange(query, target)
 }
 
-run_dnatree <- function(query, target, max_distance=NULL, max_fraction=NULL, mode = "levenshtein", show_progress = FALSE, nthreads = 8) {
-  x <- treedist::DNATree$new()
-  x$insert(target)
-  x$search(query, max_distance = max_distance, max_fraction = max_fraction, mode = mode, show_progress=show_progress, nthreads=nthreads) %>%
-    arrange(query, target)
-}
+# run_dnatree <- function(query, target, max_distance=NULL, max_fraction=NULL, mode = "levenshtein", show_progress = FALSE, nthreads = 8) {
+#   x <- treedist::DNATree$new()
+#   x$insert(target)
+#   x$search(query, max_distance = max_distance, max_fraction = max_fraction, mode = mode, show_progress=show_progress, nthreads=nthreads) %>%
+#     arrange(query, target)
+# }
 
 run_radixtree <- function(query, target, max_distance=NULL, max_fraction=NULL, mode = "levenshtein", show_progress = FALSE, nthreads = 8) {
   x <- seqtrie::RadixTree$new()
@@ -81,12 +81,12 @@ run_radixforest <- function(query, target, max_distance=NULL, max_fraction=NULL,
     arrange(query, target)
 }
 
-run_prefixtree <- function(query, target, max_distance=NULL, max_fraction=NULL, mode = "levenshtein", show_progress = FALSE, nthreads = 8) {
-  x <- treedist::PrefixTree$new()
-  x$insert(target)
-  x$search(query, max_distance = max_distance, max_fraction = max_fraction, mode = mode, show_progress=show_progress, nthreads=nthreads) %>%
-    arrange(query, target)
-}
+# run_prefixtree <- function(query, target, max_distance=NULL, max_fraction=NULL, mode = "levenshtein", show_progress = FALSE, nthreads = 8) {
+#   x <- treedist::PrefixTree$new()
+#   x$insert(target)
+#   x$search(query, max_distance = max_distance, max_fraction = max_fraction, mode = mode, show_progress=show_progress, nthreads=nthreads) %>%
+#     arrange(query, target)
+# }
 
 run_stringdist <- function(query, target, max_distance=NULL, max_fraction=NULL, nthreads = 8, show_progress = F) {
   results <- stringdist::stringdistmatrix(query, target, method = "lv", nthread=nthreads)
@@ -103,29 +103,32 @@ run_stringdist <- function(query, target, max_distance=NULL, max_fraction=NULL, 
   dplyr::arrange(results, query, target)
 }
 
-methods <- list(run_dnatree, run_radixtree, run_radixforest, run_prefixtree, run_stringdist, run_og)
-names(methods) <- c("DNATree", "RadixTree", "RadixForest", "PrefixTree", "stringdist", "OG")
+# methods <- list(run_dnatree, run_radixtree, run_radixforest, run_prefixtree, run_stringdist, run_og)
+# names(methods) <- c("DNATree", "RadixTree", "RadixForest", "PrefixTree", "stringdist", "OG")
 
-data("covid_cdr3")
+methods <- list(run_radixtree, run_radixforest, run_og)
+names(methods) <- c("RadixTree", "RadixForest", "OG")
+
+# data("covid_cdr3")
 cc3_subset <- sample(covid_cdr3, size = 1000)
 
-sd_results <- run_stringdist(cc3_subset, cc3_subset, 2)
-og_results <- run_og(cc3_subset, cc3_subset, 2)
+# sd_results <- run_stringdist(cc3_subset, cc3_subset, 2)
+# og_results <- run_og(cc3_subset, cc3_subset, 2)
 # dt_results <- run_dnatree(cc3_subset, cc3_subset, max_distance = 2)
-rt_results <- run_radixtree(cc3_subset, cc3_subset, max_distance = 2)
-rf_results <- run_radixforest(cc3_subset, cc3_subset, max_distance = 2)
+# rt_results <- run_radixtree(cc3_subset, cc3_subset, max_distance = 2)
+# rf_results <- run_radixforest(cc3_subset, cc3_subset, max_distance = 2)
 # pt_results <- run_prefixtree(cc3_subset, cc3_subset, max_distance = 2)
 
-stopifnot(identical(sd_results, og_results))
+# stopifnot(identical(sd_results, og_results))
 # stopifnot(identical(sd_results, dt_results))
-stopifnot(identical(sd_results, rt_results))
-stopifnot(identical(sd_results, rf_results))
+# stopifnot(identical(sd_results, rt_results))
+# stopifnot(identical(sd_results, rf_results))
 # stopifnot(identical(sd_results, pt_results))
 
 ################################################################################
 
-grid <- expand.grid(nseqs = c(10000), maxdist = c(2,3), iter = 1:NITER, method = names(methods)) %>% sample_n(nrow(.))
-grid <- filter(grid, nseqs <= 1000 | method %in% c("DNATree", "RadixTree", "RadixForest", "PrefixTree"))
+grid <- expand.grid(nseqs = c(100,300,1000,3000,10000), maxdist = c(2,3), iter = 1:NITER, method = names(methods)) %>% sample_n(nrow(.))
+# grid <- filter(grid, nseqs <= 1000 | method %in% c("DNATree", "RadixTree", "RadixForest", "PrefixTree"))
 grid$time <- rep(0, nrow(grid))
 for(i in 1:nrow(grid)) {
   print(grid[i,])
@@ -138,7 +141,7 @@ for(i in 1:nrow(grid)) {
 }
 maxdist_results <- grid
 
-grid <- expand.grid(nseqs = c(100,300,1000,3000,10000,30000), maxfrac = c(0.035,0.15), iter = 1:NITER, method = c("DNATree", "RadixTree", "RadixForest", "PrefixTree")) %>% sample_n(nrow(.))
+grid <- expand.grid(nseqs = c(100,300,1000,3000,10000,30000), maxfrac = c(0.035,0.15), iter = 1:NITER, method = c("RadixTree", "RadixForest")) %>% sample_n(nrow(.))
 grid$time <- rep(0, nrow(grid))
 for(i in 1:nrow(grid)) {
   print(grid[i,])
@@ -154,9 +157,13 @@ maxfrac_results <- grid
 maxdist_results %>% group_by(nseqs, method, maxdist) %>% summarize(time = mean(time)) %>% as.data.frame %>% print
 maxfrac_results %>% group_by(nseqs, method, maxfrac) %>% summarize(time = mean(time)) %>% as.data.frame %>% print
 
-g <- ggplot(grid, aes(x = nseqs, y = time, color = method)) + geom_point() + geom_smooth(fill = NA) +
+ggplot(maxfrac_results, aes(x = nseqs, y = time, color = method)) + geom_point() + geom_smooth(fill = NA) +
   scale_x_log10() +
-  # scale_y_log10() +
-  facet_wrap(~maxfrac) + 
+  facet_wrap(~maxfrac, scales = "free") + 
   theme_bw(base_size = 16)
-ggsave(g, file = "benchmark_plot.png", width = 6, height = 4)
+
+ggplot(maxdist_results, aes(x = nseqs, y = time, color = method)) + geom_point() + geom_smooth(fill = NA) +
+  scale_x_log10() +
+  facet_wrap(~maxfrac, scales = "free") + 
+  theme_bw(base_size = 16)
+# ggsave(g, file = "benchmark_plot.png", width = 6, height = 4)

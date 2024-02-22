@@ -1,21 +1,6 @@
-#include <Rcpp.h>
-#include <RcppParallel.h>
-
-#include <set>
-#include <memory>
-#include <tuple>
-#include <unordered_map>
 #include "seqtrie_types.h"
-#include "seqtrie_utils.h"
-
-#include "pairwise/pairwise.h"
+#include "seqtrie/pairwise.h"
 #include "simple_progress/simple_progress.h"
-
-#include <boost/numeric/ublas/matrix.hpp>
-using IMatrix = boost::numeric::ublas::matrix<int>;
-
-using namespace Rcpp;
-using namespace RcppParallel;
 
 // All input parameters should be checked in R, so any error thrown here is an internal error
 // [[Rcpp::export(rng = false)]]
