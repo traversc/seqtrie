@@ -10,22 +10,29 @@
 #include <set>
 #include <memory>
 #include <tuple>
-#include <boost/functional/hash.hpp>
 
-using namespace Rcpp;
-using namespace RcppParallel;
-
+#if __cplusplus >= 201703L
+#define USE_ANKERL 1
 #include "ankerl/unordered_dense.h"
+#else
+#include <boost/functional/hash.hpp>
+#endif
+
 #include "seqtrie/radixmap.h"
 #include "simple_array/small_array.h"
 
-using namespace Rcpp;
-
-#if __cplusplus >= 201703L
-  #define USE_ANKERL 1
+// defined in some headers in windows and Mac, conflicts with R headers
+#ifdef TRUE
+#undef TRUE
+#endif
+#ifdef FALSE
+#undef FALSE
 #endif
 
 #define USE_SEQTRIE_SMALL_ARRAY_SIZE SEQTRIE_SMALL_ARRAY_SIZE
+
+using namespace Rcpp;
+using namespace RcppParallel;
 
 // constants and types
 using pairchar_type = std::pair<char, char>;

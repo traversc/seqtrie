@@ -7,7 +7,7 @@ set.seed(314156)
 NITER = 5
 NT = 4
 
-grid <- expand.grid(nseqs = c(30000), maxfrac = c(0.05), iter = 1:NITER, method = c("RadixForest")) %>% sample_n(nrow(.))
+grid <- expand.grid(nseqs = c(133034), maxfrac = c(0.035), iter = 1:NITER, method = c("RadixForest")) %>% sample_n(nrow(.))
 grid$time <- rep(0, nrow(grid))
 for(i in 1:nrow(grid)) {
   x <- sample(covid_cdr3, size = grid$nseqs[i])
