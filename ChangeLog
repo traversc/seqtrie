@@ -1,2 +1,6 @@
+Version 0.2.7 (2024-01-25)
+   * Add Ankerl unordered_dense conditional on C++17 support
+   * Add `pwalign` package to suggests field which is responsible for pairwiseAlignment in the biostrings package in BioC 3.19
+
 Version 0.2.6 (2024-01-25)
    * Minor fix for CRAN checks, std::basic_string<uint8_t> deprecated in Clang 18

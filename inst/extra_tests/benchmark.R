@@ -164,6 +164,6 @@ ggplot(maxfrac_results, aes(x = nseqs, y = time, color = method)) + geom_point()
 
 ggplot(maxdist_results, aes(x = nseqs, y = time, color = method)) + geom_point() + geom_smooth(fill = NA) +
   scale_x_log10() +
-  facet_wrap(~maxfrac, scales = "free") + 
+  facet_wrap(~maxdist, scales = "free") + 
   theme_bw(base_size = 16)
 # ggsave(g, file = "benchmark_plot.png", width = 6, height = 4)

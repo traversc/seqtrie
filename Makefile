@@ -76,7 +76,7 @@ test:
 	IS_LOCAL=Yes Rscript tests/test_RadixForest.R && unset IS_LOCAL
 
 local-bench:
-	Rscript inst/extra_tests/benchmark.r
+	Rscript inst/extra_tests/benchmark.R
 
 
 R_INCLUDE=$(shell R CMD config --cppflags)
