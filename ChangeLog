@@ -1,3 +1,6 @@
+Version 0.2.8 (2024-05-03)
+   * Conditionally run tests if required packages are installed
+
 Version 0.2.7 (2024-01-25)
    * Add Ankerl unordered_dense conditional on C++17 support
    * Add `pwalign` package to suggests field which is responsible for pairwiseAlignment in the biostrings package in BioC 3.19

@@ -2,6 +2,15 @@
 # These two functions are simple dynamic programming algorithms for computing pairwise distances and are themselves used to validate
 # the RadixTree imeplementation (see test_radix_tree.R)
 
+if(requireNamespace("seqtrie", quietly=TRUE) &&
+   requireNamespace("stringi", quietly=TRUE) &&
+   requireNamespace("stringdist", quietly=TRUE) &&
+   requireNamespace("Biostrings", quietly=TRUE) &&
+   requireNamespace("dplyr", quietly=TRUE) && 
+   # pwalign is only required for Biostrings >= 2.72.0 in R 4.4+
+   ( (packageVersion("Biostrings") < "2.72.0") || requireNamespace("pwalign", quietly=TRUE) )
+) {
+
 library(seqtrie)
 library(stringi)
 library(stringdist)
@@ -260,4 +269,6 @@ for(. in 1:NITER) {
       results_biostrings <- biostrings_pairwise_anchored(query_pairwise, target, query_size, target_size, cost_matrix = cost_matrix, gap_cost = gap_cost, gap_open_cost=gap_open_cost)
       stopifnot(all(results_seqtrie == results_biostrings))
     })
+}
+
 }

@@ -2,6 +2,12 @@
 # 1) That insertion and deletion produce the correct results with random strings
 # 2) That search (hamming, levenshtein and anchored) produce the same results as the internal `dist_matrix` and `dist_pairwise` functions
 
+if(requireNamespace("seqtrie", quietly=TRUE) &&
+   requireNamespace("stringi", quietly=TRUE) &&
+   requireNamespace("stringdist", quietly=TRUE) &&
+   requireNamespace("dplyr", quietly=TRUE)
+) {
+
 library(seqtrie)
 library(stringdist)
 library(stringi)
@@ -293,4 +299,6 @@ for(. in 1:NITER) {
       stopifnot(identical(results_frac, sd_frac))
     })
   
+}
+
 }

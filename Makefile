@@ -6,10 +6,10 @@ BUILD   := $(PACKAGE)_$(VERSION).tar.gz
 .PHONY: doc build install test vignette $(BUILD)
 
 check: $(BUILD)
-	R CMD check --as-cran $<
+	export _R_CHECK_FORCE_SUGGESTS_=false && R CMD check --as-cran $<
 
 check-no-vignette: $(BUILD)
-	R CMD check --as-cran --no-build-vignettes --ignore-vignettes --no-manual $<
+	export _R_CHECK_FORCE_SUGGESTS_=false && R CMD check --as-cran --no-build-vignettes --ignore-vignettes --no-manual $<
 
 
 check-cran: $(BUILD)
