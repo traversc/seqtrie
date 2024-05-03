@@ -68,7 +68,7 @@ install-fast:
 
 vignette:
 	Rscript -e "rmarkdown::render(input='vignettes/vignette.rmd', output_format='html_vignette')"
-	IS_GITHUB=Yes Rscript -e "rmarkdown::render(input='vignettes/vignette.rmd', output_file='../README.md', output_format=rmarkdown::github_document(html_preview=FALSE))"; unset IS_GITHUB
+	GITHUB_README=Yes Rscript -e "rmarkdown::render(input='vignettes/vignette.rmd', output_file='../README.md', output_format=rmarkdown::github_document(html_preview=FALSE))"; unset GITHUB_README
 
 test:
 	IS_LOCAL=Yes Rscript tests/test_pairwise.R && unset IS_LOCAL

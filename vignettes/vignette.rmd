@@ -11,8 +11,10 @@ vignette: >
 ---
 
 ```{r, setup, echo=FALSE}
-IS_GITHUB <- Sys.getenv("IS_GITHUB") != ""
+GITHUB_README <- Sys.getenv("GITHUB_README") != ""
+CAN_IGRAPH_PLOT <- requireNamespace("igraph", quietly=TRUE) && requireNamespace("ggplot2", quietly=TRUE)
 knitr::opts_chunk$set(dpi=96,fig.width=6.5)
+library(seqtrie)
 ```
 
 ### Basic usage
@@ -72,8 +74,7 @@ the `$new`, `$insert` and `$search()` methods.
 Below is a simple example where we insert some sequences (strings), erase one and 
 then plot out the tree.
 
-```{r, basic_plot, eval=!IS_GITHUB, out.width=400}
-library(seqtrie)
+```{r, basic_plot, eval=!GITHUB_README && CAN_IGRAPH_PLOT, out.width=400}
 tree <- RadixTree$new()
 tree$insert(c("cargo", "cart", "carburetor", "carbuncle", "bar", "zebra"))
 tree$erase("zebra")
@@ -81,8 +82,7 @@ tree$erase("zebra")
 set.seed(1); tree$graph()
 ```
 
-```{r, basic_plot_output, eval=IS_GITHUB, echo=FALSE, message=FALSE, results='hide'}
-library(seqtrie)
+```{r, basic_plot_output, eval=GITHUB_README && CAN_IGRAPH_PLOT, echo=FALSE, message=FALSE, results='hide'}
 tree <- RadixTree$new()
 tree$insert(c("cargo", "cart", "carburetor", "carbuncle", "bar", "zebra"))
 tree$erase("zebra")
@@ -91,7 +91,7 @@ set.seed(1); tree$graph()
 dev.off()
 ```
 
-```{r, basic_plot_github, eval=IS_GITHUB, echo=FALSE, results='asis'}
+```{r, basic_plot_github, eval=GITHUB_README, echo=FALSE, results='asis'}
 cat('![](vignettes/simple_tree.png "simple_tree")')
 ```
 

@@ -4,11 +4,11 @@ seqtrie
 ### Basic usage
 
 ``` r
-results <- dist_search(strings1, strings2, max_distance=2, nthreads = 1)
+results <- dist_search(x, y, max_distance = 2, nthreads = 1)
 ```
 
-The above code will find all similar sequences between `strings1` and
-`strings2`. This will generally be significantly faster than calculating
+The above code will find all similar sequences/strings between `x` and
+`y`. This will generally be significantly faster than calculating
 pairwise distance or pairwise alignment.
 
 ### Background
@@ -60,7 +60,6 @@ Below is a simple example where we insert some sequences (strings),
 erase one and then plot out the tree.
 
 ``` r
-library(seqtrie)
 tree <- RadixTree$new()
 tree$insert(c("cargo", "cart", "carburetor", "carbuncle", "bar", "zebra"))
 tree$erase("zebra")
@@ -282,10 +281,10 @@ tree$prefix_search("car")
 ```
 
     ##   query     target
-    ## 1   car  carbuncle
-    ## 2   car carburetor
-    ## 3   car      cargo
-    ## 4   car       cart
+    ## 1   car      cargo
+    ## 2   car       cart
+    ## 3   car carburetor
+    ## 4   car  carbuncle
 
 ### Why not just use Bowtie2, BWA or other fast alignment software?
 

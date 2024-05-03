@@ -51,10 +51,10 @@ RadixForest <- R6::R6Class("RadixForest", list(
       return(result)
     } else if(plot) {
       if (!requireNamespace("igraph", quietly = TRUE)) {
-        stopf("igraph package is required to plot the tree.") # nocov
+        stop("igraph package is required to plot the tree.") # nocov
       }
       if (!requireNamespace("ggplot2", quietly = TRUE)) {
-        stopf("ggplot2 package is required to plot the tree.") # nocov
+        stop("ggplot2 package is required to plot the tree.") # nocov
       }
       result$parent <- ifelse(result$parent == "", root_label, result$parent)
       gr <- igraph::graph_from_data_frame(result)
