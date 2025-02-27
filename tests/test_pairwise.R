@@ -8,9 +8,12 @@ if(requireNamespace("seqtrie", quietly=TRUE) &&
    requireNamespace("Biostrings", quietly=TRUE) &&
    requireNamespace("dplyr", quietly=TRUE) && 
    # pwalign is only required for Biostrings >= 2.72.0 in R 4.4+
-   ( (packageVersion("Biostrings") < "2.72.0") || requireNamespace("pwalign", quietly=TRUE) )
+   ( (packageVersion("Biostrings") < "2.72.0") || requireNamespace("pwalign", quietly=TRUE) ) &&
+   # pwalign in devel (1.3.2) has a bug that causes test to fail
+   # https://github.com/Bioconductor/pwalign/issues/11
+   # so only run if Biostrings < 2.72.0 OR pwalign <= 1.2.0
+   ( (packageVersion("Biostrings") < "2.72.0") || (requireNamespace("pwalign", quietly=TRUE) && packageVersion("pwalign") <= "1.2.0") )
 ) {
-
 library(seqtrie)
 library(stringi)
 library(stringdist)
@@ -51,18 +54,29 @@ mutate_strings <- function(x, prob = 0.025, indel_prob = 0.025, charset = "abcde
 }
 
 # Biostrings notes:
+# pairwiseAlignment is officially deprecated in Biostrings 2.75.1
+# but functionally deprecated as 2.72.0 as it still gives a warning which fails the test
+# use pwalign instead
+
+if(packageVersion("Biostrings") < "2.72.0") {
+  pairwiseAlignment_dispatch <- Biostrings::pairwiseAlignment
+} else {
+  pairwiseAlignment_dispatch <- pwalign::pairwiseAlignment
+}
+
+
 # subject (target) must be of length 1 or equal to pattern (query)
 # To get a distance matrix, iterate over target and perform a column bind
 # special_zero_case -- if both query and target are empty, Biostrings fails with an error
 pairwiseAlignmentFix <- function(pattern, subject, ...) {
-    results <- rep(0, length(subject))
-    special_zero_case <- nchar(pattern) == 0 & nchar(subject) == 0
-    if(all(special_zero_case)) {
-      results
-    } else {
-      results[!special_zero_case] <- Biostrings::pairwiseAlignment(pattern=pattern[!special_zero_case], subject=subject[!special_zero_case], ...)
-      results
-    }
+  results <- rep(0, length(subject))
+  special_zero_case <- nchar(pattern) == 0 & nchar(subject) == 0
+  if(all(special_zero_case)) {
+    results
+  } else {
+    results[!special_zero_case] <- pairwiseAlignment_dispatch(pattern=pattern[!special_zero_case], subject=subject[!special_zero_case], ...)
+    results
+  }
 }
 
 biostrings_matrix_global <- function(query, target, cost_matrix, gap_cost, gap_open_cost = 0) {
@@ -75,7 +89,7 @@ biostrings_matrix_global <- function(query, target, cost_matrix, gap_cost, gap_o
 
 biostrings_pairwise_global <- function(query, target, cost_matrix, gap_cost, gap_open_cost = 0) {
   substitutionMatrix <- -cost_matrix
-  -pairwiseAlignment(pattern=query, subject=target, substitutionMatrix = substitutionMatrix,gapOpening=gap_open_cost, gapExtension=gap_cost, scoreOnly=TRUE, type="global")
+  -pairwiseAlignment_dispatch(pattern=query, subject=target, substitutionMatrix = substitutionMatrix,gapOpening=gap_open_cost, gapExtension=gap_cost, scoreOnly=TRUE, type="global")
 }
 
 biostrings_matrix_anchored <- function(query, target, query_size, target_size, cost_matrix, gap_cost, gap_open_cost = 0) {

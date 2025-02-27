@@ -29,6 +29,11 @@
 #undef FALSE
 #endif
 
+#if (R_VERSION < R_Version(3, 5, 0))
+#define STRING_PTR_RO STRING_PTR
+#endif
+
+
 #define USE_SEQTRIE_SMALL_ARRAY_SIZE SEQTRIE_SMALL_ARRAY_SIZE
 
 using namespace Rcpp;
@@ -131,7 +136,7 @@ inline cspan charsxp_to_cspan(SEXP x) {
 
 inline std::vector<cspan> strsxp_to_cspan(CharacterVector x) {
   size_t n = Rf_xlength(x);
-  SEXP * xp = STRING_PTR(x);
+  const SEXP * xp = STRING_PTR_RO(x);
   std::vector<cspan> out(n);
   for(size_t i=0; i<n; ++i) {
     out[i] = charsxp_to_cspan(xp[i]);

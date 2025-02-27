@@ -8,7 +8,7 @@ CharCounterXPtr CharCounter_create() {
 void CharCounter_add(CharCounterXPtr xp, CharacterVector sequences) {
   auto & counts = *xp;
   size_t nseqs = Rf_xlength(sequences);
-  SEXP * seqs = STRING_PTR(sequences);
+  const SEXP * seqs = STRING_PTR_RO(sequences);
   for(size_t i=0; i<nseqs; ++i) {
     auto s = charsxp_to_cspan(seqs[i]);
     for(auto c : s) {
@@ -20,7 +20,7 @@ void CharCounter_add(CharCounterXPtr xp, CharacterVector sequences) {
 void CharCounter_subtract(CharCounterXPtr xp, CharacterVector sequences) {
   auto & counts = *xp;
   size_t nseqs = Rf_xlength(sequences);
-  SEXP * seqs = STRING_PTR(sequences);
+  const SEXP * seqs = STRING_PTR_RO(sequences);
   for(size_t i=0; i<nseqs; ++i) {
     auto s = charsxp_to_cspan(seqs[i]);
     for(auto c : s) {
@@ -49,7 +49,7 @@ CharacterVector CharCounter_keys(CharCounterXPtr xp) {
 CharacterVector get_charset(CharacterVector sequences) {
   size_t nseqs = Rf_xlength(sequences);
   std::set<char> charset;
-  SEXP * seqs = STRING_PTR(sequences);
+  const SEXP * seqs = STRING_PTR_RO(sequences);
   for(size_t i=0; i<nseqs; ++i) {
     cspan x = charsxp_to_cspan(seqs[i]);
     charset.insert(x.begin(), x.end());

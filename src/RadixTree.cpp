@@ -12,7 +12,7 @@ double RadixTree_size(RadixTreeRXPtr xp) {
 // [[Rcpp::export(rng = false)]]
 LogicalVector RadixTree_insert(RadixTreeRXPtr xp, CharacterVector sequences) {
   auto & root = *xp;
-  SEXP * sequence_ptr = STRING_PTR(sequences);
+  const SEXP * sequence_ptr = STRING_PTR_RO(sequences);
   size_t nseqs = Rf_xlength(sequences);
   LogicalVector result(nseqs);
   int * result_ptr = LOGICAL(result);
@@ -27,7 +27,7 @@ LogicalVector RadixTree_insert(RadixTreeRXPtr xp, CharacterVector sequences) {
 // [[Rcpp::export(rng = false)]]
 LogicalVector RadixTree_erase(RadixTreeRXPtr xp, CharacterVector sequences) {
   auto & root = *xp;
-  SEXP * sequence_ptr = STRING_PTR(sequences);
+  const SEXP * sequence_ptr = STRING_PTR_RO(sequences);
   size_t nseqs = Rf_xlength(sequences);
   LogicalVector result(nseqs);
   int * result_ptr = LOGICAL(result);
@@ -42,7 +42,7 @@ LogicalVector RadixTree_erase(RadixTreeRXPtr xp, CharacterVector sequences) {
 // [[Rcpp::export(rng = false)]]
 LogicalVector RadixTree_find(RadixTreeRXPtr xp, CharacterVector sequences) {
   auto & root = *xp;
-  SEXP * sequence_ptr = STRING_PTR(sequences);
+  const SEXP * sequence_ptr = STRING_PTR_RO(sequences);
   size_t nseqs = Rf_xlength(sequences);
   LogicalVector result(nseqs);
   int * result_ptr = LOGICAL(result);
@@ -58,7 +58,7 @@ LogicalVector RadixTree_find(RadixTreeRXPtr xp, CharacterVector sequences) {
 // [[Rcpp::export(rng = false)]]
 DataFrame RadixTree_prefix_search(RadixTreeRXPtr xp, CharacterVector sequences) {
   auto & root = *xp;
-  SEXP * sequence_ptr = STRING_PTR(sequences);
+  const SEXP * sequence_ptr = STRING_PTR_RO(sequences);
   size_t nseqs = Rf_xlength(sequences);
   std::vector<std::vector<SeqTrie::path>> output(nseqs);
   
