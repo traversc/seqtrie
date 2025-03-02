@@ -8,7 +8,7 @@ Authors@R: c(
     person("Steve", "Hanov", role = c("ctb"), comment = "Trie levenshtein implementation in Python"),
     person("Martin", "Leitner-Ankerl", role = c("ctb"), comment = "Ankerl unordered dense hashmap")
 	)
-Description: A collection of Radix Tree and Trie algorithms for finding similar sequences and calculating sequence distances (Levenshtein and other distance metrics). This work was inspired by a trie implementation in Python: "Fast and Easy Levenshtein distance using a Trie." Hanov (2011) <http://stevehanov.ca/blog/index.php?id=114>.
+Description: A collection of Radix Tree and Trie algorithms for finding similar sequences and calculating sequence distances (Levenshtein and other distance metrics). This work was inspired by a trie implementation in Python: "Fast and Easy Levenshtein distance using a Trie." Hanov (2011) <https://stevehanov.ca/blog/index.php?id=114>.
 License: GPL-3
 Biarch: true
 Encoding: UTF-8
