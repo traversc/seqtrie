@@ -20,7 +20,7 @@ LinkingTo:
 Imports: 
     Rcpp (>= 0.12.18.3), RcppParallel (>= 5.1.3), R6, rlang, dplyr, stringi
 Suggests:
-    knitr, rmarkdown, stringdist, qs, Biostrings, pwalign, igraph, ggplot2
+    knitr, rmarkdown, stringdist, qs, pwalign, igraph, ggplot2
 VignetteBuilder: knitr
 RoxygenNote: 7.3.2
 Roxygen: list(markdown = TRUE)
