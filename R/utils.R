@@ -226,58 +226,93 @@ get_gap_type <- function(finalized_cost_matrix) {
 }
 
 #' @title Generate a simple cost matrix
-#' @description Generate a cost matrix for use with the \code{search} method
-#' @param charset A string representing all possible characters in both query and target sequences (e.g. "ACGT")
-#' @param match The cost of a match
-#' @param mismatch The cost of a mismatch
-#' @param gap The cost of a gap or NULL if this parameter will be set later.
-#' @param gap_open The cost of a gap opening or NULL. If this parameter is set, gap must also be set.
-#' @return A cost matrix
+#' @description Generate a cost matrix for use with the \code{search} method.
+#' @param charset A string of all allowed characters in both query and target sequences (e.g. \code{"ACGT"}).
+#' @param ambiguity_base A single character (e.g. \code{"N"}) that will match any character in \code{charset} at the cost of \code{match}.  Defaults to \code{NULL}.
+#' @param match Integer cost of a match.
+#' @param mismatch Integer cost of a mismatch.
+#' @param gap Integer cost of a gap, or \code{NULL} if you plan to set this later.
+#' @param gap_open Integer cost to open a gap, or \code{NULL}.  If \code{gap_open} is non-\code{NULL}, then \code{gap} must also be non-\code{NULL}.
+#' @return A square cost matrix with row- and column-names given by \code{charset}, plus the optional \code{ambiguity_base}, \code{"gap"} and \code{"gap_open"} tokens.
 #' @examples
 #' generate_cost_matrix("ACGT", match = 0, mismatch = 1)
+#' generate_cost_matrix("ACGT", ambiguity_base = "N", match = 0, mismatch = 1)
+#' generate_cost_matrix("ACGT", match = 0, mismatch = 1, gap = 2, gap_open = 5)
 #' @export
-generate_cost_matrix <- function(charset, match = 0L, mismatch = 1L, gap = NULL, gap_open = NULL) {
-  charset <- strsplit(charset, "")[[1]]
-  gap_is_defined <- !is.null(gap)
-  gap_open_is_defined <- !is.null(gap_open)
+generate_cost_matrix <- function(charset,
+                                 ambiguity_base = NULL,
+                                 match       = 0L,
+                                 mismatch    = 1L,
+                                 gap         = NULL,
+                                 gap_open    = NULL) 
+{
+  # split into vector of single chars
+  chars <- strsplit(charset, "")[[1]]
+  
+  # handle single ambiguity base
+  if (!is.null(ambiguity_base)) {
+    if (!is.character(ambiguity_base) || nchar(ambiguity_base) != 1L) {
+      stop("`ambiguity_base` must be a single character, e.g. 'N'")
+    }
+    amb <- ambiguity_base
+    # add to charset if not already present
+    if (!amb %in% chars) {
+      chars <- c(chars, amb)
+    }
+  }
 
-  if (!is_integerlike(match) || !is_integerlike(mismatch)) {
-    stop("Cost parameters must have integer values")
+  # flags for gap params
+  gap_defined      <- !is.null(gap)
+  gap_open_defined <- !is.null(gap_open)
+
+  # check integer-like costs
+  if (!is_integerlike(match)    || !is_integerlike(mismatch) ||
+      (gap_defined      && !is_integerlike(gap)) ||
+      (gap_open_defined && !is_integerlike(gap_open))) {
+    stop("All cost parameters (match, mismatch, gap, gap_open) must be integer")
   }
-  if (gap_is_defined && !is_integerlike(gap)) {
-    stop("Cost parameters must have integer values")
-  }
-  if (gap_open_is_defined && !is_integerlike(gap_open)) {
-    stop("Cost parameters must have integer values")
+  if (gap_open_defined && !gap_defined) {
+    stop("If `gap_open` is defined, `gap` must also be defined")
   }
 
-  if (gap_open_is_defined && gap_is_defined) {
-    charset <- c(charset, "gap", "gap_open")
-  } else if (gap_is_defined) {
-    charset <- c(charset, "gap")
-  } else if (gap_open_is_defined) {
-    stop("If gap_open is defined, gap must also be defined")
+  # extend charset with gap tokens
+  if (gap_open_defined) {
+    chars <- c(chars, "gap", "gap_open")
+  } else if (gap_defined) {
+    chars <- c(chars, "gap")
   }
-  n <- length(charset)
-  x <- matrix(nrow = n, ncol = n)
-  rownames(x) <- charset
-  colnames(x) <- charset
+
+  # initialize matrix
+  n <- length(chars)
+  x <- matrix(0L, nrow = n, ncol = n, dimnames = list(chars, chars))
+
+  # set mismatch off-diagonal, match on-diagonal
   x[lower.tri(x)] <- mismatch
   x[upper.tri(x)] <- mismatch
-  diag(x) <- match
-  if (gap_open_is_defined) {
-    x["gap", ] <- gap
-    x[, "gap"] <- gap
-    x["gap_open", ] <- gap_open
-    x[, "gap_open"] <- gap_open
-    x["gap", "gap"] <- 0L
-    x["gap_open", "gap"] <- 0L
-    x["gap", "gap_open"] <- 0L
-    x["gap_open", "gap_open"] <- 0L
-  } else if (gap_is_defined) {
-    x["gap", ] <- gap
-    x[, "gap"] <- gap
+  diag(x)         <- match
+
+  # override ambiguity_base interactions to always be 'match'
+  if (!is.null(ambiguity_base)) {
+    others <- setdiff(chars, c("gap", "gap_open", amb))
+    x[amb, others] <- match
+    x[others, amb] <- match
+    x[amb, amb]    <- match
+  }
+
+  # apply gap costs
+  if (gap_defined) {
+    x["gap", ]      <- gap
+    x[, "gap"]      <- gap
     x["gap", "gap"] <- 0L
   }
+  if (gap_open_defined) {
+    x["gap_open", ]           <- gap_open
+    x[, "gap_open"]           <- gap_open
+    x["gap_open", "gap_open"] <- 0L
+    # no cost for transitions between gap and gap_open
+    x["gap_open", "gap"]      <- 0L
+    x["gap",      "gap_open"] <- 0L
+  }
+
   x
 }

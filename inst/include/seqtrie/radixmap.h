@@ -2,126 +2,135 @@
 #define seqtrie_RADIXMAP_H
 
 #include "seqtrie/utility.h"
+#include "ankerl/unordered_dense.h"
+#include "simple_array/small_array.h"
+
+#ifndef SEQTRIE_SMALL_ARRAY_SIZE
+#error "SEQTRIE_SMALL_ARRAY_SIZE must be defined"
+#endif
+
+// template parameters moved to macros
+#define CHAR_T char
+#define MAP_T ankerl::unordered_dense::map
+#define BRANCH_T trqwe::small_array<CHAR_T, std::allocator<CHAR_T>, size_t, std::integral_constant<size_t, SEQTRIE_SMALL_ARRAY_SIZE>>
+#define INDEX_T size_t
 
 namespace seqtrie {
 
-
-
-#define TEMPLATE_LIST template <class A, template<typename...> class M, template<typename...> class B, class I>
-#define RADIXMAP_T RadixMap<A,M,B,I>
-#define GAP_CHAR 0                                                        // '\0' any gap cost for non-affine
-#define GAP_OPEN_CHAR std::numeric_limits<A>::min()                       // '\255' gap open cost for affine
-#define GAP_EXTN_CHAR 0                                                   // '\0' extension for affine
-#define NO_ALIGN std::numeric_limits<typename MT::mapped_type>::max() / 2 // represents impossible positions in affine alignment, MT::mapped_type should be int
-
-template <class A = char, template<typename...> class M = std::map, template<typename...> class B = std::vector, class I=size_t> class RadixMap;
-template <class A = char, template<typename...> class M = std::map, template<typename...> class B = std::vector, class I=size_t> using RadixMapUPtr = std::unique_ptr<RadixMap<A,M,B,I>>;
-template <class A, template<typename...> class M, template<typename...> class B, class I>
 class RadixMap {
 public:
-  static constexpr I nullidx = std::numeric_limits<I>::max();
-  typedef A atomic_type; // '\0' and '\255' are reserved character for gaps
-  typedef B<A> branch_type;
-  typedef I index_type;
-  typedef size_t size_type;
-  typedef RadixMap<A,M,B,I> self_type;
-  typedef RadixMapUPtr<A,M,B,I> pointer_type;
-  typedef RadixMap<A,M,B,I> const * const_weak_pointer_type;
-  typedef RadixMap<A,M,B,I> * weak_pointer_type;
-  typedef M<A,RadixMapUPtr<A,M,B,I>> map_type;
-  typedef std::pair<A,A> pairchar_type;
-  typedef nonstd::span<const A> span_type;
-  typedef std::tuple<std::vector<int>, std::vector<int>, std::vector<int>> affine_col_type;
+  // fundamental types
+  typedef CHAR_T                                   atomic_type;
+  typedef BRANCH_T                                 branch_type;
+  typedef INDEX_T                                  index_type;
+  typedef size_t                                  size_type;
+  typedef RadixMap                                self_type;
+  typedef std::unique_ptr<self_type>              pointer_type;
+  typedef const self_type*                        const_weak_pointer_type;
+  typedef self_type*                              weak_pointer_type;
+  typedef MAP_T<CHAR_T,pointer_type>              map_type;
+  typedef std::pair<CHAR_T,CHAR_T>                pairchar_type;
+  typedef nonstd::span<const CHAR_T>              span_type;
+  typedef std::tuple<std::vector<int>,std::vector<int>,std::vector<int>> affine_col_type;
+
+  // constants
+  static constexpr INDEX_T nullidx     = std::numeric_limits<INDEX_T>::max();
+  static constexpr atomic_type GAP_CHAR      = CHAR_T(0);                                      // '\0' gap for non-affine
+  static constexpr atomic_type GAP_OPEN_CHAR = std::numeric_limits<atomic_type>::min();        // '\255' gap open for affine
+  static constexpr atomic_type GAP_EXTN_CHAR = CHAR_T(0);                                      // '\0' gap extension for affine
+  static constexpr int         NO_ALIGN     = std::numeric_limits<int>::max() / 2;             // impossible positions
+
 private:
-  map_type child_nodes;        // 48 bytes for std::map
-  branch_type branch;         // 24 bytes for std::vector
-  const_weak_pointer_type parent_node; // 8 bytes
-  index_type terminal_idx;    // 8 bytes
+  map_type                child_nodes;
+  branch_type             branch;
+  const_weak_pointer_type parent_node;
+  index_type              terminal_idx;
+
 public:
   RadixMap() : parent_node(nullptr), terminal_idx(nullidx) {}
-  struct path { // like an iterator, but without iteration. Later we could turn this into a real iterator. 
+
+  struct path {
     const_weak_pointer_type m;
     path() : m(nullptr) {}
     path(const_weak_pointer_type x) : m(x) {}
     const_weak_pointer_type operator->() const { return m; }
   };
-  struct search_context { // result struct for global and hamming search
+
+  struct search_context {
     std::vector<path> match;
     std::vector<int> distance;
     span_type query;
     int max_distance;
     search_context() {}
     search_context(span_type query, int max_distance) : query(query), max_distance(max_distance) {}
-    void append(const search_context & other) { // convienence method for processing similar results
-      this->match.insert(this->match.end(), other.match.begin(), other.match.end());
-      this->distance.insert(this->distance.end(), other.distance.begin(), other.distance.end());
-      this->query = other.query;
-      this->max_distance = other.max_distance;
+    void append(const search_context & other) {
+      match.insert(match.end(), other.match.begin(), other.match.end());
+      distance.insert(distance.end(), other.distance.begin(), other.distance.end());
+      query = other.query;
+      max_distance = other.max_distance;
     }
   };
+
   const map_type & get_child_nodes() const { return child_nodes; }
   const branch_type & get_branch() const { return branch; }
   const_weak_pointer_type get_parent_node() const { return parent_node; }
   index_type get_terminal_idx() const { return terminal_idx; }
 
-  // output the sequence represented by this node, by traversing up the tree
-  // ST is an array-like container type, e.g. std::vector<char>, std::string
-  template <typename ST> ST sequence() const;
+  template <typename ST>
+  ST sequence() const;
 
   size_type size() const;
-  bool validate(const bool is_root = true) const; // check if tree makes sense
+  bool validate(const bool is_root = true) const;
   std::vector<path> all(size_t max_depth = -1) const;
-  std::string print() const { return print_impl(0); } // this function really only makes sense if atomic_type is char...
+  std::string print() const { return print_impl(0); }
   std::pair<std::vector<path>, std::vector<path>> graph(size_t max_depth = -1) const;
-  index_type find(const span_type query) const; // returns terminal_idx if found, nullidx if not found
-  index_type insert(const span_type sequence, index_type idx); // returns terminal_idx if already exists, otherwise nullidx
-  index_type erase(const span_type sequence); // returns terminal_idx if sequence existed, nullidx if it did not exist
+  index_type find(const span_type query) const;
+  index_type insert(const span_type sequence, index_type idx);
+  index_type erase(const span_type sequence);
   std::vector<path> prefix_search(const span_type query) const;
 
-  search_context hamming_search(const span_type query, const int max_distance) const;
-  search_context global_search(const span_type query, const int max_distance) const;
-  search_context anchored_search(const span_type query, const int max_distance) const;
+  search_context hamming_search(const span_type query, int max_distance) const;
+  search_context global_search(const span_type query, int max_distance) const;
+  search_context anchored_search(const span_type query, int max_distance) const;
 
-  // search using a custom edit distance cost matrix
-  // MT is a map type, e.g. std::map<pairchar_type, int>
-  // the map key is the pair of characters (query, target) to compare
-  // All possibile pairs of characters must be included in the map, or else it return an error
-  // The map value is the cost of the edit operation and must be non-negative
-  // The map must also include the special character \0, which represents a gap
-  // Example:
-  // map<pairchar_type, int> m = {{pairchar_type('A','A'), 0}, {pairchar_type('A','B'), 1}, {pairchar_type('A','\0'), 1},
-//                           {pairchar_type('B','A'), 1}, {pairchar_type('B','B'), 0}, {pairchar_type('B','\0'), 1} };
-  template <typename MT> search_context global_search_linear(const span_type query, const int max_distance, const MT & cost_map) const;
-  template <typename MT> search_context anchored_search_linear(const span_type query, const int max_distance, const MT & cost_map) const;
-  
-  template <typename MT> search_context global_search_affine(const span_type query, const int max_distance, const MT & cost_map) const;
-  template <typename MT> search_context anchored_search_affine(const span_type query, const int max_distance, const MT & cost_map) const;
-  
+  template <typename MT>
+  search_context global_search_linear(const span_type query, int max_distance, const MT & cost_map) const;
+  template <typename MT>
+  search_context anchored_search_linear(const span_type query, int max_distance, const MT & cost_map) const;
 
+  template <typename MT>
+  search_context global_search_affine(const span_type query, int max_distance, const MT & cost_map) const;
+  template <typename MT>
+  search_context anchored_search_affine(const span_type query, int max_distance, const MT & cost_map) const;
 
 private:
-  // implementation helpers, subject to change
   std::string print_impl(size_t depth) const;
   enum class erase_action { erase, merge, keep };
   static erase_action erase_impl(weak_pointer_type node, const span_type sequence, index_type & result);
 
-  static void hamming_search_impl(const_weak_pointer_type node, const size_t position, const int distance, search_context & ctx);
-
-  static int update_col(const atomic_type branchval, const span_type query, std::vector<int> & col); // helper for global and anchored search
+  static void hamming_search_impl(const_weak_pointer_type node, size_t position, int distance, search_context & ctx);
+  static int update_col(atomic_type branchval, const span_type query, std::vector<int> & col);
   static void global_search_impl(const_weak_pointer_type node, const std::vector<int> & previous_col, search_context & ctx);
-  static void anchored_search_impl(const_weak_pointer_type node, const std::vector<int> & previous_col, const int row_min, search_context & ctx);
+  static void anchored_search_impl(const_weak_pointer_type node, const std::vector<int> & previous_col, int row_min, search_context & ctx);
 
-  template <typename MT> static int update_col_linear(const atomic_type branchval, const span_type query, std::vector<int> & col, const MT & cost_map);
-  template <typename MT> static void global_search_linear_impl(const_weak_pointer_type node, const std::vector<int> & previous_col, search_context & ctx, const MT & cost_map);
-  template <typename MT> static void anchored_search_linear_impl(const_weak_pointer_type node, const std::vector<int> & previous_col, const int row_min, search_context & ctx, const MT & cost_map);
+  template <typename MT>
+  static int update_col_linear(atomic_type branchval, const span_type query, std::vector<int> & col, const MT & cost_map);
+  template <typename MT>
+  static void global_search_linear_impl(const_weak_pointer_type node, const std::vector<int> & previous_col, search_context & ctx, const MT & cost_map);
+  template <typename MT>
+  static void anchored_search_linear_impl(const_weak_pointer_type node, const std::vector<int> & previous_col, int row_min, search_context & ctx, const MT & cost_map);
 
-  template <typename MT> static int update_col_affine(const atomic_type branchval, const span_type query, affine_col_type & col, const MT & cost_map);
-  template <typename MT> static void global_search_affine_impl(const_weak_pointer_type node, const affine_col_type & previous_col, search_context & ctx, const MT & cost_map);
-  template <typename MT> static void anchored_search_affine_impl(const_weak_pointer_type node, const affine_col_type & previous_col, const int row_min, search_context & ctx, const MT & cost_map);
+  template <typename MT>
+  static int update_col_affine(atomic_type branchval, const span_type query, affine_col_type & col, const MT & cost_map);
+  template <typename MT>
+  static void global_search_affine_impl(const_weak_pointer_type node, const affine_col_type & previous_col, search_context & ctx, const MT & cost_map);
+  template <typename MT>
+  static void anchored_search_affine_impl(const_weak_pointer_type node, const affine_col_type & previous_col, int row_min, search_context & ctx, const MT & cost_map);
 };
 
-TEMPLATE_LIST template <typename ST>
-ST RADIXMAP_T::sequence() const {
+// implementations
+template <typename ST>
+inline ST RadixMap::sequence() const {
   static_assert(std::is_same<typename ST::value_type, atomic_type>::value, "Output sequence value_type must be the same as RadixMap::atomic_type.");
   const_weak_pointer_type current = this;
   std::vector<const_weak_pointer_type> h;
@@ -140,7 +149,7 @@ ST RADIXMAP_T::sequence() const {
   return result;
 }
 
-TEMPLATE_LIST std::vector<typename RADIXMAP_T::path> RADIXMAP_T::all(size_t max_depth) const {
+inline std::vector<RadixMap::path> RadixMap::all(size_t max_depth) const {
   std::vector<path> result;
   if(terminal_idx != nullidx) {
     result.push_back(this);
@@ -153,13 +162,13 @@ TEMPLATE_LIST std::vector<typename RADIXMAP_T::path> RADIXMAP_T::all(size_t max_
   return result;
 }
 
-TEMPLATE_LIST typename RADIXMAP_T::size_type RADIXMAP_T::size() const {
+inline RadixMap::size_type RadixMap::size() const {
   size_type result = terminal_idx == nullidx ? 0 : 1;
   for(auto & ch : child_nodes) { result += ch.second->size(); }
   return result;
 }
 
-TEMPLATE_LIST bool RADIXMAP_T::validate(const bool is_root) const {
+inline bool RadixMap::validate(const bool is_root) const {
   // checks:
   // 1) all parent_node values are correct
   // root can be distinguished by parent_node == nullptr
@@ -181,8 +190,7 @@ TEMPLATE_LIST bool RADIXMAP_T::validate(const bool is_root) const {
   return true;
 }
 
-
-TEMPLATE_LIST std::string RADIXMAP_T::print_impl(size_t depth) const {
+inline std::string RadixMap::print_impl(size_t depth) const {
   std::string result;
   if(depth == 0) {
     result += "(root)";
@@ -216,7 +224,7 @@ TEMPLATE_LIST std::string RADIXMAP_T::print_impl(size_t depth) const {
   return result;
 }
 
-TEMPLATE_LIST std::pair<std::vector<typename RADIXMAP_T::path>, std::vector<typename RADIXMAP_T::path>> RADIXMAP_T::graph(size_t max_depth) const {
+inline std::pair<std::vector<RadixMap::path>, std::vector<RadixMap::path>> RadixMap::graph(size_t max_depth) const {
   std::pair<std::vector<path>, std::vector<path>> result;
   if(parent_node != nullptr) {
     result.first.push_back(path(parent_node));
@@ -231,7 +239,7 @@ TEMPLATE_LIST std::pair<std::vector<typename RADIXMAP_T::path>, std::vector<type
   return result;
 }
 
-TEMPLATE_LIST typename RADIXMAP_T::index_type RADIXMAP_T::find(const typename RADIXMAP_T::span_type query) const {
+inline RadixMap::index_type RadixMap::find(const RadixMap::span_type query) const {
   const_weak_pointer_type node = this;
   size_t position=0;
   while(position < query.size()) {
@@ -249,7 +257,7 @@ TEMPLATE_LIST typename RADIXMAP_T::index_type RADIXMAP_T::find(const typename RA
   return node->terminal_idx;
 }
 
-TEMPLATE_LIST typename RADIXMAP_T::index_type RADIXMAP_T::insert(const typename RADIXMAP_T::span_type sequence, index_type idx) {
+inline RadixMap::index_type RadixMap::insert(const RadixMap::span_type sequence, index_type idx) {
   if(sequence.size() == 0) {
     // std::cout << "case -1: end of sequence" << std::endl;
     if(terminal_idx == nullidx) {
@@ -321,13 +329,13 @@ TEMPLATE_LIST typename RADIXMAP_T::index_type RADIXMAP_T::insert(const typename 
 }
 
 
-TEMPLATE_LIST typename RADIXMAP_T::index_type RADIXMAP_T::erase(const typename RADIXMAP_T::span_type sequence) {
+inline RadixMap::index_type RadixMap::erase(const RadixMap::span_type sequence) {
   index_type result = nullidx;
   erase_impl(this, sequence, result);
   return result;
 }
 
-TEMPLATE_LIST std::vector<typename RADIXMAP_T::path> RADIXMAP_T::prefix_search(const typename RADIXMAP_T::span_type query) const {
+inline std::vector<RadixMap::path> RadixMap::prefix_search(const RadixMap::span_type query) const {
   const_weak_pointer_type node = this;
   size_t query_position = 0;
   size_t branch_position = 0;
@@ -350,13 +358,13 @@ TEMPLATE_LIST std::vector<typename RADIXMAP_T::path> RADIXMAP_T::prefix_search(c
   return node->all();
 }
 
-TEMPLATE_LIST typename RADIXMAP_T::search_context RADIXMAP_T::hamming_search(const span_type query, const int max_distance) const {
+inline RadixMap::search_context RadixMap::hamming_search(const span_type query, const int max_distance) const {
   search_context ctx(query, max_distance);
   hamming_search_impl(this, 0, 0, ctx);
   return ctx;
 }
 
-TEMPLATE_LIST typename RADIXMAP_T::search_context RADIXMAP_T::global_search(const typename RADIXMAP_T::span_type query, const int max_distance) const {
+inline RadixMap::search_context RadixMap::global_search(const RadixMap::span_type query, const int max_distance) const {
   search_context ctx(query, max_distance);
   global_search_impl(this, iota_range<std::vector<int>>(0, query.size() + 1), ctx); 
   return ctx;
@@ -365,14 +373,14 @@ TEMPLATE_LIST typename RADIXMAP_T::search_context RADIXMAP_T::global_search(cons
 // an "anchored" search can end on the last column or col of the dynamic programming array
 // unlike global which must end on the bottom right corner
 // we need to keep track of the minimum value in the last row
-TEMPLATE_LIST typename RADIXMAP_T::search_context RADIXMAP_T::anchored_search(const typename RADIXMAP_T::span_type query, const int max_distance) const {
+inline RadixMap::search_context RadixMap::anchored_search(const RadixMap::span_type query, const int max_distance) const {
   search_context ctx(query, max_distance);
   anchored_search_impl(this, iota_range<std::vector<int>>(0, query.size() + 1), query.size(), ctx); 
   return ctx;
 }
 
-TEMPLATE_LIST template <typename MT>
-typename RADIXMAP_T::search_context RADIXMAP_T::global_search_linear(const typename RADIXMAP_T::span_type query, const int max_distance, const MT & cost_map) const {
+template <typename MT>
+inline RadixMap::search_context RadixMap::global_search_linear(const RadixMap::span_type query, const int max_distance, const MT & cost_map) const {
   search_context ctx(query, max_distance);
   std::vector<int> col(query.size() + 1, 0);
   for(size_t i=1; i<col.size(); ++i) {
@@ -382,8 +390,8 @@ typename RADIXMAP_T::search_context RADIXMAP_T::global_search_linear(const typen
   return ctx;
 }
 
-TEMPLATE_LIST template <typename MT>
-typename RADIXMAP_T::search_context RADIXMAP_T::anchored_search_linear(const typename RADIXMAP_T::span_type query, const int max_distance, const MT & cost_map) const {
+template <typename MT>
+inline RadixMap::search_context RadixMap::anchored_search_linear(const RadixMap::span_type query, const int max_distance, const MT & cost_map) const {
   search_context ctx(query, max_distance);
   std::vector<int> col(query.size() + 1, 0);
   for(size_t i=1; i<col.size(); ++i) {
@@ -393,8 +401,8 @@ typename RADIXMAP_T::search_context RADIXMAP_T::anchored_search_linear(const typ
   return ctx;
 }
 
-TEMPLATE_LIST template <typename MT>
-typename RADIXMAP_T::search_context RADIXMAP_T::global_search_affine(const typename RADIXMAP_T::span_type query, const int max_distance, const MT & cost_map) const {
+template <typename MT>
+inline RadixMap::search_context RadixMap::global_search_affine(const RadixMap::span_type query, const int max_distance, const MT & cost_map) const {
   search_context ctx(query, max_distance);
   size_t col_size = query.size() + 1;
   affine_col_type col = std::make_tuple(std::vector<int>(col_size, 0), std::vector<int>(col_size, 0), std::vector<int>(col_size, 0));
@@ -421,8 +429,8 @@ typename RADIXMAP_T::search_context RADIXMAP_T::global_search_affine(const typen
   return ctx;
 }
 
-TEMPLATE_LIST template <typename MT>
-typename RADIXMAP_T::search_context RADIXMAP_T::anchored_search_affine(const typename RADIXMAP_T::span_type query, const int max_distance, const MT & cost_map) const {
+template <typename MT>
+RadixMap::search_context RadixMap::anchored_search_affine(const RadixMap::span_type query, const int max_distance, const MT & cost_map) const {
   search_context ctx(query, max_distance);
   size_t col_size = query.size() + 1;
   affine_col_type col = std::make_tuple(std::vector<int>(col_size, 0), std::vector<int>(col_size, 0), std::vector<int>(col_size, 0));
@@ -447,7 +455,7 @@ typename RADIXMAP_T::search_context RADIXMAP_T::anchored_search_affine(const typ
   return ctx;
 }
 
-TEMPLATE_LIST typename RADIXMAP_T::erase_action RADIXMAP_T::erase_impl(typename RADIXMAP_T::weak_pointer_type node, const span_type sequence, typename RADIXMAP_T::index_type & result) {
+inline RadixMap::erase_action RadixMap::erase_impl(RadixMap::weak_pointer_type node, const span_type sequence, RadixMap::index_type & result) {
   if(sequence.size() == 0) {
     std::swap(result, node->terminal_idx); // if sequence doesn't exist, terminal_idx should be nullidx which is fine since result is initialized as nullidx
     size_t nc = node->child_nodes.size();
@@ -502,7 +510,7 @@ TEMPLATE_LIST typename RADIXMAP_T::erase_action RADIXMAP_T::erase_impl(typename 
   }
 }
 
-TEMPLATE_LIST void RADIXMAP_T::hamming_search_impl(typename RADIXMAP_T::const_weak_pointer_type node, const size_t position, const int distance, typename RADIXMAP_T::search_context & ctx) {
+inline void RadixMap::hamming_search_impl(RadixMap::const_weak_pointer_type node, const size_t position, const int distance, RadixMap::search_context & ctx) {
   if(position == ctx.query.size()) {
     if(node->terminal_idx != nullidx) {
       ctx.match.push_back(path(node));
@@ -530,7 +538,7 @@ TEMPLATE_LIST void RADIXMAP_T::hamming_search_impl(typename RADIXMAP_T::const_we
   }
 }
 
-TEMPLATE_LIST int RADIXMAP_T::update_col(const typename RADIXMAP_T::atomic_type branchval, const typename RADIXMAP_T::span_type query, std::vector<int> & col) {
+inline int RadixMap::update_col(const RadixMap::atomic_type branchval, const RadixMap::span_type query, std::vector<int> & col) {
   int previous_col_i_minus_1 = col[0];
   col[0] = col[0] + 1;
   int min_element = col[0];
@@ -545,7 +553,7 @@ TEMPLATE_LIST int RADIXMAP_T::update_col(const typename RADIXMAP_T::atomic_type 
   return min_element;
 }
 
-TEMPLATE_LIST void RADIXMAP_T::global_search_impl(typename RADIXMAP_T::const_weak_pointer_type node, const std::vector<int> & previous_col, search_context & ctx) {
+inline void RadixMap::global_search_impl(RadixMap::const_weak_pointer_type node, const std::vector<int> & previous_col, search_context & ctx) {
   if( *std::min_element(previous_col.begin(), previous_col.end()) > ctx.max_distance ) { return; }
   if((node->terminal_idx != nullidx) && (previous_col.back() <= ctx.max_distance)) {
     ctx.match.push_back(path(node));
@@ -573,7 +581,7 @@ TEMPLATE_LIST void RADIXMAP_T::global_search_impl(typename RADIXMAP_T::const_wea
 // col > max > row -- add all children (distance = row) and stop (case 2)
 // row > col > max -- stop (case 1)
 // col > row > max -- stop (case 1)
-TEMPLATE_LIST void RADIXMAP_T::anchored_search_impl(typename RADIXMAP_T::const_weak_pointer_type node, const std::vector<int> & previous_col, const int row_min, search_context & ctx) {
+inline void RadixMap::anchored_search_impl(RadixMap::const_weak_pointer_type node, const std::vector<int> & previous_col, const int row_min, search_context & ctx) {
   int current_col_min = *std::min_element(previous_col.begin(), previous_col.end());
   int current_row_min = row_min;
   if( (current_col_min > ctx.max_distance) && (current_row_min > ctx.max_distance) ) { // case 1
@@ -625,8 +633,8 @@ TEMPLATE_LIST void RADIXMAP_T::anchored_search_impl(typename RADIXMAP_T::const_w
   }
 }
 
-TEMPLATE_LIST template <typename MT>
-int RADIXMAP_T::update_col_linear(const typename RADIXMAP_T::atomic_type branchval, const typename RADIXMAP_T::span_type query, std::vector<int> & col, const MT & cost_map) {
+template <typename MT>
+inline int RadixMap::update_col_linear(const RadixMap::atomic_type branchval, const RadixMap::span_type query, std::vector<int> & col, const MT & cost_map) {
   int previous_col_i_minus_1 = col[0];
   col[0] = col[0] + cost_map.at(pairchar_type(GAP_CHAR, branchval)); // gap in target
   int min_element = col[0];
@@ -641,8 +649,8 @@ int RADIXMAP_T::update_col_linear(const typename RADIXMAP_T::atomic_type branchv
   return min_element;
 }
 
-TEMPLATE_LIST template <typename MT>
-void RADIXMAP_T::global_search_linear_impl(typename RADIXMAP_T::const_weak_pointer_type node, const std::vector<int> & previous_col, search_context & ctx, const MT & cost_map) {
+template <typename MT>
+inline void RadixMap::global_search_linear_impl(RadixMap::const_weak_pointer_type node, const std::vector<int> & previous_col, search_context & ctx, const MT & cost_map) {
   if( *std::min_element(previous_col.begin(), previous_col.end()) > ctx.max_distance ) { return; }
   if((node->terminal_idx != nullidx) && (previous_col.back() <= ctx.max_distance)) {
     ctx.match.push_back(path(node));
@@ -663,8 +671,8 @@ void RADIXMAP_T::global_search_linear_impl(typename RADIXMAP_T::const_weak_point
   }
 }
 
-TEMPLATE_LIST template <typename MT>
-void RADIXMAP_T::anchored_search_linear_impl(typename RADIXMAP_T::const_weak_pointer_type node, const std::vector<int> & previous_col, const int row_min, search_context & ctx, const MT & cost_map) {
+template <typename MT>
+inline void RadixMap::anchored_search_linear_impl(RadixMap::const_weak_pointer_type node, const std::vector<int> & previous_col, const int row_min, search_context & ctx, const MT & cost_map) {
   int current_col_min = *std::min_element(previous_col.begin(), previous_col.end());
   int current_row_min = row_min;
   if( (current_col_min > ctx.max_distance) && (current_row_min > ctx.max_distance) ) { // case 1
@@ -716,8 +724,8 @@ void RADIXMAP_T::anchored_search_linear_impl(typename RADIXMAP_T::const_weak_poi
   }
 }
 
-TEMPLATE_LIST template <typename MT>
-int RADIXMAP_T::update_col_affine(const typename RADIXMAP_T::atomic_type branchval, const typename RADIXMAP_T::span_type query, affine_col_type & col, const MT & cost_map) {
+template <typename MT>
+inline int RadixMap::update_col_affine(const RadixMap::atomic_type branchval, const RadixMap::span_type query, affine_col_type & col, const MT & cost_map) {
   auto & M_col =  std::get<0>(col); // match
   auto & X_col = std::get<1>(col); // gap in query
   auto & Y_col = std::get<2>(col); // gap in target
@@ -762,8 +770,8 @@ int RADIXMAP_T::update_col_affine(const typename RADIXMAP_T::atomic_type branchv
   return min_element;
 }
 
-TEMPLATE_LIST template <typename MT>
-void RADIXMAP_T::global_search_affine_impl(typename RADIXMAP_T::const_weak_pointer_type node, const affine_col_type & previous_col, search_context & ctx, const MT & cost_map) {
+template <typename MT>
+inline void RadixMap::global_search_affine_impl(RadixMap::const_weak_pointer_type node, const affine_col_type & previous_col, search_context & ctx, const MT & cost_map) {
   if(
     (*std::min_element(std::get<0>(previous_col).begin(), std::get<0>(previous_col).end()) > ctx.max_distance) &&
     (*std::min_element(std::get<1>(previous_col).begin(), std::get<1>(previous_col).end()) > ctx.max_distance) &&
@@ -792,8 +800,8 @@ void RADIXMAP_T::global_search_affine_impl(typename RADIXMAP_T::const_weak_point
   }
 }
 
-TEMPLATE_LIST template <typename MT>
-void RADIXMAP_T::anchored_search_affine_impl(typename RADIXMAP_T::const_weak_pointer_type node, const affine_col_type & previous_col, const int row_min, search_context & ctx, const MT & cost_map) {
+template <typename MT>
+inline void RadixMap::anchored_search_affine_impl(RadixMap::const_weak_pointer_type node, const affine_col_type & previous_col, const int row_min, search_context & ctx, const MT & cost_map) {
   int current_col_min = std::min({
     *std::min_element(std::get<0>(previous_col).begin(), std::get<0>(previous_col).end()),
     *std::min_element(std::get<1>(previous_col).begin(), std::get<1>(previous_col).end()),
@@ -852,13 +860,15 @@ void RADIXMAP_T::anchored_search_affine_impl(typename RADIXMAP_T::const_weak_poi
   }
 }
 
-
-#undef TEMPLATE_LIST
-#undef RADIXMAP_T
+#undef CHAR_T
+#undef MAP_T
+#undef BRANCH_T
+#undef INDEX_T
 #undef GAP_CHAR
 #undef GAP_OPEN_CHAR
 #undef GAP_EXTN_CHAR
 #undef NO_ALIGN
-} // end namespace
 
-#endif // include guard
+} // namespace seqtrie
+
+#endif // seqtrie_RADIXMAP_H
