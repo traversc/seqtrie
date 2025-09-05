@@ -93,15 +93,11 @@ public:
   search_context global_search(const span_type query, int max_distance) const;
   search_context anchored_search(const span_type query, int max_distance) const;
 
-  template <typename MT>
-  search_context global_search_linear(const span_type query, int max_distance, const MT & cost_map) const;
-  template <typename MT>
-  search_context anchored_search_linear(const span_type query, int max_distance, const MT & cost_map) const;
+  search_context global_search_linear(const span_type query, int max_distance, const CostMap & cost_map) const;
+  search_context anchored_search_linear(const span_type query, int max_distance, const CostMap & cost_map) const;
 
-  template <typename MT>
-  search_context global_search_affine(const span_type query, int max_distance, const MT & cost_map) const;
-  template <typename MT>
-  search_context anchored_search_affine(const span_type query, int max_distance, const MT & cost_map) const;
+  search_context global_search_affine(const span_type query, int max_distance, const CostMap & cost_map) const;
+  search_context anchored_search_affine(const span_type query, int max_distance, const CostMap & cost_map) const;
 
 private:
   std::string print_impl(size_t depth) const;
@@ -113,19 +109,13 @@ private:
   static void global_search_impl(const_weak_pointer_type node, const std::vector<int> & previous_col, search_context & ctx);
   static void anchored_search_impl(const_weak_pointer_type node, const std::vector<int> & previous_col, int row_min, search_context & ctx);
 
-  template <typename MT>
-  static int update_col_linear(atomic_type branchval, const span_type query, std::vector<int> & col, const MT & cost_map);
-  template <typename MT>
-  static void global_search_linear_impl(const_weak_pointer_type node, const std::vector<int> & previous_col, search_context & ctx, const MT & cost_map);
-  template <typename MT>
-  static void anchored_search_linear_impl(const_weak_pointer_type node, const std::vector<int> & previous_col, int row_min, search_context & ctx, const MT & cost_map);
+  static int update_col_linear(atomic_type branchval, const span_type query, std::vector<int> & col, const CostMap & cost_map);
+  static void global_search_linear_impl(const_weak_pointer_type node, const std::vector<int> & previous_col, search_context & ctx, const CostMap & cost_map);
+  static void anchored_search_linear_impl(const_weak_pointer_type node, const std::vector<int> & previous_col, int row_min, search_context & ctx, const CostMap & cost_map);
 
-  template <typename MT>
-  static int update_col_affine(atomic_type branchval, const span_type query, affine_col_type & col, const MT & cost_map);
-  template <typename MT>
-  static void global_search_affine_impl(const_weak_pointer_type node, const affine_col_type & previous_col, search_context & ctx, const MT & cost_map);
-  template <typename MT>
-  static void anchored_search_affine_impl(const_weak_pointer_type node, const affine_col_type & previous_col, int row_min, search_context & ctx, const MT & cost_map);
+  static int update_col_affine(atomic_type branchval, const span_type query, affine_col_type & col, const CostMap & cost_map);
+  static void global_search_affine_impl(const_weak_pointer_type node, const affine_col_type & previous_col, search_context & ctx, const CostMap & cost_map);
+  static void anchored_search_affine_impl(const_weak_pointer_type node, const affine_col_type & previous_col, int row_min, search_context & ctx, const CostMap & cost_map);
 };
 
 // implementations
@@ -156,7 +146,8 @@ inline std::vector<RadixMap::path> RadixMap::all(size_t max_depth) const {
   }
   if(max_depth == 0) return result;
   for(auto & ch : child_nodes) {
-    std::vector<path> x = ch.second->all(--max_depth);
+    size_t next_depth = (max_depth == std::numeric_limits<size_t>::max()) ? max_depth : (max_depth - 1);
+    std::vector<path> x = ch.second->all(next_depth);
     appendspan(result, x);
   }
   return result;
@@ -185,7 +176,7 @@ inline bool RadixMap::validate(const bool is_root) const {
   for(auto & ch : child_nodes) {
     if(ch.first != ch.second->branch[0]) return false;
     if(ch.second->parent_node != this) return false;
-    return ch.second->validate(false);
+    if(!ch.second->validate(false)) return false;
   }
   return true;
 }
@@ -232,7 +223,8 @@ inline std::pair<std::vector<RadixMap::path>, std::vector<RadixMap::path>> Radix
   }
   if(max_depth == 0) return result;
   for(auto & ch : child_nodes) {
-    auto x = ch.second->graph(--max_depth);
+    size_t next_depth = (max_depth == std::numeric_limits<size_t>::max()) ? max_depth : (max_depth - 1);
+    auto x = ch.second->graph(next_depth);
     appendspan(result.first, x.first);
     appendspan(result.second, x.second);
   }
@@ -379,30 +371,27 @@ inline RadixMap::search_context RadixMap::anchored_search(const RadixMap::span_t
   return ctx;
 }
 
-template <typename MT>
-inline RadixMap::search_context RadixMap::global_search_linear(const RadixMap::span_type query, const int max_distance, const MT & cost_map) const {
+inline RadixMap::search_context RadixMap::global_search_linear(const RadixMap::span_type query, const int max_distance, const CostMap & cost_map) const {
   search_context ctx(query, max_distance);
   std::vector<int> col(query.size() + 1, 0);
   for(size_t i=1; i<col.size(); ++i) {
-    col[i] = col[i-1] + cost_map.at(pairchar_type(query[i-1], GAP_CHAR)); // gap in target
+    col[i] = col[i-1] + cost_map.gap_cost; // gap in target
   }
-  global_search_linear_impl<MT>(this, col, ctx, cost_map);
+  global_search_linear_impl(this, col, ctx, cost_map);
   return ctx;
 }
 
-template <typename MT>
-inline RadixMap::search_context RadixMap::anchored_search_linear(const RadixMap::span_type query, const int max_distance, const MT & cost_map) const {
+inline RadixMap::search_context RadixMap::anchored_search_linear(const RadixMap::span_type query, const int max_distance, const CostMap & cost_map) const {
   search_context ctx(query, max_distance);
   std::vector<int> col(query.size() + 1, 0);
   for(size_t i=1; i<col.size(); ++i) {
-    col[i] = col[i-1] + cost_map.at(pairchar_type(query[i-1], GAP_CHAR)); // gap in target
+    col[i] = col[i-1] + cost_map.gap_cost; // gap in target
   }
-  anchored_search_linear_impl<MT>(this, col, col.back(), ctx, cost_map);
+  anchored_search_linear_impl(this, col, col.back(), ctx, cost_map);
   return ctx;
 }
 
-template <typename MT>
-inline RadixMap::search_context RadixMap::global_search_affine(const RadixMap::span_type query, const int max_distance, const MT & cost_map) const {
+inline RadixMap::search_context RadixMap::global_search_affine(const RadixMap::span_type query, const int max_distance, const CostMap & cost_map) const {
   search_context ctx(query, max_distance);
   size_t col_size = query.size() + 1;
   affine_col_type col = std::make_tuple(std::vector<int>(col_size, 0), std::vector<int>(col_size, 0), std::vector<int>(col_size, 0));
@@ -415,22 +404,18 @@ inline RadixMap::search_context RadixMap::global_search_affine(const RadixMap::s
   for(size_t i=1; i<col_size; ++i) {
     M_col[i] = NO_ALIGN;
     X_col[i] = NO_ALIGN;
-    if(i == 1) {
-      Y_col[i] = cost_map.at(pairchar_type(query[i-1], GAP_OPEN_CHAR));
-    } else {
-      Y_col[i] = Y_col[i-1] + cost_map.at(pairchar_type(query[i-1], GAP_EXTN_CHAR));
-    }
+    if(i == 1) Y_col[i] = cost_map.gap_open_cost;
+    else       Y_col[i] = Y_col[i-1] + cost_map.gap_cost;
   }
   // print_vec(M_col);
   // print_vec(X_col);
   // print_vec(Y_col);
   // std::cout << std::endl;
-  global_search_affine_impl<MT>(this, col, ctx, cost_map);
+  global_search_affine_impl(this, col, ctx, cost_map);
   return ctx;
 }
 
-template <typename MT>
-RadixMap::search_context RadixMap::anchored_search_affine(const RadixMap::span_type query, const int max_distance, const MT & cost_map) const {
+inline RadixMap::search_context RadixMap::anchored_search_affine(const RadixMap::span_type query, const int max_distance, const CostMap & cost_map) const {
   search_context ctx(query, max_distance);
   size_t col_size = query.size() + 1;
   affine_col_type col = std::make_tuple(std::vector<int>(col_size, 0), std::vector<int>(col_size, 0), std::vector<int>(col_size, 0));
@@ -443,13 +428,10 @@ RadixMap::search_context RadixMap::anchored_search_affine(const RadixMap::span_t
   for(size_t i=1; i<col_size; ++i) {
     M_col[i] = NO_ALIGN;
     X_col[i] = NO_ALIGN;
-    if(i == 1) {
-      Y_col[i] = cost_map.at(pairchar_type(query[i-1], GAP_OPEN_CHAR));
-    } else {
-      Y_col[i] = Y_col[i-1] + cost_map.at(pairchar_type(query[i-1], GAP_EXTN_CHAR));
-    }
+    if(i == 1) Y_col[i] = cost_map.gap_open_cost;
+    else       Y_col[i] = Y_col[i-1] + cost_map.gap_cost;
   }
-  anchored_search_affine_impl<MT>(this, col, 
+  anchored_search_affine_impl(this, col, 
                                  std::min({M_col.back(), Y_col.back()}), // Edge case: use M_col if query is empty
                                  ctx, cost_map);
   return ctx;
@@ -633,15 +615,14 @@ inline void RadixMap::anchored_search_impl(RadixMap::const_weak_pointer_type nod
   }
 }
 
-template <typename MT>
-inline int RadixMap::update_col_linear(const RadixMap::atomic_type branchval, const RadixMap::span_type query, std::vector<int> & col, const MT & cost_map) {
+inline int RadixMap::update_col_linear(const RadixMap::atomic_type branchval, const RadixMap::span_type query, std::vector<int> & col, const CostMap & cost_map) {
   int previous_col_i_minus_1 = col[0];
-  col[0] = col[0] + cost_map.at(pairchar_type(GAP_CHAR, branchval)); // gap in target
+  col[0] = col[0] + cost_map.gap_cost; // gap in target
   int min_element = col[0];
   for(size_t i=1; i<col.size(); ++i) {
-    int match_cost  = previous_col_i_minus_1 + cost_map.at(pairchar_type(query[i-1], branchval));
-    int gap_in_query = col[i] + cost_map.at(pairchar_type(GAP_CHAR, branchval));
-    int gap_in_target = col[i-1] + cost_map.at(pairchar_type(query[i-1], GAP_CHAR));
+    int match_cost   = previous_col_i_minus_1 + cost_map.char_cost_map.at(std::make_pair(query[i-1], static_cast<char>(branchval)));
+    int gap_in_query = col[i]   + cost_map.gap_cost;
+    int gap_in_target= col[i-1] + cost_map.gap_cost;
     previous_col_i_minus_1 = col[i];
     col[i] = std::min({match_cost, gap_in_query, gap_in_target});
     if(col[i] < min_element) min_element = col[i];
@@ -649,8 +630,7 @@ inline int RadixMap::update_col_linear(const RadixMap::atomic_type branchval, co
   return min_element;
 }
 
-template <typename MT>
-inline void RadixMap::global_search_linear_impl(RadixMap::const_weak_pointer_type node, const std::vector<int> & previous_col, search_context & ctx, const MT & cost_map) {
+inline void RadixMap::global_search_linear_impl(RadixMap::const_weak_pointer_type node, const std::vector<int> & previous_col, search_context & ctx, const CostMap & cost_map) {
   if( *std::min_element(previous_col.begin(), previous_col.end()) > ctx.max_distance ) { return; }
   if((node->terminal_idx != nullidx) && (previous_col.back() <= ctx.max_distance)) {
     ctx.match.push_back(path(node));
@@ -661,18 +641,17 @@ inline void RadixMap::global_search_linear_impl(RadixMap::const_weak_pointer_typ
     branch_type & branch = ch.second->branch;
     bool max_distance_exceeded = false;
     for(size_t u=0; u<branch.size(); ++u) {
-      int current_dist = update_col_linear<MT>(branch[u], ctx.query, current_col, cost_map);
+      int current_dist = update_col_linear(branch[u], ctx.query, current_col, cost_map);
       if(current_dist > ctx.max_distance) {
         max_distance_exceeded = true;
         break;
       }
     }
-    if(!max_distance_exceeded) global_search_linear_impl<MT>(ch.second.get(), current_col, ctx, cost_map);
+    if(!max_distance_exceeded) global_search_linear_impl(ch.second.get(), current_col, ctx, cost_map);
   }
 }
 
-template <typename MT>
-inline void RadixMap::anchored_search_linear_impl(RadixMap::const_weak_pointer_type node, const std::vector<int> & previous_col, const int row_min, search_context & ctx, const MT & cost_map) {
+inline void RadixMap::anchored_search_linear_impl(RadixMap::const_weak_pointer_type node, const std::vector<int> & previous_col, const int row_min, search_context & ctx, const CostMap & cost_map) {
   int current_col_min = *std::min_element(previous_col.begin(), previous_col.end());
   int current_row_min = row_min;
   if( (current_col_min > ctx.max_distance) && (current_row_min > ctx.max_distance) ) { // case 1
@@ -724,8 +703,7 @@ inline void RadixMap::anchored_search_linear_impl(RadixMap::const_weak_pointer_t
   }
 }
 
-template <typename MT>
-inline int RadixMap::update_col_affine(const RadixMap::atomic_type branchval, const RadixMap::span_type query, affine_col_type & col, const MT & cost_map) {
+inline int RadixMap::update_col_affine(const RadixMap::atomic_type branchval, const RadixMap::span_type query, affine_col_type & col, const CostMap & cost_map) {
   auto & M_col =  std::get<0>(col); // match
   auto & X_col = std::get<1>(col); // gap in query
   auto & Y_col = std::get<2>(col); // gap in target
@@ -735,25 +713,24 @@ inline int RadixMap::update_col_affine(const RadixMap::atomic_type branchval, co
   int previous_Y_i_minus_1 = Y_col[0];
 
   M_col[0] = NO_ALIGN;
-  X_col[0] = previous_X_i_minus_1 == NO_ALIGN ? 
-              cost_map.at(pairchar_type(GAP_OPEN_CHAR, branchval)) : 
-              previous_X_i_minus_1 + cost_map.at(pairchar_type(GAP_EXTN_CHAR, branchval));
+  X_col[0] = previous_X_i_minus_1 == NO_ALIGN ? cost_map.gap_open_cost
+                                              : previous_X_i_minus_1 + cost_map.gap_cost;
   Y_col[0] = NO_ALIGN;
   int min_element = X_col[0];
   for(size_t i=1; i<M_col.size(); ++i) {
     // Update col[i] after updating {previous_i_minus_1 <- col[i]}
-    int M_col_i = cost_map.at(pairchar_type(query[i-1], branchval)) + std::min({
+    int M_col_i = cost_map.char_cost_map.at(std::make_pair(query[i-1], static_cast<char>(branchval))) + std::min({
       previous_M_i_minus_1, 
       previous_X_i_minus_1, 
       previous_Y_i_minus_1});
     int X_col_i = std::min({
-      cost_map.at(pairchar_type(GAP_OPEN_CHAR, branchval)) + M_col[i],
-      cost_map.at(pairchar_type(GAP_EXTN_CHAR, branchval)) + X_col[i],
-      cost_map.at(pairchar_type(GAP_OPEN_CHAR, branchval)) + Y_col[i]}); 
+      cost_map.gap_open_cost + M_col[i],
+      cost_map.gap_cost      + X_col[i],
+      cost_map.gap_open_cost + Y_col[i]}); 
     int Y_col_i = std::min({
-      cost_map.at(pairchar_type(query[i-1], GAP_OPEN_CHAR)) + M_col[i-1],
-      cost_map.at(pairchar_type(query[i-1], GAP_OPEN_CHAR)) + X_col[i-1],
-      cost_map.at(pairchar_type(query[i-1], GAP_EXTN_CHAR)) + Y_col[i-1]});
+      cost_map.gap_open_cost + M_col[i-1],
+      cost_map.gap_open_cost + X_col[i-1],
+      cost_map.gap_cost      + Y_col[i-1]});
     previous_M_i_minus_1 = M_col[i];
     previous_X_i_minus_1 = X_col[i];
     previous_Y_i_minus_1 = Y_col[i];
@@ -770,8 +747,7 @@ inline int RadixMap::update_col_affine(const RadixMap::atomic_type branchval, co
   return min_element;
 }
 
-template <typename MT>
-inline void RadixMap::global_search_affine_impl(RadixMap::const_weak_pointer_type node, const affine_col_type & previous_col, search_context & ctx, const MT & cost_map) {
+inline void RadixMap::global_search_affine_impl(RadixMap::const_weak_pointer_type node, const affine_col_type & previous_col, search_context & ctx, const CostMap & cost_map) {
   if(
     (*std::min_element(std::get<0>(previous_col).begin(), std::get<0>(previous_col).end()) > ctx.max_distance) &&
     (*std::min_element(std::get<1>(previous_col).begin(), std::get<1>(previous_col).end()) > ctx.max_distance) &&
@@ -790,18 +766,17 @@ inline void RadixMap::global_search_affine_impl(RadixMap::const_weak_pointer_typ
     branch_type & branch = ch.second->branch;
     bool max_distance_exceeded = false;
     for(size_t u=0; u<branch.size(); ++u) {
-      int current_dist = update_col_affine<MT>(branch[u], ctx.query, current_col, cost_map);
+      int current_dist = update_col_affine(branch[u], ctx.query, current_col, cost_map);
       if(current_dist > ctx.max_distance) {
         max_distance_exceeded = true;
         break;
       }
     }
-    if(!max_distance_exceeded) global_search_affine_impl<MT>(ch.second.get(), current_col, ctx, cost_map);
+    if(!max_distance_exceeded) global_search_affine_impl(ch.second.get(), current_col, ctx, cost_map);
   }
 }
 
-template <typename MT>
-inline void RadixMap::anchored_search_affine_impl(RadixMap::const_weak_pointer_type node, const affine_col_type & previous_col, const int row_min, search_context & ctx, const MT & cost_map) {
+inline void RadixMap::anchored_search_affine_impl(RadixMap::const_weak_pointer_type node, const affine_col_type & previous_col, const int row_min, search_context & ctx, const CostMap & cost_map) {
   int current_col_min = std::min({
     *std::min_element(std::get<0>(previous_col).begin(), std::get<0>(previous_col).end()),
     *std::min_element(std::get<1>(previous_col).begin(), std::get<1>(previous_col).end()),

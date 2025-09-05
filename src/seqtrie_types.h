@@ -14,6 +14,7 @@
 #include "ankerl/unordered_dense.h"
 
 #include "seqtrie/radixmap.h"
+#include "seqtrie/utility.h"
 #include "simple_array/small_array.h"
 
 // defined in some headers in windows and Mac, conflicts with R headers
@@ -33,15 +34,10 @@
 using namespace Rcpp;
 using namespace RcppParallel;
 
-// basic pairchar type aligned with RadixMap
-using pairchar_type     = seqtrie::RadixMap::pairchar_type;
-using pairchar_map_type = ankerl::unordered_dense::map<pairchar_type, int>;
-using cspan             = nonstd::span<const char>;
-
-// alias constants from RadixMap
-static constexpr char GAP_CHAR      = seqtrie::RadixMap::GAP_CHAR;
-static constexpr char GAP_OPEN_CHAR = seqtrie::RadixMap::GAP_OPEN_CHAR;
-static constexpr char GAP_EXTN_CHAR = seqtrie::RadixMap::GAP_EXTN_CHAR;
+// basic types and spans
+using pairchar_type = seqtrie::pairchar_type;
+using cspan        = nonstd::span<const char>;
+using CostMap      = seqtrie::CostMap;
 
 // char counter map type using ankerl
 using CharCounter      = ankerl::unordered_dense::map<char, size_t>;
@@ -110,33 +106,102 @@ inline std::vector<cspan> strsxp_to_cspan(CharacterVector x) {
   return out;
 }
 
+// ===== Centralized alignment algorithm selection =====
+enum class AlignmentAlgo {
+  Hamming,
+  GlobalUnit,
+  AnchoredUnit,
+  GlobalLinear,
+  AnchoredLinear,
+  GlobalAffine,
+  AnchoredAffine
+};
+
+inline bool is_unit_substitution(const Rcpp::Nullable<Rcpp::IntegerMatrix>& cm) {
+  if (cm.isNull()) return true; // treat NULL as unit substitution (match=0, mismatch=1)
+  Rcpp::IntegerMatrix m = cm.get();
+  if (m.nrow() != m.ncol()) return false;
+  for (int i = 0; i < m.nrow(); ++i) {
+    for (int j = 0; j < m.ncol(); ++j) {
+      const int expected = (i == j) ? 0 : 1;
+      if (m(i, j) != expected) return false;
+    }
+  }
+  return true;
+}
+
+inline AlignmentAlgo decide_alignment_algo(std::string mode,
+                                           const Rcpp::Nullable<Rcpp::IntegerMatrix>& cost_matrix,
+                                           int gap_cost,
+                                           int gap_open_cost) {
+  // normalize mode
+  for (auto& c : mode) c = static_cast<char>(std::tolower(c));
+  if (mode == "hm") mode = "hamming";
+  else if (mode == "gb" || mode == "lv" || mode == "levenshtein") mode = "global";
+  else if (mode == "an" || mode == "en" || mode == "extension") mode = "anchored";
+
+  if (mode == "hamming") return AlignmentAlgo::Hamming;
+
+  // If substitution matrix is NULL, always use unit substitution and unit gaps
+  // ignoring gap_cost and gap_open_cost entirely, per refined logic.
+  if (cost_matrix.isNull()) {
+    return (mode == "global") ? AlignmentAlgo::GlobalUnit : AlignmentAlgo::AnchoredUnit;
+  }
+
+  const bool affine = gap_open_cost > 0;      // non-zero gap_open means affine
+  const bool unit_subs = is_unit_substitution(cost_matrix);
+  const bool unit_gaps = (gap_cost == 1) && !affine; // unit gaps only when linear with gap=1
+
+  if (mode == "global") {
+    if (affine) return AlignmentAlgo::GlobalAffine;
+    if (unit_subs && unit_gaps) return AlignmentAlgo::GlobalUnit;
+    return AlignmentAlgo::GlobalLinear;
+  } else { // anchored
+    if (affine) return AlignmentAlgo::AnchoredAffine;
+    if (unit_subs && unit_gaps) return AlignmentAlgo::AnchoredUnit;
+    return AlignmentAlgo::AnchoredLinear;
+  }
+}
+
 // convert cost matrix to map
-inline pairchar_map_type convert_cost_matrix(IntegerMatrix cost_matrix) {
-  pairchar_map_type cost_map;
+inline CostMap convert_cost_matrix(IntegerMatrix cost_matrix, int gap_cost, int gap_open_cost) {
+  CostMap cm;
   std::vector<char> map_elements;
   List dimnames = cost_matrix.attr("dimnames");
   CharacterVector rownames = dimnames[0];
   map_elements.resize(rownames.size());
   for(size_t i = 0; i < rownames.size(); ++i) {
-    if(rownames[i] == "gap") {
-      map_elements[i] = GAP_CHAR;
-    } else if(rownames[i] == "gap_open") {
-      map_elements[i] = GAP_OPEN_CHAR;
+    if(rownames[i] == "gap" || rownames[i] == "gap_open") {
+      // special tokens are ignored for substitution table
+      map_elements[i] = '\0';
     } else {
       Rcpp::String s = rownames[i];
       map_elements[i] = s.get_cstring()[0];
     }
   }
-  size_t N = map_elements.size();
-  for(size_t i = 0; i < N; ++i) {
-    for(size_t j = 0; j < N; ++j) {
-      if((map_elements[i] == GAP_CHAR || map_elements[i] == GAP_OPEN_CHAR) &&
-         (map_elements[j] == GAP_CHAR || map_elements[j] == GAP_OPEN_CHAR))
-        continue;
-      cost_map[{map_elements[i], map_elements[j]}] = cost_matrix(i, j);
+  // Collect alphabet (exclude special rows/cols)
+  std::vector<char> alphabet;
+  for(size_t i = 0; i < rownames.size(); ++i) {
+    if(rownames[i] != "gap" && rownames[i] != "gap_open") {
+      alphabet.push_back(map_elements[i]);
     }
   }
-  return cost_map;
+  // Fill substitution cost map using original indices for non-special rows/cols
+  std::vector<int> alpha_idx;
+  alpha_idx.reserve(alphabet.size());
+  for(int i = 0; i < rownames.size(); ++i) {
+    if(rownames[i] != "gap" && rownames[i] != "gap_open") alpha_idx.push_back(i);
+  }
+  for(size_t ai = 0; ai < alpha_idx.size(); ++ai) {
+    for(size_t aj = 0; aj < alpha_idx.size(); ++aj) {
+      char ci = map_elements[alpha_idx[ai]];
+      char cj = map_elements[alpha_idx[aj]];
+      cm.char_cost_map[{ci, cj}] = cost_matrix(alpha_idx[ai], alpha_idx[aj]);
+    }
+  }
+  cm.gap_cost = gap_cost;
+  cm.gap_open_cost = gap_open_cost;
+  return cm;
 }
 
 // convert search results to DataFrame

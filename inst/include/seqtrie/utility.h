@@ -14,6 +14,8 @@
 #include <utility>
 #include <cstdint>
 
+#include "ankerl/unordered_dense.h"
+
 #ifdef span_CONFIG_CONTRACT_VIOLATION_TERMINATES
 #undef span_CONFIG_CONTRACT_VIOLATION_TERMINATES
 #endif
@@ -38,6 +40,16 @@ static_assert(std::is_same<std::uint8_t, char>::value ||
 
 
 namespace seqtrie {
+
+// Common pair type for substitution costs
+using pairchar_type = std::pair<char, char>;
+
+// Unified cost map: substitution table + uniform gap costs
+struct CostMap {
+  ankerl::unordered_dense::map<pairchar_type, int> char_cost_map; // substitution costs
+  int gap_cost;        // linear gap cost and affine extension cost
+  int gap_open_cost;   // affine gap opening cost
+};
 
 // constexpr test for std::unique_ptr
 template <class T> struct is_std_unique_ptr : std::false_type {};

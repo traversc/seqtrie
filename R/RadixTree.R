@@ -144,9 +144,7 @@ RadixTree <- R6::R6Class("RadixTree", public = list(
   search = function(query, max_distance = NULL, max_fraction = NULL, mode = "levenshtein", cost_matrix = NULL, gap_cost = NULL, gap_open_cost = NULL, nthreads = 1, show_progress = FALSE) {
     charset <- unique(c(CharCounter_keys(self$char_counter_pointer), get_charset(query)))
     check_alignment_params(mode, cost_matrix, gap_cost, gap_open_cost, charset, diag_must_be_zero = TRUE)
-    finalized_cost_matrix <- finalize_cost_matrix(cost_matrix, gap_cost, gap_open_cost)
     mode <- normalize_mode_parameter(mode)
-    gap_type <- get_gap_type(finalized_cost_matrix)
 
     if (!is.null(max_distance)) {
       if (length(max_distance) == 1) {
@@ -161,9 +159,14 @@ RadixTree <- R6::R6Class("RadixTree", public = list(
       stop("max_distance/max_fraction must be non-negative")
     }
 
-    result <- RadixTree_search(self$root_pointer, query, max_distance, mode, gap_type, finalized_cost_matrix, nthreads, show_progress)
+    # defaults for C++ plain ints
+    if (is.null(gap_cost)) gap_cost <- 1L
+    if (is.null(gap_open_cost)) gap_open_cost <- 0L
+    # Align conventions with pwalign/Biostrings: first gap includes one extension
+    if (gap_open_cost > 0L) gap_open_cost <- gap_open_cost + gap_cost
+    result <- RadixTree_search(self$root_pointer, query, max_distance, mode, cost_matrix, as.integer(gap_cost), as.integer(gap_open_cost), nthreads, show_progress)
     if (mode == "anchored") { # Append query_size and target_size attributes
-      result2 <- c_dist_pairwise(result$query, result$target, mode, gap_type = gap_type, finalized_cost_matrix, nthreads, show_progress = FALSE)
+      result2 <- c_dist_pairwise(result$query, result$target, mode, cost_matrix, as.integer(gap_cost), as.integer(gap_open_cost), nthreads, show_progress = FALSE)
       if (any(result$distance != result2)) {
         stop("Internal error: anchored search results do not match pairwise results")
       }

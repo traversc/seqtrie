@@ -13,7 +13,7 @@ if(requireNamespace("seqtrie", quietly=TRUE) &&
    requireNamespace("stringdist", quietly=TRUE) &&
    requireNamespace("dplyr", quietly=TRUE) && 
    requireNamespace("pwalign", quietly=TRUE) &&
-   (packageVersion("pwalign") >= "1.4.0" || packageVersion("pwalign" <= "1.2.0"))
+   (packageVersion("pwalign") >= "1.4.0" || packageVersion("pwalign") <= "1.2.0")
 ) {
 library(seqtrie)
 library(stringi)
@@ -235,7 +235,7 @@ for(. in 1:NITER) {
       colnames(cost_matrix) <- rownames(cost_matrix) <- strsplit(CHARSET, "")[[1]]
       gap_cost <- sample(1:3, size = 1)
       gap_open_cost <- sample(1:3, size = 1)
-      results_seqtrie <- dist_matrix(query, target, mode = "levenshtein", cost_matrix = cost_matrix, gap_cost = gap_cost, gap_open_cos=gap_open_cost, nthreads=NTHREADS)
+      results_seqtrie <- dist_matrix(query, target, mode = "levenshtein", cost_matrix = cost_matrix, gap_cost = gap_cost, gap_open_cost=gap_open_cost, nthreads=NTHREADS)
       results_biostrings <- biostrings_matrix_global(query, target, cost_matrix = cost_matrix, gap_cost = gap_cost, gap_open_cost=gap_open_cost)
       stopifnot(all(results_seqtrie == results_biostrings))
 

@@ -61,7 +61,7 @@ The second `R6` class is `RadixForest`, a derivative data structure where
 separate trees are constructed for each sequence length. This data structure has
 advantages and disadvantages, discussed later.
 
-Finally, there's a simple convienence function `dist_search` to find similar 
+Finally, there's a simple convenience function `dist_search` to find similar 
 sequences using a `RadixTree` or `RadixForest` object. This is a wrapper around
 the `$new`, `$insert` and `$search()` methods.
 
@@ -194,21 +194,38 @@ position or primer site.
 
 ### Custom distance searches and affine gap alignment
 
-`seqtrie` supports custom alignment parameters, including an affine gap
-parameter. The interface is similar to the `Biostrings::pairwiseAlignment`.
+`seqtrie` supports custom substitution costs and affine gap penalties.
 Note: we are calculating distance (higher is worse) and not alignment score
 (higher is better).
 
 ```{r, custom_search}
 tree <- RadixTree$new()
 tree$insert(covid_cdr3)
-# define a custom distance matrix - generate_cost_matrix is a convienence function
-# gap and gap_open can be defined directly in the cost_matrix or as search method parameters
-cost_mat <- generate_cost_matrix("ACGT", match=0, mismatch=5, gap=2, gap_open=1)
+
+# Define a custom substitution matrix. Use generate_cost_matrix for convenience.
+cost_mat <- generate_cost_matrix("ACGT", match = 0, mismatch = 5)
 print(cost_mat)
-# Perform a search. "Mode" can be either global or anchored.
-results <- tree$search(covid_cdr3, max_distance=8, cost_matrix=cost_mat, mode="global", nthreads=2)
-dplyr::filter(results, query != target)
+
+# Set gap penalties via parameters (not in the matrix):
+# - Linear gaps: set gap_cost only
+# - Affine gaps: set both gap_cost and gap_open_cost
+
+# Linear example
+results_linear <- tree$search(covid_cdr3, max_distance = 8,
+                              mode = "global",
+                              cost_matrix = cost_mat,
+                              gap_cost = 2,
+                              nthreads = 2)
+
+# Affine example
+results_affine <- tree$search(covid_cdr3, max_distance = 8,
+                              mode = "global",
+                              cost_matrix = cost_mat,
+                              gap_cost = 2,
+                              gap_open_cost = 5,
+                              nthreads = 2)
+
+dplyr::filter(results_linear, query != target)
 ```
 
 ### Radix Forest for faster Levenshtein searches
@@ -238,7 +255,7 @@ identical(
 
 ### Finding strings that start with a pattern
 
-The `$find_prefix()` function can be used to find similar sequences that start
+The `$prefix_search()` function can be used to find similar sequences that start
 with a pattern. This is one of the classic use cases of trie data structures,
 for use as a database lookup and predictive text.
 

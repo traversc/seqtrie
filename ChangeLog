@@ -1,3 +1,7 @@
+Version 0.3.0 (2025-09-05)
+   * Code cleanup, documentation cleanup, cleaner interface
+   * Minor bug fixes
+
 Version 0.2.9 (2025-02-27)
    * Use `STRING_PTR_RO` instead of `STRING_PTR` to align with C API
    * Use `pwalign` instead of `Biostrings` to test alignment (deprecated as of `Biostrings` 2.75.1 on R-devel 3.5)

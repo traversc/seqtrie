@@ -21,10 +21,13 @@
 dist_matrix <- function(query, target, mode, cost_matrix = NULL, gap_cost = NULL, gap_open_cost = NULL, nthreads = 1, show_progress = FALSE) {
   charset <- unique(c(get_charset(query), get_charset(target)))
   check_alignment_params(mode, cost_matrix, gap_cost, gap_open_cost, charset, diag_must_be_zero = FALSE)
-  finalized_cost_matrix <- finalize_cost_matrix(cost_matrix, gap_cost, gap_open_cost)
   mode <- normalize_mode_parameter(mode)
-  gap_type <- get_gap_type(finalized_cost_matrix)
-  c_dist_matrix(query, target, mode, gap_type, finalized_cost_matrix, nthreads, show_progress)
+  # defaults for C++ plain ints
+  if (is.null(gap_cost)) gap_cost <- 1L
+  if (is.null(gap_open_cost)) gap_open_cost <- 0L
+  # Align conventions with pwalign/Biostrings: first gap includes one extension
+  if (gap_open_cost > 0L) gap_open_cost <- gap_open_cost + gap_cost
+  c_dist_matrix(query, target, mode, cost_matrix, as.integer(gap_cost), as.integer(gap_open_cost), nthreads, show_progress)
 }
 
 #' @title Pairwise distance between two sets of sequences
@@ -53,9 +56,11 @@ dist_pairwise <- function(query, target, mode, cost_matrix = NULL, gap_cost = NU
   }
   charset <- unique(c(get_charset(query), get_charset(target)))
   check_alignment_params(mode, cost_matrix, gap_cost, gap_open_cost, charset, diag_must_be_zero = FALSE)
-  finalized_cost_matrix <- finalize_cost_matrix(cost_matrix, gap_cost, gap_open_cost)
   mode <- normalize_mode_parameter(mode)
-  gap_type <- get_gap_type(finalized_cost_matrix)
-  c_dist_pairwise(query, target, mode, gap_type, finalized_cost_matrix, nthreads, show_progress)
+  # defaults for C++ plain ints
+  if (is.null(gap_cost)) gap_cost <- 1L
+  if (is.null(gap_open_cost)) gap_open_cost <- 0L
+  # Align conventions with pwalign/Biostrings: first gap includes one extension
+  if (gap_open_cost > 0L) gap_open_cost <- gap_open_cost + gap_cost
+  c_dist_pairwise(query, target, mode, cost_matrix, as.integer(gap_cost), as.integer(gap_open_cost), nthreads, show_progress)
 }
-

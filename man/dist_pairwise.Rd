@@ -49,11 +49,10 @@ but is semi-global in that the end of the either the query sequence or target se
 
 In contrast a global alignment must align the entire query and target sequences. When mismatch and indel costs are equal to 1, this is also known as the Levenshtein distance.
 
-By default, if mode == "global" or "anchored", all mismatches and indels are given a cost of 1. However, you can define your own distance metric by setting the cost_matrix and gap parameters.
-The cost_matrix is a strictly positive square integer matrix and should include all characters in query and target as column- and rownames.
-To set the cost of a gap (insertion or deletion) you can include a row and column named "gap" in the cost_matrix \emph{OR} set the gap_cost parameter (a single positive integer).
-Similarly, the affine gap alignment can be set by including a row and column named "gap_open" in the cost_matrix \emph{OR} setting the gap_open_cost parameter (a single positive integer).
-If affine alignment is used, the cost of a gap is defined as:
+By default, if mode == "global" or "anchored", all mismatches and indels are given a cost of 1. However, you can define your own distance metric by setting the substitution cost_matrix and separate gap parameters.
+The cost_matrix is a strictly positive square integer matrix of substitution costs and should include all characters in query and target as column- and rownames. Any rows/columns named "gap" or "gap_open" are ignored.
+To set the cost of a gap (insertion or deletion), use the gap_cost parameter (a single positive integer). To enable affine gaps, provide the gap_open_cost parameter (a single positive integer) in addition to gap_cost.
+If affine alignment is used, the total cost of a gap of length L is defined as:
 TOTAL_GAP_COST = gap_open_cost + (gap_cost * gap_length).
 
 If mode == "hamming" all alignment parameters are ignored; mismatch is given a distance of 1 and gaps are not allowed.

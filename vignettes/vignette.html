@@ -27,46 +27,31 @@ document.addEventListener('DOMContentLoaded', function(e) {
   }
 });
 </script>
-<script>// Hide empty <a> tag within highlighted CodeBlock for screen reader accessibility (see https://github.com/jgm/pandoc/issues/6352#issuecomment-626106786) -->
-// v0.0.1
-// Written by JooYoung Seo (jooyoung@psu.edu) and Atsushi Yasumoto on June 1st, 2020.
-
-document.addEventListener('DOMContentLoaded', function() {
-  const codeList = document.getElementsByClassName("sourceCode");
-  for (var i = 0; i < codeList.length; i++) {
-    var linkList = codeList[i].getElementsByTagName('a');
-    for (var j = 0; j < linkList.length; j++) {
-      if (linkList[j].innerHTML === "") {
-        linkList[j].setAttribute('aria-hidden', 'true');
-      }
-    }
-  }
-});
-</script>
 
 <style type="text/css">
-  code{white-space: pre-wrap;}
-  span.smallcaps{font-variant: small-caps;}
-  span.underline{text-decoration: underline;}
-  div.column{display: inline-block; vertical-align: top; width: 50%;}
-  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
-  ul.task-list{list-style: none;}
-    </style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
 
 
 
 <style type="text/css">
-  code {
-    white-space: pre;
-  }
-  .sourceCode {
-    overflow: visible;
-  }
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
 </style>
 <style type="text/css" data-origin="pandoc">
 pre > code.sourceCode { white-space: pre; position: relative; }
 pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
 pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
 code.sourceCode > span { color: inherit; text-decoration: inherit; }
 div.sourceCode { margin: 1em 0; }
 pre.sourceCode { margin: 0; }
@@ -78,55 +63,54 @@ pre > code.sourceCode { white-space: pre-wrap; }
 pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
 }
 pre.numberSource code
-  { counter-reset: source-line 0; }
+{ counter-reset: source-line 0; }
 pre.numberSource code > span
-  { position: relative; left: -4em; counter-increment: source-line; }
+{ position: relative; left: -4em; counter-increment: source-line; }
 pre.numberSource code > span > a:first-child::before
-  { content: counter(source-line);
-    position: relative; left: -1em; text-align: right; vertical-align: baseline;
-    border: none; display: inline-block;
-    -webkit-touch-callout: none; -webkit-user-select: none;
-    -khtml-user-select: none; -moz-user-select: none;
-    -ms-user-select: none; user-select: none;
-    padding: 0 4px; width: 4em;
-    color: #aaaaaa;
-  }
-pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
 div.sourceCode
-  {   }
+{ }
 @media screen {
 pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
 }
-code span.al { color: #ff0000; font-weight: bold; } /* Alert */
-code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
-code span.at { color: #7d9029; } /* Attribute */
-code span.bn { color: #40a070; } /* BaseN */
-code span.bu { } /* BuiltIn */
-code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
-code span.ch { color: #4070a0; } /* Char */
-code span.cn { color: #880000; } /* Constant */
-code span.co { color: #60a0b0; font-style: italic; } /* Comment */
-code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
-code span.do { color: #ba2121; font-style: italic; } /* Documentation */
-code span.dt { color: #902000; } /* DataType */
-code span.dv { color: #40a070; } /* DecVal */
-code span.er { color: #ff0000; font-weight: bold; } /* Error */
-code span.ex { } /* Extension */
-code span.fl { color: #40a070; } /* Float */
-code span.fu { color: #06287e; } /* Function */
-code span.im { } /* Import */
-code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
-code span.kw { color: #007020; font-weight: bold; } /* Keyword */
-code span.op { color: #666666; } /* Operator */
-code span.ot { color: #007020; } /* Other */
-code span.pp { color: #bc7a00; } /* Preprocessor */
-code span.sc { color: #4070a0; } /* SpecialChar */
-code span.ss { color: #bb6688; } /* SpecialString */
-code span.st { color: #4070a0; } /* String */
-code span.va { color: #19177c; } /* Variable */
-code span.vs { color: #4070a0; } /* VerbatimString */
-code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
-
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
 </style>
 <script>
 // apply pandoc div.sourceCode style to pre.sourceCode instead
@@ -358,19 +342,47 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 
 <div id="basic-usage" class="section level3">
 <h3>Basic usage</h3>
-<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true"></a>results &lt;-<span class="st"> </span><span class="kw">dist_search</span>(x, y, <span class="dt">max_distance =</span> <span class="dv">2</span>, <span class="dt">nthreads =</span> <span class="dv">1</span>)</span></code></pre></div>
-<p>The above code will find all similar sequences/strings between <code>x</code> and <code>y</code>. This will generally be significantly faster than calculating pairwise distance or pairwise alignment.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a>results <span class="ot">&lt;-</span> <span class="fu">dist_search</span>(x, y, <span class="at">max_distance =</span> <span class="dv">2</span>, <span class="at">nthreads =</span> <span class="dv">1</span>)</span></code></pre></div>
+<p>The above code will find all similar sequences/strings between
+<code>x</code> and <code>y</code>. This will generally be significantly
+faster than calculating pairwise distance or pairwise alignment.</p>
 </div>
 <div id="background" class="section level3">
 <h3>Background</h3>
-<p><code>seqtrie</code> is a collection of Radix Tree algorithms. These include some classic algorithms like prefix lookup and more bioinformatics focused algorithms such as alignment algorithms and sequence distance calculations (Hamming and Levenshtein distances).</p>
-<p>A trie (aka Prefix Tree) is a data structure used in many applications. It is a space efficient data structure where a collection of sequences are stored in a tree structure, where each leaf represents one sequence, and each node holds one character representing a shared prefix of all sequences descending from it. A Radix Tree (aka Compact Prefix Tree) is an improvement on a trie, using less memory and being generally faster. In a Radix Tree, each node is able to represent multiple characters instead of just one.</p>
-<p>Tries and Radix Trees have similar complexity to a hashmap. Storing a sequence within the tree or looking it up are O(k) where k is the length of the sequence. The main advantage of a trie is that it can be used to quickly find similar sequences by various algorithms and metrics, whereas a hashmap does not contain any sequence similarity information.</p>
+<p><code>seqtrie</code> is a collection of Radix Tree algorithms. These
+include some classic algorithms like prefix lookup and more
+bioinformatics focused algorithms such as alignment algorithms and
+sequence distance calculations (Hamming and Levenshtein distances).</p>
+<p>A trie (aka Prefix Tree) is a data structure used in many
+applications. It is a space efficient data structure where a collection
+of sequences are stored in a tree structure, where each leaf represents
+one sequence, and each node holds one character representing a shared
+prefix of all sequences descending from it. A Radix Tree (aka Compact
+Prefix Tree) is an improvement on a trie, using less memory and being
+generally faster. In a Radix Tree, each node is able to represent
+multiple characters instead of just one.</p>
+<p>Tries and Radix Trees have similar complexity to a hashmap. Storing a
+sequence within the tree or looking it up are O(k) where k is the length
+of the sequence. The main advantage of a trie is that it can be used to
+quickly find similar sequences by various algorithms and metrics,
+whereas a hashmap does not contain any sequence similarity
+information.</p>
 <p>See also: <a href="https://en.wikipedia.org/wiki/Radix_tree" class="uri">https://en.wikipedia.org/wiki/Radix_tree</a></p>
 <p>In <code>seqtrie</code>, there are two <code>R6</code> classes:</p>
-<p><code>RadixTree</code> is the primary class in this package. There are three main methods. The <code>$insert()</code> method is used to store sequences on the tree, <code>$erase()</code> for erasing sequences from the tree and <code>$search()</code> for finding similar sequences stored on the tree.</p>
-<p>The second <code>R6</code> class is <code>RadixForest</code>, a derivative data structure where separate trees are constructed for each sequence length. This data structure has advantages and disadvantages, discussed later.</p>
-<p>Finally, there’s a simple convienence function <code>dist_search</code> to find similar sequences using a <code>RadixTree</code> or <code>RadixForest</code> object. This is a wrapper around the <code>$new</code>, <code>$insert</code> and <code>$search()</code> methods.</p>
+<p><code>RadixTree</code> is the primary class in this package. There
+are three main methods. The <code>$insert()</code> method is used to
+store sequences on the tree, <code>$erase()</code> for erasing sequences
+from the tree and <code>$search()</code> for finding similar sequences
+stored on the tree.</p>
+<p>The second <code>R6</code> class is <code>RadixForest</code>, a
+derivative data structure where separate trees are constructed for each
+sequence length. This data structure has advantages and disadvantages,
+discussed later.</p>
+<p>Finally, there’s a simple convenience function
+<code>dist_search</code> to find similar sequences using a
+<code>RadixTree</code> or <code>RadixForest</code> object. This is a
+wrapper around the <code>$new</code>, <code>$insert</code> and
+<code>$search()</code> methods.</p>
 </div>
 <div id="install" class="section level3">
 <h3>Install</h3>
@@ -378,35 +390,43 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 </div>
 <div id="more-examples" class="section level3">
 <h3>More examples</h3>
-<p>Below is a simple example where we insert some sequences (strings), erase one and then plot out the tree.</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true"></a>tree &lt;-<span class="st"> </span>RadixTree<span class="op">$</span><span class="kw">new</span>()</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true"></a>tree<span class="op">$</span><span class="kw">insert</span>(<span class="kw">c</span>(<span class="st">&quot;cargo&quot;</span>, <span class="st">&quot;cart&quot;</span>, <span class="st">&quot;carburetor&quot;</span>, <span class="st">&quot;carbuncle&quot;</span>, <span class="st">&quot;bar&quot;</span>, <span class="st">&quot;zebra&quot;</span>))</span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true"></a>tree<span class="op">$</span><span class="kw">erase</span>(<span class="st">&quot;zebra&quot;</span>)</span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true"></a><span class="co"># tree$graph requires igraph package</span></span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true"></a><span class="kw">set.seed</span>(<span class="dv">1</span>); tree<span class="op">$</span><span class="kw">graph</span>()</span></code></pre></div>
-<p><img src="data:image/png;base64,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" width="400" /></p>
+<p>Below is a simple example where we insert some sequences (strings),
+erase one and then plot out the tree.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>tree <span class="ot">&lt;-</span> RadixTree<span class="sc">$</span><span class="fu">new</span>()</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>tree<span class="sc">$</span><span class="fu">insert</span>(<span class="fu">c</span>(<span class="st">&quot;cargo&quot;</span>, <span class="st">&quot;cart&quot;</span>, <span class="st">&quot;carburetor&quot;</span>, <span class="st">&quot;carbuncle&quot;</span>, <span class="st">&quot;bar&quot;</span>, <span class="st">&quot;zebra&quot;</span>))</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>tree<span class="sc">$</span><span class="fu">erase</span>(<span class="st">&quot;zebra&quot;</span>)</span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="co"># tree$graph requires igraph package</span></span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1</span>); tree<span class="sc">$</span><span class="fu">graph</span>()</span></code></pre></div>
 </div>
 <div id="levenshtein-edit-distance-search" class="section level3">
 <h3>Levenshtein “edit distance” search</h3>
-<p>Below is an example using COVID19 T-cell data from Adaptive Biotechnologies. (doi: 10.21203/rs.3.rs-51964/v1. This data is licensed under CC 4.0.)</p>
-<p>Here, we find highly similar sequences within a fixed edit distance. For the purpose of this vignette, we sample a small selection of sequences.</p>
-<p>On the full dataset, if you tried to calculate an edit distance matrix, it would take a pretty long time, not to mention requiring a lot of memory. A trie-based method could be used to find similar sequences in a fraction of the time. Approximate running times on the full dataset using 8 threads are listed in the comments.</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true"></a><span class="co"># 130,000 &quot;CDR3&quot; sequences</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true"></a><span class="kw">set.seed</span>(<span class="dv">1</span>)</span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true"></a><span class="kw">data</span>(covid_cdr3)</span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true"></a>covid_cdr3 &lt;-<span class="st"> </span><span class="kw">sample</span>(covid_cdr3, <span class="dv">1000</span>)</span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true"></a>tree &lt;-<span class="st"> </span>RadixTree<span class="op">$</span><span class="kw">new</span>()</span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true"></a>tree<span class="op">$</span><span class="kw">insert</span>(covid_cdr3)</span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true"></a><span class="co"># Full data: 1 min</span></span>
-<span id="cb3-8"><a href="#cb3-8" aria-hidden="true"></a>results &lt;-<span class="st"> </span>tree<span class="op">$</span><span class="kw">search</span>(covid_cdr3, <span class="dt">max_distance=</span><span class="dv">2</span>, <span class="dt">mode=</span><span class="st">&quot;levenshtein&quot;</span>, <span class="dt">nthreads=</span><span class="dv">2</span>)</span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true"></a></span>
-<span id="cb3-10"><a href="#cb3-10" aria-hidden="true"></a><span class="co"># Alternatively, instead of using the RadixTree object directly, you can use the</span></span>
-<span id="cb3-11"><a href="#cb3-11" aria-hidden="true"></a><span class="co"># dist_search function, which is a wrapper around the RadixTree object.</span></span>
-<span id="cb3-12"><a href="#cb3-12" aria-hidden="true"></a>results &lt;-<span class="st"> </span><span class="kw">dist_search</span>(covid_cdr3, covid_cdr3, <span class="dt">max_distance=</span><span class="dv">2</span>)</span>
-<span id="cb3-13"><a href="#cb3-13" aria-hidden="true"></a></span>
-<span id="cb3-14"><a href="#cb3-14" aria-hidden="true"></a><span class="co"># The output is a data.frame mapping query (search sequences)</span></span>
-<span id="cb3-15"><a href="#cb3-15" aria-hidden="true"></a><span class="co"># and target (sequences inserted into the tree).</span></span>
-<span id="cb3-16"><a href="#cb3-16" aria-hidden="true"></a>dplyr<span class="op">::</span><span class="kw">filter</span>(results, query <span class="op">!=</span><span class="st"> </span>target)</span></code></pre></div>
+<p>Below is an example using COVID19 T-cell data from Adaptive
+Biotechnologies. (doi: 10.21203/rs.3.rs-51964/v1. This data is licensed
+under CC 4.0.)</p>
+<p>Here, we find highly similar sequences within a fixed edit distance.
+For the purpose of this vignette, we sample a small selection of
+sequences.</p>
+<p>On the full dataset, if you tried to calculate an edit distance
+matrix, it would take a pretty long time, not to mention requiring a lot
+of memory. A trie-based method could be used to find similar sequences
+in a fraction of the time. Approximate running times on the full dataset
+using 8 threads are listed in the comments.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="co"># 130,000 &quot;CDR3&quot; sequences</span></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1</span>)</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="fu">data</span>(covid_cdr3)</span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>covid_cdr3 <span class="ot">&lt;-</span> <span class="fu">sample</span>(covid_cdr3, <span class="dv">1000</span>)</span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>tree <span class="ot">&lt;-</span> RadixTree<span class="sc">$</span><span class="fu">new</span>()</span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>tree<span class="sc">$</span><span class="fu">insert</span>(covid_cdr3)</span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a><span class="co"># Full data: 1 min</span></span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a>results <span class="ot">&lt;-</span> tree<span class="sc">$</span><span class="fu">search</span>(covid_cdr3, <span class="at">max_distance=</span><span class="dv">2</span>, <span class="at">mode=</span><span class="st">&quot;levenshtein&quot;</span>, <span class="at">nthreads=</span><span class="dv">2</span>)</span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a><span class="co"># Alternatively, instead of using the RadixTree object directly, you can use the</span></span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a><span class="co"># dist_search function, which is a wrapper around the RadixTree object.</span></span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a>results <span class="ot">&lt;-</span> <span class="fu">dist_search</span>(covid_cdr3, covid_cdr3, <span class="at">max_distance=</span><span class="dv">2</span>)</span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a></span>
+<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a><span class="co"># The output is a data.frame mapping query (search sequences)</span></span>
+<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a><span class="co"># and target (sequences inserted into the tree).</span></span>
+<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a>dplyr<span class="sc">::</span><span class="fu">filter</span>(results, query <span class="sc">!=</span> target)</span></code></pre></div>
 <pre><code>##                                           query
 ## 1    TGTGCCAGCAGTCACGGAACTAGCACAGATACGCAGTATTTT
 ## 2          TGCAGCGTTGATCTGCCGGGAGAGACCCAGTACTTC
@@ -424,101 +444,189 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 </div>
 <div id="search-parameters" class="section level3">
 <h3>Search parameters</h3>
-<p>The <code>$search()</code> function contains two mutually exclusive parameters: <code>max_distance</code> and <code>max_fraction</code>.The former parameter sets an absolute threshold that limits the distance between pairs of sequences in the output, and the latter parameter sets a threshold relative to the query sequence length.</p>
-<p>The search time is monotonically increasing with the distance threshold, logarithmically increasing with tree size and linearly increasing with the number of query sequences and the length of each sequence. Overall, the algorithm is significantly faster than a pairwise/matrix edit distance calculation for finding similar sequences. However, <em>care still needs to be taken when setting parameters for searching a large number of sequences (~100,000+).</em></p>
-<p><strong>Some additional examples using the max_fraction parameter.</strong></p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true"></a><span class="co"># Full data: several seconds</span></span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true"></a>results &lt;-<span class="st"> </span>tree<span class="op">$</span><span class="kw">search</span>(covid_cdr3, <span class="dt">max_fraction=</span><span class="fl">0.035</span>, <span class="dt">mode=</span><span class="st">&quot;levenshtein&quot;</span>, <span class="dt">nthreads=</span><span class="dv">2</span>)</span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true"></a><span class="co"># Full data: 1 minute</span></span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true"></a>results &lt;-<span class="st"> </span>tree<span class="op">$</span><span class="kw">search</span>(covid_cdr3, <span class="dt">max_fraction=</span><span class="fl">0.06</span>, <span class="dt">mode=</span><span class="st">&quot;levenshtein&quot;</span>, <span class="dt">nthreads=</span><span class="dv">2</span>)</span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true"></a><span class="co"># Full data: 15-20 minutes</span></span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true"></a>results &lt;-<span class="st"> </span>tree<span class="op">$</span><span class="kw">search</span>(covid_cdr3, <span class="dt">max_fraction=</span><span class="fl">0.15</span>, <span class="dt">mode=</span><span class="st">&quot;levenshtein&quot;</span>, <span class="dt">nthreads=</span><span class="dv">2</span>)</span></code></pre></div>
+<p>The <code>$search()</code> function contains two mutually exclusive
+parameters: <code>max_distance</code> and <code>max_fraction</code>.The
+former parameter sets an absolute threshold that limits the distance
+between pairs of sequences in the output, and the latter parameter sets
+a threshold relative to the query sequence length.</p>
+<p>The search time is monotonically increasing with the distance
+threshold, logarithmically increasing with tree size and linearly
+increasing with the number of query sequences and the length of each
+sequence. Overall, the algorithm is significantly faster than a
+pairwise/matrix edit distance calculation for finding similar sequences.
+However, <em>care still needs to be taken when setting parameters for
+searching a large number of sequences (~100,000+).</em></p>
+<p><strong>Some additional examples using the max_fraction
+parameter.</strong></p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="co"># Full data: several seconds</span></span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>results <span class="ot">&lt;-</span> tree<span class="sc">$</span><span class="fu">search</span>(covid_cdr3, <span class="at">max_fraction=</span><span class="fl">0.035</span>, <span class="at">mode=</span><span class="st">&quot;levenshtein&quot;</span>, <span class="at">nthreads=</span><span class="dv">2</span>)</span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="co"># Full data: 1 minute</span></span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>results <span class="ot">&lt;-</span> tree<span class="sc">$</span><span class="fu">search</span>(covid_cdr3, <span class="at">max_fraction=</span><span class="fl">0.06</span>, <span class="at">mode=</span><span class="st">&quot;levenshtein&quot;</span>, <span class="at">nthreads=</span><span class="dv">2</span>)</span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a><span class="co"># Full data: 15-20 minutes</span></span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>results <span class="ot">&lt;-</span> tree<span class="sc">$</span><span class="fu">search</span>(covid_cdr3, <span class="at">max_fraction=</span><span class="fl">0.15</span>, <span class="at">mode=</span><span class="st">&quot;levenshtein&quot;</span>, <span class="at">nthreads=</span><span class="dv">2</span>)</span></code></pre></div>
 </div>
 <div id="hamming-distance-search" class="section level3">
 <h3>Hamming distance search</h3>
-<p>Hamming distance is similar to Levenshtein distance, but does not allow insertions or deletions. Sequences must be the same length. Because of this restriction, Hamming distance is generally a lot faster.</p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true"></a><span class="co"># Full data: 1 second</span></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true"></a>results &lt;-<span class="st"> </span>tree<span class="op">$</span><span class="kw">search</span>(covid_cdr3, <span class="dt">max_fraction=</span><span class="fl">0.035</span>, <span class="dt">mode=</span><span class="st">&quot;hamming&quot;</span>, <span class="dt">nthreads=</span><span class="dv">2</span>)</span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true"></a><span class="co"># Full data: several seconds</span></span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true"></a>results &lt;-<span class="st"> </span>tree<span class="op">$</span><span class="kw">search</span>(covid_cdr3, <span class="dt">max_fraction=</span><span class="fl">0.06</span>, <span class="dt">mode=</span><span class="st">&quot;hamming&quot;</span>, <span class="dt">nthreads=</span><span class="dv">2</span>)</span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true"></a><span class="co"># Full data: 1.5 minutes</span></span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true"></a>results &lt;-<span class="st"> </span>tree<span class="op">$</span><span class="kw">search</span>(covid_cdr3, <span class="dt">max_fraction=</span><span class="fl">0.15</span>, <span class="dt">mode=</span><span class="st">&quot;hamming&quot;</span>, <span class="dt">nthreads=</span><span class="dv">2</span>)</span></code></pre></div>
+<p>Hamming distance is similar to Levenshtein distance, but does not
+allow insertions or deletions. Sequences must be the same length.
+Because of this restriction, Hamming distance is generally a lot
+faster.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="co"># Full data: 1 second</span></span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>results <span class="ot">&lt;-</span> tree<span class="sc">$</span><span class="fu">search</span>(covid_cdr3, <span class="at">max_fraction=</span><span class="fl">0.035</span>, <span class="at">mode=</span><span class="st">&quot;hamming&quot;</span>, <span class="at">nthreads=</span><span class="dv">2</span>)</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a><span class="co"># Full data: several seconds</span></span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>results <span class="ot">&lt;-</span> tree<span class="sc">$</span><span class="fu">search</span>(covid_cdr3, <span class="at">max_fraction=</span><span class="fl">0.06</span>, <span class="at">mode=</span><span class="st">&quot;hamming&quot;</span>, <span class="at">nthreads=</span><span class="dv">2</span>)</span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a><span class="co"># Full data: 1.5 minutes</span></span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a>results <span class="ot">&lt;-</span> tree<span class="sc">$</span><span class="fu">search</span>(covid_cdr3, <span class="at">max_fraction=</span><span class="fl">0.15</span>, <span class="at">mode=</span><span class="st">&quot;hamming&quot;</span>, <span class="at">nthreads=</span><span class="dv">2</span>)</span></code></pre></div>
 </div>
 <div id="anchored-alignment-searches" class="section level3">
 <h3>Anchored alignment searches</h3>
-<p>An anchored alignment is a form of semi-global alignment, where the query sequence is “anchored” (global) to the beginning of both the query and target sequences, but is semi-global in that the end of the either the query sequence or target sequence (but not both) can be unaligned. This type of alignment is sometimes called an “extension” alignment in literature.</p>
-<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true"></a>tree &lt;-<span class="st"> </span>RadixTree<span class="op">$</span><span class="kw">new</span>()</span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true"></a>tree<span class="op">$</span><span class="kw">insert</span>(<span class="st">&quot;CARTON&quot;</span>)</span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true"></a>tree<span class="op">$</span><span class="kw">insert</span>(<span class="st">&quot;CAR&quot;</span>)</span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true"></a>tree<span class="op">$</span><span class="kw">insert</span>(<span class="st">&quot;CARBON&quot;</span>)</span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true"></a>tree<span class="op">$</span><span class="kw">search</span>(<span class="st">&quot;CART&quot;</span>, <span class="dt">max_distance =</span> <span class="dv">0</span>, <span class="dt">mode =</span> <span class="st">&quot;anchored&quot;</span>)</span></code></pre></div>
+<p>An anchored alignment is a form of semi-global alignment, where the
+query sequence is “anchored” (global) to the beginning of both the query
+and target sequences, but is semi-global in that the end of the either
+the query sequence or target sequence (but not both) can be unaligned.
+This type of alignment is sometimes called an “extension” alignment in
+literature.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>tree <span class="ot">&lt;-</span> RadixTree<span class="sc">$</span><span class="fu">new</span>()</span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>tree<span class="sc">$</span><span class="fu">insert</span>(<span class="st">&quot;CARTON&quot;</span>)</span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>tree<span class="sc">$</span><span class="fu">insert</span>(<span class="st">&quot;CAR&quot;</span>)</span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>tree<span class="sc">$</span><span class="fu">insert</span>(<span class="st">&quot;CARBON&quot;</span>)</span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a>tree<span class="sc">$</span><span class="fu">search</span>(<span class="st">&quot;CART&quot;</span>, <span class="at">max_distance =</span> <span class="dv">0</span>, <span class="at">mode =</span> <span class="st">&quot;anchored&quot;</span>)</span></code></pre></div>
 <pre><code>##   query target distance query_size target_size
 ## 1  CART    CAR        0          3           3
 ## 2  CART CARTON        0          4           4</code></pre>
-<p>Because the alignment is semi-global at the end of the alignment, the query of “CART” finds “CAR” and “CARTON” but not “CARBON” given a max distance of 0. Additionally, the output of an anchored search also returns the position of the query and target at the ends. Either the query or the target must fully align, so at least one of the end positions will be the full length of the sequence. This type of alignment is frequently useful in biology e.g. if you are trying to align multiple reads that are variable in length but start at the same genomic position or primer site.</p>
+<p>Because the alignment is semi-global at the end of the alignment, the
+query of “CART” finds “CAR” and “CARTON” but not “CARBON” given a max
+distance of 0. Additionally, the output of an anchored search also
+returns the position of the query and target at the ends. Either the
+query or the target must fully align, so at least one of the end
+positions will be the full length of the sequence. This type of
+alignment is frequently useful in biology e.g. if you are trying to
+align multiple reads that are variable in length but start at the same
+genomic position or primer site.</p>
 </div>
 <div id="custom-distance-searches-and-affine-gap-alignment" class="section level3">
 <h3>Custom distance searches and affine gap alignment</h3>
-<p><code>seqtrie</code> supports custom alignment parameters, including an affine gap parameter. The interface is similar to the <code>Biostrings::pairwiseAlignment</code>. Note: we are calculating distance (higher is worse) and not alignment score (higher is better).</p>
-<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true"></a>tree &lt;-<span class="st"> </span>RadixTree<span class="op">$</span><span class="kw">new</span>()</span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true"></a>tree<span class="op">$</span><span class="kw">insert</span>(covid_cdr3)</span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true"></a><span class="co"># define a custom distance matrix - generate_cost_matrix is a convienence function</span></span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true"></a><span class="co"># gap and gap_open can be defined directly in the cost_matrix or as search method parameters</span></span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true"></a>cost_mat &lt;-<span class="st"> </span><span class="kw">generate_cost_matrix</span>(<span class="st">&quot;ACGT&quot;</span>, <span class="dt">match=</span><span class="dv">0</span>, <span class="dt">mismatch=</span><span class="dv">5</span>, <span class="dt">gap=</span><span class="dv">2</span>, <span class="dt">gap_open=</span><span class="dv">1</span>)</span>
-<span id="cb9-6"><a href="#cb9-6" aria-hidden="true"></a><span class="kw">print</span>(cost_mat)</span></code></pre></div>
-<pre><code>##          A C G T gap gap_open
-## A        0 5 5 5   2        1
-## C        5 0 5 5   2        1
-## G        5 5 0 5   2        1
-## T        5 5 5 0   2        1
-## gap      2 2 2 2   0        0
-## gap_open 1 1 1 1   0        0</code></pre>
-<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true"></a><span class="co"># Perform a search. &quot;Mode&quot; can be either global or anchored.</span></span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true"></a>results &lt;-<span class="st"> </span>tree<span class="op">$</span><span class="kw">search</span>(covid_cdr3, <span class="dt">max_distance=</span><span class="dv">8</span>, <span class="dt">cost_matrix=</span>cost_mat, <span class="dt">mode=</span><span class="st">&quot;global&quot;</span>, <span class="dt">nthreads=</span><span class="dv">2</span>)</span>
-<span id="cb11-3"><a href="#cb11-3" aria-hidden="true"></a>dplyr<span class="op">::</span><span class="kw">filter</span>(results, query <span class="op">!=</span><span class="st"> </span>target)</span></code></pre></div>
-<pre><code>##                                           query
-## 1          TGCAGCGTTGATCTGCCGGGAGAGACCCAGTACTTC
-## 2          TGTGCCAGCAGTTGGGGGGGCTACGAGCAGTACTTC
-## 3       TGTGCCAGCAGTTTATCGGGGTCCTACGAGCAGTACTTC
-## 4 TGTGCCAGCAGCCTTAGCGGGGTGAGCACAGATACGCAGTATTTT
-## 5       TGTGCCAGCAGTTTAGGGGGTGGCTACGAGCAGTACTTC
-## 6          TGTGCCAGCAGTTTCGGGGCCTACGAGCAGTACTTC
-## 7    TGTGCCAGCAGCCTTAGCGGTAGCACAGATACGCAGTATTTT
-## 8          TGCAGCGTTGATCTGACGGGAGAGACCCAGTACTTC
-##                                          target distance
-## 1          TGCAGCGTTGATCTGACGGGAGAGACCCAGTACTTC        5
-## 2       TGTGCCAGCAGTTTAGGGGGTGGCTACGAGCAGTACTTC        8
-## 3          TGTGCCAGCAGTTTCGGGGCCTACGAGCAGTACTTC        8
-## 4    TGTGCCAGCAGCCTTAGCGGTAGCACAGATACGCAGTATTTT        8
-## 5          TGTGCCAGCAGTTGGGGGGGCTACGAGCAGTACTTC        8
-## 6       TGTGCCAGCAGTTTATCGGGGTCCTACGAGCAGTACTTC        8
-## 7 TGTGCCAGCAGCCTTAGCGGGGTGAGCACAGATACGCAGTATTTT        8
-## 8          TGCAGCGTTGATCTGCCGGGAGAGACCCAGTACTTC        5</code></pre>
+<p><code>seqtrie</code> supports custom substitution costs and affine
+gap penalties. Note: we are calculating distance (higher is worse) and
+not alignment score (higher is better).</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a>tree <span class="ot">&lt;-</span> RadixTree<span class="sc">$</span><span class="fu">new</span>()</span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a>tree<span class="sc">$</span><span class="fu">insert</span>(covid_cdr3)</span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a></span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a><span class="co"># Define a custom substitution matrix. Use generate_cost_matrix for convenience.</span></span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a>cost_mat <span class="ot">&lt;-</span> <span class="fu">generate_cost_matrix</span>(<span class="st">&quot;ACGT&quot;</span>, <span class="at">match =</span> <span class="dv">0</span>, <span class="at">mismatch =</span> <span class="dv">5</span>)</span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a><span class="fu">print</span>(cost_mat)</span></code></pre></div>
+<pre><code>##   A C G T
+## A 0 5 5 5
+## C 5 0 5 5
+## G 5 5 0 5
+## T 5 5 5 0</code></pre>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a><span class="co"># Set gap penalties via parameters (not in the matrix):</span></span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a><span class="co"># - Linear gaps: set gap_cost only</span></span>
+<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a><span class="co"># - Affine gaps: set both gap_cost and gap_open_cost</span></span>
+<span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a></span>
+<span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a><span class="co"># Linear example</span></span>
+<span id="cb11-6"><a href="#cb11-6" tabindex="-1"></a>results_linear <span class="ot">&lt;-</span> tree<span class="sc">$</span><span class="fu">search</span>(covid_cdr3, <span class="at">max_distance =</span> <span class="dv">8</span>,</span>
+<span id="cb11-7"><a href="#cb11-7" tabindex="-1"></a>                              <span class="at">mode =</span> <span class="st">&quot;global&quot;</span>,</span>
+<span id="cb11-8"><a href="#cb11-8" tabindex="-1"></a>                              <span class="at">cost_matrix =</span> cost_mat,</span>
+<span id="cb11-9"><a href="#cb11-9" tabindex="-1"></a>                              <span class="at">gap_cost =</span> <span class="dv">2</span>,</span>
+<span id="cb11-10"><a href="#cb11-10" tabindex="-1"></a>                              <span class="at">nthreads =</span> <span class="dv">2</span>)</span>
+<span id="cb11-11"><a href="#cb11-11" tabindex="-1"></a></span>
+<span id="cb11-12"><a href="#cb11-12" tabindex="-1"></a><span class="co"># Affine example</span></span>
+<span id="cb11-13"><a href="#cb11-13" tabindex="-1"></a>results_affine <span class="ot">&lt;-</span> tree<span class="sc">$</span><span class="fu">search</span>(covid_cdr3, <span class="at">max_distance =</span> <span class="dv">8</span>,</span>
+<span id="cb11-14"><a href="#cb11-14" tabindex="-1"></a>                              <span class="at">mode =</span> <span class="st">&quot;global&quot;</span>,</span>
+<span id="cb11-15"><a href="#cb11-15" tabindex="-1"></a>                              <span class="at">cost_matrix =</span> cost_mat,</span>
+<span id="cb11-16"><a href="#cb11-16" tabindex="-1"></a>                              <span class="at">gap_cost =</span> <span class="dv">2</span>,</span>
+<span id="cb11-17"><a href="#cb11-17" tabindex="-1"></a>                              <span class="at">gap_open_cost =</span> <span class="dv">5</span>,</span>
+<span id="cb11-18"><a href="#cb11-18" tabindex="-1"></a>                              <span class="at">nthreads =</span> <span class="dv">2</span>)</span>
+<span id="cb11-19"><a href="#cb11-19" tabindex="-1"></a></span>
+<span id="cb11-20"><a href="#cb11-20" tabindex="-1"></a>dplyr<span class="sc">::</span><span class="fu">filter</span>(results_linear, query <span class="sc">!=</span> target)</span></code></pre></div>
+<pre><code>##                                            query
+## 1        TGTGCCAGCAGCTTAGGACAGTCCTACGAGCAGTACTTC
+## 2        TGTGCCAGCAGCTTAGGACAGTCCTACGAGCAGTACTTC
+## 3     TGTGCCAGCAGTCACGGAACTAGCACAGATACGCAGTATTTT
+## 4           TGCAGCGTTGATCTGCCGGGAGAGACCCAGTACTTC
+## 5     TGTGCCAGCAGCTCGGCGGGGTCCTACAATGAGCAGTTCTTC
+## 6        TGTGCCAGCAGTTACGGGCAGTCCTACGAGCAGTACTTC
+## 7        TGTGCCAGCAGTTACGGGCAGTCCTACGAGCAGTACTTC
+## 8  TGTGCCAGTACTATGGGACAGGGGATGAACACTGAAGCTTTCTTT
+## 9  TGTGCCAGTAGTATGGGACAGGGAATGAACACTGAAGCTTTCTTT
+## 10    TGTGCCAGCAGCTCAGGGGGCTCCTACAATGAGCAGTTCTTC
+## 11          TGTGCCAGCAGTTGGGGGGGCTACGAGCAGTACTTC
+## 12    TGTGCCAGCAGTTCCCCTAATAGCAATCAGCCCCAGCATTTT
+## 13       TGTGCCAGCAGTTTATCGGGGTCCTACGAGCAGTACTTC
+## 14       TGTGCCAGCAGTTTATCGGGGTCCTACGAGCAGTACTTC
+## 15 TGTGCCAGCAGCCTTAGCGGGGTGAGCACAGATACGCAGTATTTT
+## 16          TGTGCCAGCAGTCCCTCAGGGGAGACCCAGTACTTC
+## 17       TGTGCCAGCAGCCTAGCAGGGGCCGGGGAGCTGTTTTTT
+## 18       TGTGCCAGCAGGCCAGGACAGTCCTACGAGCAGTACTTC
+## 19       TGTGCCAGCAGCTTAGAGGCGGCCGGGGAGCTGTTTTTT
+## 20    TGTGCCAGCAGTCCCATAGATAGCAATCAGCCCCAGCATTTT
+## 21    TGTGCCAGCAGTGACAGAACTAGCACAGATACGCAGTATTTT
+## 22       TGTGCCAGCAGTTTAGGGGGTGGCTACGAGCAGTACTTC
+## 23          TGTGCCAGCAGTTTCGGGGCCTACGAGCAGTACTTC
+## 24    TGTGCCAGCAGCCTTAGCGGTAGCACAGATACGCAGTATTTT
+## 25          TGTGCCAGCAGTCCTAGCGGCGAGACCCAGTACTTC
+## 26          TGCAGCGTTGATCTGACGGGAGAGACCCAGTACTTC
+##                                           target distance
+## 1        TGTGCCAGCAGTTACGGGCAGTCCTACGAGCAGTACTTC        8
+## 2        TGTGCCAGCAGGCCAGGACAGTCCTACGAGCAGTACTTC        8
+## 3     TGTGCCAGCAGTGACAGAACTAGCACAGATACGCAGTATTTT        8
+## 4           TGCAGCGTTGATCTGACGGGAGAGACCCAGTACTTC        4
+## 5     TGTGCCAGCAGCTCAGGGGGCTCCTACAATGAGCAGTTCTTC        8
+## 6        TGTGCCAGCAGTTTATCGGGGTCCTACGAGCAGTACTTC        8
+## 7        TGTGCCAGCAGCTTAGGACAGTCCTACGAGCAGTACTTC        8
+## 8  TGTGCCAGTAGTATGGGACAGGGAATGAACACTGAAGCTTTCTTT        8
+## 9  TGTGCCAGTACTATGGGACAGGGGATGAACACTGAAGCTTTCTTT        8
+## 10    TGTGCCAGCAGCTCGGCGGGGTCCTACAATGAGCAGTTCTTC        8
+## 11       TGTGCCAGCAGTTTAGGGGGTGGCTACGAGCAGTACTTC        6
+## 12    TGTGCCAGCAGTCCCATAGATAGCAATCAGCCCCAGCATTTT        8
+## 13          TGTGCCAGCAGTTTCGGGGCCTACGAGCAGTACTTC        6
+## 14       TGTGCCAGCAGTTACGGGCAGTCCTACGAGCAGTACTTC        8
+## 15    TGTGCCAGCAGCCTTAGCGGTAGCACAGATACGCAGTATTTT        6
+## 16          TGTGCCAGCAGTCCTAGCGGCGAGACCCAGTACTTC        8
+## 17       TGTGCCAGCAGCTTAGAGGCGGCCGGGGAGCTGTTTTTT        8
+## 18       TGTGCCAGCAGCTTAGGACAGTCCTACGAGCAGTACTTC        8
+## 19       TGTGCCAGCAGCCTAGCAGGGGCCGGGGAGCTGTTTTTT        8
+## 20    TGTGCCAGCAGTTCCCCTAATAGCAATCAGCCCCAGCATTTT        8
+## 21    TGTGCCAGCAGTCACGGAACTAGCACAGATACGCAGTATTTT        8
+## 22          TGTGCCAGCAGTTGGGGGGGCTACGAGCAGTACTTC        6
+## 23       TGTGCCAGCAGTTTATCGGGGTCCTACGAGCAGTACTTC        6
+## 24 TGTGCCAGCAGCCTTAGCGGGGTGAGCACAGATACGCAGTATTTT        6
+## 25          TGTGCCAGCAGTCCCTCAGGGGAGACCCAGTACTTC        8
+## 26          TGCAGCGTTGATCTGCCGGGAGAGACCCAGTACTTC        4</code></pre>
 </div>
 <div id="radix-forest-for-faster-levenshtein-searches" class="section level3">
 <h3>Radix Forest for faster Levenshtein searches</h3>
-<p>The <code>RadixForest</code> class is a data structure holding a collection of Radix Trees, where a separate tree is constructed for each sequence length. The primary advantage of <code>RadixForest</code> is significantly faster Levenshtein searches, because you can know sequence length up front. The disadvantages are higher memory usage, and no support for custom distance searches.</p>
+<p>The <code>RadixForest</code> class is a data structure holding a
+collection of Radix Trees, where a separate tree is constructed for each
+sequence length. The primary advantage of <code>RadixForest</code> is
+significantly faster Levenshtein searches, because you can know sequence
+length up front. The disadvantages are higher memory usage, and no
+support for custom distance searches.</p>
 <p>Below is a brief comparison:</p>
-<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true"></a><span class="co"># RadixTree, full data: 45 seconds</span></span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true"></a>tree &lt;-<span class="st"> </span>RadixTree<span class="op">$</span><span class="kw">new</span>()</span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true"></a>tree<span class="op">$</span><span class="kw">insert</span>(covid_cdr3)</span>
-<span id="cb13-4"><a href="#cb13-4" aria-hidden="true"></a>results_tree &lt;-<span class="st"> </span>tree<span class="op">$</span><span class="kw">search</span>(covid_cdr3, <span class="dt">max_distance=</span><span class="dv">2</span>, <span class="dt">mode=</span><span class="st">&quot;levenshtein&quot;</span>, <span class="dt">nthreads=</span><span class="dv">2</span>)</span>
-<span id="cb13-5"><a href="#cb13-5" aria-hidden="true"></a><span class="co"># RadixForest, full data: 19 seconds</span></span>
-<span id="cb13-6"><a href="#cb13-6" aria-hidden="true"></a>frst &lt;-<span class="st"> </span>RadixForest<span class="op">$</span><span class="kw">new</span>()</span>
-<span id="cb13-7"><a href="#cb13-7" aria-hidden="true"></a>frst<span class="op">$</span><span class="kw">insert</span>(covid_cdr3)</span>
-<span id="cb13-8"><a href="#cb13-8" aria-hidden="true"></a>results_frst &lt;-<span class="st"> </span>frst<span class="op">$</span><span class="kw">search</span>(covid_cdr3, <span class="dt">max_distance=</span><span class="dv">2</span>, <span class="dt">mode=</span><span class="st">&quot;levenshtein&quot;</span>, <span class="dt">nthreads=</span><span class="dv">2</span>)</span>
-<span id="cb13-9"><a href="#cb13-9" aria-hidden="true"></a><span class="co"># The results are the same, but order is not guaranteed</span></span>
-<span id="cb13-10"><a href="#cb13-10" aria-hidden="true"></a><span class="kw">identical</span>(</span>
-<span id="cb13-11"><a href="#cb13-11" aria-hidden="true"></a>  dplyr<span class="op">::</span><span class="kw">arrange</span>(results_tree, query, target),</span>
-<span id="cb13-12"><a href="#cb13-12" aria-hidden="true"></a>  dplyr<span class="op">::</span><span class="kw">arrange</span>(results_frst, query, target) )</span></code></pre></div>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a><span class="co"># RadixTree, full data: 45 seconds</span></span>
+<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a>tree <span class="ot">&lt;-</span> RadixTree<span class="sc">$</span><span class="fu">new</span>()</span>
+<span id="cb13-3"><a href="#cb13-3" tabindex="-1"></a>tree<span class="sc">$</span><span class="fu">insert</span>(covid_cdr3)</span>
+<span id="cb13-4"><a href="#cb13-4" tabindex="-1"></a>results_tree <span class="ot">&lt;-</span> tree<span class="sc">$</span><span class="fu">search</span>(covid_cdr3, <span class="at">max_distance=</span><span class="dv">2</span>, <span class="at">mode=</span><span class="st">&quot;levenshtein&quot;</span>, <span class="at">nthreads=</span><span class="dv">2</span>)</span>
+<span id="cb13-5"><a href="#cb13-5" tabindex="-1"></a><span class="co"># RadixForest, full data: 19 seconds</span></span>
+<span id="cb13-6"><a href="#cb13-6" tabindex="-1"></a>frst <span class="ot">&lt;-</span> RadixForest<span class="sc">$</span><span class="fu">new</span>()</span>
+<span id="cb13-7"><a href="#cb13-7" tabindex="-1"></a>frst<span class="sc">$</span><span class="fu">insert</span>(covid_cdr3)</span>
+<span id="cb13-8"><a href="#cb13-8" tabindex="-1"></a>results_frst <span class="ot">&lt;-</span> frst<span class="sc">$</span><span class="fu">search</span>(covid_cdr3, <span class="at">max_distance=</span><span class="dv">2</span>, <span class="at">mode=</span><span class="st">&quot;levenshtein&quot;</span>, <span class="at">nthreads=</span><span class="dv">2</span>)</span>
+<span id="cb13-9"><a href="#cb13-9" tabindex="-1"></a><span class="co"># The results are the same, but order is not guaranteed</span></span>
+<span id="cb13-10"><a href="#cb13-10" tabindex="-1"></a><span class="fu">identical</span>(</span>
+<span id="cb13-11"><a href="#cb13-11" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">arrange</span>(results_tree, query, target),</span>
+<span id="cb13-12"><a href="#cb13-12" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">arrange</span>(results_frst, query, target) )</span></code></pre></div>
 <pre><code>## [1] TRUE</code></pre>
 </div>
 <div id="finding-strings-that-start-with-a-pattern" class="section level3">
 <h3>Finding strings that start with a pattern</h3>
-<p>The <code>$find_prefix()</code> function can be used to find similar sequences that start with a pattern. This is one of the classic use cases of trie data structures, for use as a database lookup and predictive text.</p>
-<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true"></a>tree &lt;-<span class="st"> </span>RadixTree<span class="op">$</span><span class="kw">new</span>()</span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true"></a>tree<span class="op">$</span><span class="kw">insert</span>(<span class="kw">c</span>(<span class="st">&quot;cargo&quot;</span>, <span class="st">&quot;cart&quot;</span>, <span class="st">&quot;carburetor&quot;</span>, <span class="st">&quot;carbuncle&quot;</span>, <span class="st">&quot;bar&quot;</span>))</span>
-<span id="cb15-3"><a href="#cb15-3" aria-hidden="true"></a>tree<span class="op">$</span><span class="kw">prefix_search</span>(<span class="st">&quot;car&quot;</span>)</span></code></pre></div>
+<p>The <code>$prefix_search()</code> function can be used to find
+similar sequences that start with a pattern. This is one of the classic
+use cases of trie data structures, for use as a database lookup and
+predictive text.</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" tabindex="-1"></a>tree <span class="ot">&lt;-</span> RadixTree<span class="sc">$</span><span class="fu">new</span>()</span>
+<span id="cb15-2"><a href="#cb15-2" tabindex="-1"></a>tree<span class="sc">$</span><span class="fu">insert</span>(<span class="fu">c</span>(<span class="st">&quot;cargo&quot;</span>, <span class="st">&quot;cart&quot;</span>, <span class="st">&quot;carburetor&quot;</span>, <span class="st">&quot;carbuncle&quot;</span>, <span class="st">&quot;bar&quot;</span>))</span>
+<span id="cb15-3"><a href="#cb15-3" tabindex="-1"></a>tree<span class="sc">$</span><span class="fu">prefix_search</span>(<span class="st">&quot;car&quot;</span>)</span></code></pre></div>
 <pre><code>##   query     target
 ## 1   car      cargo
 ## 2   car       cart
@@ -527,16 +635,24 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 </div>
 <div id="why-not-just-use-bowtie2-bwa-or-other-fast-alignment-software" class="section level3">
 <h3>Why not just use Bowtie2, BWA or other fast alignment software?</h3>
-<p>There are no apples-to-apples comparisons. With NGS alignment software, you are looking for alignments of reads (queries) <em>within</em> a genome reference (target). Here, we’re looking for alignments from the query to the <em>full</em> target. However, many NGS aligners do use Tries and similar data structures.</p>
-<p>Compared to pairwise alignment packages, calculating all alignment pairs takes much longer, but on the other hand gives you more information.</p>
+<p>There are no apples-to-apples comparisons. With NGS alignment
+software, you are looking for alignments of reads (queries)
+<em>within</em> a genome reference (target). Here, we’re looking for
+alignments from the query to the <em>full</em> target. However, many NGS
+aligners do use Tries and similar data structures.</p>
+<p>Compared to pairwise alignment packages, calculating all alignment
+pairs takes much longer, but on the other hand gives you more
+information.</p>
 </div>
 <div id="references-and-literature" class="section level3">
 <h3>References and literature</h3>
 <ul>
 <li>“Fast string correction with Levenshtein automata” (2002) &lt;<a href="doi:10.1007/s10032-002-0082-8" class="uri">doi:10.1007/s10032-002-0082-8</a>&gt;</li>
-<li>“A survey of sequence alignment algorithms for next-generation sequencing” (2010) &lt;<a href="doi:10.1093/bib/bbq015" class="uri">doi:10.1093/bib/bbq015</a>&gt;</li>
+<li>“A survey of sequence alignment algorithms for next-generation
+sequencing” (2010) &lt;<a href="doi:10.1093/bib/bbq015" class="uri">doi:10.1093/bib/bbq015</a>&gt;</li>
 <li>“Fast and Easy Levenshtein distance using a Trie” (2011) &lt;<a href="https://stevehanov.ca/blog/index.php?id=114" class="uri">https://stevehanov.ca/blog/index.php?id=114</a>&gt;</li>
-<li>“Spell Checker Application Based on Levenshtein Automaton” (2021) &lt;<a href="doi:10.1007/978-3-030-91608-4_5" class="uri">doi:10.1007/978-3-030-91608-4_5</a>&gt;</li>
+<li>“Spell Checker Application Based on Levenshtein Automaton” (2021)
+&lt;<a href="doi:10.1007/978-3-030-91608-4_5" class="uri">doi:10.1007/978-3-030-91608-4_5</a>&gt;</li>
 </ul>
 </div>
 

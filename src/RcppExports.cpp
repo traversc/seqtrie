@@ -284,51 +284,54 @@ BEGIN_RCPP
 END_RCPP
 }
 // RadixTree_search
-DataFrame RadixTree_search(RadixTreeRXPtr xp, CharacterVector query, IntegerVector max_distance, const std::string mode, const std::string gap_type, Rcpp::Nullable<IntegerMatrix> cost_matrix, const int nthreads, const bool show_progress);
-RcppExport SEXP _seqtrie_RadixTree_search(SEXP xpSEXP, SEXP querySEXP, SEXP max_distanceSEXP, SEXP modeSEXP, SEXP gap_typeSEXP, SEXP cost_matrixSEXP, SEXP nthreadsSEXP, SEXP show_progressSEXP) {
+DataFrame RadixTree_search(RadixTreeRXPtr xp, CharacterVector query, IntegerVector max_distance, const std::string mode, Rcpp::Nullable<IntegerMatrix> cost_matrix, const int gap_cost, const int gap_open_cost, const int nthreads, const bool show_progress);
+RcppExport SEXP _seqtrie_RadixTree_search(SEXP xpSEXP, SEXP querySEXP, SEXP max_distanceSEXP, SEXP modeSEXP, SEXP cost_matrixSEXP, SEXP gap_costSEXP, SEXP gap_open_costSEXP, SEXP nthreadsSEXP, SEXP show_progressSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::traits::input_parameter< RadixTreeRXPtr >::type xp(xpSEXP);
     Rcpp::traits::input_parameter< CharacterVector >::type query(querySEXP);
     Rcpp::traits::input_parameter< IntegerVector >::type max_distance(max_distanceSEXP);
     Rcpp::traits::input_parameter< const std::string >::type mode(modeSEXP);
-    Rcpp::traits::input_parameter< const std::string >::type gap_type(gap_typeSEXP);
     Rcpp::traits::input_parameter< Rcpp::Nullable<IntegerMatrix> >::type cost_matrix(cost_matrixSEXP);
+    Rcpp::traits::input_parameter< const int >::type gap_cost(gap_costSEXP);
+    Rcpp::traits::input_parameter< const int >::type gap_open_cost(gap_open_costSEXP);
     Rcpp::traits::input_parameter< const int >::type nthreads(nthreadsSEXP);
     Rcpp::traits::input_parameter< const bool >::type show_progress(show_progressSEXP);
-    rcpp_result_gen = Rcpp::wrap(RadixTree_search(xp, query, max_distance, mode, gap_type, cost_matrix, nthreads, show_progress));
+    rcpp_result_gen = Rcpp::wrap(RadixTree_search(xp, query, max_distance, mode, cost_matrix, gap_cost, gap_open_cost, nthreads, show_progress));
     return rcpp_result_gen;
 END_RCPP
 }
 // c_dist_matrix
-IntegerMatrix c_dist_matrix(CharacterVector query, CharacterVector target, const std::string mode, const std::string gap_type, Rcpp::Nullable<IntegerMatrix> cost_matrix, const int nthreads, const bool show_progress);
-RcppExport SEXP _seqtrie_c_dist_matrix(SEXP querySEXP, SEXP targetSEXP, SEXP modeSEXP, SEXP gap_typeSEXP, SEXP cost_matrixSEXP, SEXP nthreadsSEXP, SEXP show_progressSEXP) {
+IntegerMatrix c_dist_matrix(CharacterVector query, CharacterVector target, const std::string mode, Rcpp::Nullable<IntegerMatrix> cost_matrix, const int gap_cost, const int gap_open_cost, const int nthreads, const bool show_progress);
+RcppExport SEXP _seqtrie_c_dist_matrix(SEXP querySEXP, SEXP targetSEXP, SEXP modeSEXP, SEXP cost_matrixSEXP, SEXP gap_costSEXP, SEXP gap_open_costSEXP, SEXP nthreadsSEXP, SEXP show_progressSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::traits::input_parameter< CharacterVector >::type query(querySEXP);
     Rcpp::traits::input_parameter< CharacterVector >::type target(targetSEXP);
     Rcpp::traits::input_parameter< const std::string >::type mode(modeSEXP);
-    Rcpp::traits::input_parameter< const std::string >::type gap_type(gap_typeSEXP);
     Rcpp::traits::input_parameter< Rcpp::Nullable<IntegerMatrix> >::type cost_matrix(cost_matrixSEXP);
+    Rcpp::traits::input_parameter< const int >::type gap_cost(gap_costSEXP);
+    Rcpp::traits::input_parameter< const int >::type gap_open_cost(gap_open_costSEXP);
     Rcpp::traits::input_parameter< const int >::type nthreads(nthreadsSEXP);
     Rcpp::traits::input_parameter< const bool >::type show_progress(show_progressSEXP);
-    rcpp_result_gen = Rcpp::wrap(c_dist_matrix(query, target, mode, gap_type, cost_matrix, nthreads, show_progress));
+    rcpp_result_gen = Rcpp::wrap(c_dist_matrix(query, target, mode, cost_matrix, gap_cost, gap_open_cost, nthreads, show_progress));
     return rcpp_result_gen;
 END_RCPP
 }
 // c_dist_pairwise
-IntegerVector c_dist_pairwise(CharacterVector query, CharacterVector target, const std::string mode, const std::string gap_type, Rcpp::Nullable<IntegerMatrix> cost_matrix, const int nthreads, const bool show_progress);
-RcppExport SEXP _seqtrie_c_dist_pairwise(SEXP querySEXP, SEXP targetSEXP, SEXP modeSEXP, SEXP gap_typeSEXP, SEXP cost_matrixSEXP, SEXP nthreadsSEXP, SEXP show_progressSEXP) {
+IntegerVector c_dist_pairwise(CharacterVector query, CharacterVector target, const std::string mode, Rcpp::Nullable<IntegerMatrix> cost_matrix, const int gap_cost, const int gap_open_cost, const int nthreads, const bool show_progress);
+RcppExport SEXP _seqtrie_c_dist_pairwise(SEXP querySEXP, SEXP targetSEXP, SEXP modeSEXP, SEXP cost_matrixSEXP, SEXP gap_costSEXP, SEXP gap_open_costSEXP, SEXP nthreadsSEXP, SEXP show_progressSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::traits::input_parameter< CharacterVector >::type query(querySEXP);
     Rcpp::traits::input_parameter< CharacterVector >::type target(targetSEXP);
     Rcpp::traits::input_parameter< const std::string >::type mode(modeSEXP);
-    Rcpp::traits::input_parameter< const std::string >::type gap_type(gap_typeSEXP);
     Rcpp::traits::input_parameter< Rcpp::Nullable<IntegerMatrix> >::type cost_matrix(cost_matrixSEXP);
+    Rcpp::traits::input_parameter< const int >::type gap_cost(gap_costSEXP);
+    Rcpp::traits::input_parameter< const int >::type gap_open_cost(gap_open_costSEXP);
     Rcpp::traits::input_parameter< const int >::type nthreads(nthreadsSEXP);
     Rcpp::traits::input_parameter< const bool >::type show_progress(show_progressSEXP);
-    rcpp_result_gen = Rcpp::wrap(c_dist_pairwise(query, target, mode, gap_type, cost_matrix, nthreads, show_progress));
+    rcpp_result_gen = Rcpp::wrap(c_dist_pairwise(query, target, mode, cost_matrix, gap_cost, gap_open_cost, nthreads, show_progress));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -360,9 +363,9 @@ static const R_CallMethodDef CallEntries[] = {
     {"_seqtrie_RadixTree_to_vector", (DL_FUNC) &_seqtrie_RadixTree_to_vector, 1},
     {"_seqtrie_RadixTree_validate", (DL_FUNC) &_seqtrie_RadixTree_validate, 1},
     {"_seqtrie_RadixTree_create", (DL_FUNC) &_seqtrie_RadixTree_create, 0},
-    {"_seqtrie_RadixTree_search", (DL_FUNC) &_seqtrie_RadixTree_search, 8},
-    {"_seqtrie_c_dist_matrix", (DL_FUNC) &_seqtrie_c_dist_matrix, 7},
-    {"_seqtrie_c_dist_pairwise", (DL_FUNC) &_seqtrie_c_dist_pairwise, 7},
+    {"_seqtrie_RadixTree_search", (DL_FUNC) &_seqtrie_RadixTree_search, 9},
+    {"_seqtrie_c_dist_matrix", (DL_FUNC) &_seqtrie_c_dist_matrix, 8},
+    {"_seqtrie_c_dist_pairwise", (DL_FUNC) &_seqtrie_c_dist_pairwise, 8},
     {NULL, NULL, 0}
 };
 

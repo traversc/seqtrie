@@ -46,7 +46,7 @@ The second `R6` class is `RadixForest`, a derivative data structure
 where separate trees are constructed for each sequence length. This data
 structure has advantages and disadvantages, discussed later.
 
-Finally, there’s a simple convienence function `dist_search` to find
+Finally, there’s a simple convenience function `dist_search` to find
 similar sequences using a `RadixTree` or `RadixForest` object. This is a
 wrapper around the `$new`, `$insert` and `$search()` methods.
 
@@ -132,9 +132,9 @@ the number of query sequences and the length of each sequence. Overall,
 the algorithm is significantly faster than a pairwise/matrix edit
 distance calculation for finding similar sequences. However, *care still
 needs to be taken when setting parameters for searching a large number
-of sequences (\~100,000+).*
+of sequences (~100,000+).*
 
-**Some additional examples using the max\_fraction parameter.**
+**Some additional examples using the max_fraction parameter.**
 
 ``` r
 # Full data: several seconds
@@ -193,52 +193,102 @@ genomic position or primer site.
 
 ### Custom distance searches and affine gap alignment
 
-`seqtrie` supports custom alignment parameters, including an affine gap
-parameter. The interface is similar to the
-`Biostrings::pairwiseAlignment`. Note: we are calculating distance
-(higher is worse) and not alignment score (higher is better).
+`seqtrie` supports custom substitution costs and affine gap penalties.
+Note: we are calculating distance (higher is worse) and not alignment
+score (higher is better).
 
 ``` r
 tree <- RadixTree$new()
 tree$insert(covid_cdr3)
-# define a custom distance matrix - generate_cost_matrix is a convienence function
-# gap and gap_open can be defined directly in the cost_matrix or as search method parameters
-cost_mat <- generate_cost_matrix("ACGT", match=0, mismatch=5, gap=2, gap_open=1)
+
+# Define a custom substitution matrix. Use generate_cost_matrix for convenience.
+cost_mat <- generate_cost_matrix("ACGT", match = 0, mismatch = 5)
 print(cost_mat)
 ```
 
-    ##          A C G T gap gap_open
-    ## A        0 5 5 5   2        1
-    ## C        5 0 5 5   2        1
-    ## G        5 5 0 5   2        1
-    ## T        5 5 5 0   2        1
-    ## gap      2 2 2 2   0        0
-    ## gap_open 1 1 1 1   0        0
+    ##   A C G T
+    ## A 0 5 5 5
+    ## C 5 0 5 5
+    ## G 5 5 0 5
+    ## T 5 5 5 0
 
 ``` r
-# Perform a search. "Mode" can be either global or anchored.
-results <- tree$search(covid_cdr3, max_distance=8, cost_matrix=cost_mat, mode="global", nthreads=2)
-dplyr::filter(results, query != target)
+# Set gap penalties via parameters (not in the matrix):
+# - Linear gaps: set gap_cost only
+# - Affine gaps: set both gap_cost and gap_open_cost
+
+# Linear example
+results_linear <- tree$search(covid_cdr3, max_distance = 8,
+                              mode = "global",
+                              cost_matrix = cost_mat,
+                              gap_cost = 2,
+                              nthreads = 2)
+
+# Affine example
+results_affine <- tree$search(covid_cdr3, max_distance = 8,
+                              mode = "global",
+                              cost_matrix = cost_mat,
+                              gap_cost = 2,
+                              gap_open_cost = 5,
+                              nthreads = 2)
+
+dplyr::filter(results_linear, query != target)
 ```
 
-    ##                                           query
-    ## 1          TGCAGCGTTGATCTGCCGGGAGAGACCCAGTACTTC
-    ## 2          TGTGCCAGCAGTTGGGGGGGCTACGAGCAGTACTTC
-    ## 3       TGTGCCAGCAGTTTATCGGGGTCCTACGAGCAGTACTTC
-    ## 4 TGTGCCAGCAGCCTTAGCGGGGTGAGCACAGATACGCAGTATTTT
-    ## 5       TGTGCCAGCAGTTTAGGGGGTGGCTACGAGCAGTACTTC
-    ## 6          TGTGCCAGCAGTTTCGGGGCCTACGAGCAGTACTTC
-    ## 7    TGTGCCAGCAGCCTTAGCGGTAGCACAGATACGCAGTATTTT
-    ## 8          TGCAGCGTTGATCTGACGGGAGAGACCCAGTACTTC
-    ##                                          target distance
-    ## 1          TGCAGCGTTGATCTGACGGGAGAGACCCAGTACTTC        5
-    ## 2       TGTGCCAGCAGTTTAGGGGGTGGCTACGAGCAGTACTTC        8
-    ## 3          TGTGCCAGCAGTTTCGGGGCCTACGAGCAGTACTTC        8
-    ## 4    TGTGCCAGCAGCCTTAGCGGTAGCACAGATACGCAGTATTTT        8
-    ## 5          TGTGCCAGCAGTTGGGGGGGCTACGAGCAGTACTTC        8
-    ## 6       TGTGCCAGCAGTTTATCGGGGTCCTACGAGCAGTACTTC        8
-    ## 7 TGTGCCAGCAGCCTTAGCGGGGTGAGCACAGATACGCAGTATTTT        8
-    ## 8          TGCAGCGTTGATCTGCCGGGAGAGACCCAGTACTTC        5
+    ##                                            query
+    ## 1        TGTGCCAGCAGCTTAGGACAGTCCTACGAGCAGTACTTC
+    ## 2        TGTGCCAGCAGCTTAGGACAGTCCTACGAGCAGTACTTC
+    ## 3     TGTGCCAGCAGTCACGGAACTAGCACAGATACGCAGTATTTT
+    ## 4           TGCAGCGTTGATCTGCCGGGAGAGACCCAGTACTTC
+    ## 5     TGTGCCAGCAGCTCGGCGGGGTCCTACAATGAGCAGTTCTTC
+    ## 6        TGTGCCAGCAGTTACGGGCAGTCCTACGAGCAGTACTTC
+    ## 7        TGTGCCAGCAGTTACGGGCAGTCCTACGAGCAGTACTTC
+    ## 8  TGTGCCAGTACTATGGGACAGGGGATGAACACTGAAGCTTTCTTT
+    ## 9  TGTGCCAGTAGTATGGGACAGGGAATGAACACTGAAGCTTTCTTT
+    ## 10    TGTGCCAGCAGCTCAGGGGGCTCCTACAATGAGCAGTTCTTC
+    ## 11          TGTGCCAGCAGTTGGGGGGGCTACGAGCAGTACTTC
+    ## 12    TGTGCCAGCAGTTCCCCTAATAGCAATCAGCCCCAGCATTTT
+    ## 13       TGTGCCAGCAGTTTATCGGGGTCCTACGAGCAGTACTTC
+    ## 14       TGTGCCAGCAGTTTATCGGGGTCCTACGAGCAGTACTTC
+    ## 15 TGTGCCAGCAGCCTTAGCGGGGTGAGCACAGATACGCAGTATTTT
+    ## 16          TGTGCCAGCAGTCCCTCAGGGGAGACCCAGTACTTC
+    ## 17       TGTGCCAGCAGCCTAGCAGGGGCCGGGGAGCTGTTTTTT
+    ## 18       TGTGCCAGCAGGCCAGGACAGTCCTACGAGCAGTACTTC
+    ## 19       TGTGCCAGCAGCTTAGAGGCGGCCGGGGAGCTGTTTTTT
+    ## 20    TGTGCCAGCAGTCCCATAGATAGCAATCAGCCCCAGCATTTT
+    ## 21    TGTGCCAGCAGTGACAGAACTAGCACAGATACGCAGTATTTT
+    ## 22       TGTGCCAGCAGTTTAGGGGGTGGCTACGAGCAGTACTTC
+    ## 23          TGTGCCAGCAGTTTCGGGGCCTACGAGCAGTACTTC
+    ## 24    TGTGCCAGCAGCCTTAGCGGTAGCACAGATACGCAGTATTTT
+    ## 25          TGTGCCAGCAGTCCTAGCGGCGAGACCCAGTACTTC
+    ## 26          TGCAGCGTTGATCTGACGGGAGAGACCCAGTACTTC
+    ##                                           target distance
+    ## 1        TGTGCCAGCAGTTACGGGCAGTCCTACGAGCAGTACTTC        8
+    ## 2        TGTGCCAGCAGGCCAGGACAGTCCTACGAGCAGTACTTC        8
+    ## 3     TGTGCCAGCAGTGACAGAACTAGCACAGATACGCAGTATTTT        8
+    ## 4           TGCAGCGTTGATCTGACGGGAGAGACCCAGTACTTC        4
+    ## 5     TGTGCCAGCAGCTCAGGGGGCTCCTACAATGAGCAGTTCTTC        8
+    ## 6        TGTGCCAGCAGTTTATCGGGGTCCTACGAGCAGTACTTC        8
+    ## 7        TGTGCCAGCAGCTTAGGACAGTCCTACGAGCAGTACTTC        8
+    ## 8  TGTGCCAGTAGTATGGGACAGGGAATGAACACTGAAGCTTTCTTT        8
+    ## 9  TGTGCCAGTACTATGGGACAGGGGATGAACACTGAAGCTTTCTTT        8
+    ## 10    TGTGCCAGCAGCTCGGCGGGGTCCTACAATGAGCAGTTCTTC        8
+    ## 11       TGTGCCAGCAGTTTAGGGGGTGGCTACGAGCAGTACTTC        6
+    ## 12    TGTGCCAGCAGTCCCATAGATAGCAATCAGCCCCAGCATTTT        8
+    ## 13          TGTGCCAGCAGTTTCGGGGCCTACGAGCAGTACTTC        6
+    ## 14       TGTGCCAGCAGTTACGGGCAGTCCTACGAGCAGTACTTC        8
+    ## 15    TGTGCCAGCAGCCTTAGCGGTAGCACAGATACGCAGTATTTT        6
+    ## 16          TGTGCCAGCAGTCCTAGCGGCGAGACCCAGTACTTC        8
+    ## 17       TGTGCCAGCAGCTTAGAGGCGGCCGGGGAGCTGTTTTTT        8
+    ## 18       TGTGCCAGCAGCTTAGGACAGTCCTACGAGCAGTACTTC        8
+    ## 19       TGTGCCAGCAGCCTAGCAGGGGCCGGGGAGCTGTTTTTT        8
+    ## 20    TGTGCCAGCAGTTCCCCTAATAGCAATCAGCCCCAGCATTTT        8
+    ## 21    TGTGCCAGCAGTCACGGAACTAGCACAGATACGCAGTATTTT        8
+    ## 22          TGTGCCAGCAGTTGGGGGGGCTACGAGCAGTACTTC        6
+    ## 23       TGTGCCAGCAGTTTATCGGGGTCCTACGAGCAGTACTTC        6
+    ## 24 TGTGCCAGCAGCCTTAGCGGGGTGAGCACAGATACGCAGTATTTT        6
+    ## 25          TGTGCCAGCAGTCCCTCAGGGGAGACCCAGTACTTC        8
+    ## 26          TGCAGCGTTGATCTGCCGGGAGAGACCCAGTACTTC        4
 
 ### Radix Forest for faster Levenshtein searches
 
@@ -270,9 +320,9 @@ identical(
 
 ### Finding strings that start with a pattern
 
-The `$find_prefix()` function can be used to find similar sequences that
-start with a pattern. This is one of the classic use cases of trie data
-structures, for use as a database lookup and predictive text.
+The `$prefix_search()` function can be used to find similar sequences
+that start with a pattern. This is one of the classic use cases of trie
+data structures, for use as a database lookup and predictive text.
 
 ``` r
 tree <- RadixTree$new()
@@ -299,11 +349,11 @@ takes much longer, but on the other hand gives you more information.
 
 ### References and literature
 
-  - “Fast string correction with Levenshtein automata” (2002)
-    \<<doi:10.1007/s10032-002-0082-8>\>
-  - “A survey of sequence alignment algorithms for next-generation
-    sequencing” (2010) \<<doi:10.1093/bib/bbq015>\>
-  - “Fast and Easy Levenshtein distance using a Trie” (2011)
-    \<<https://stevehanov.ca/blog/index.php?id=114>\>
-  - “Spell Checker Application Based on Levenshtein Automaton” (2021)
-    \<<doi:10.1007/978-3-030-91608-4_5>\>
+- “Fast string correction with Levenshtein automata” (2002)
+  \<<doi:10.1007/s10032-002-0082-8>\>
+- “A survey of sequence alignment algorithms for next-generation
+  sequencing” (2010) \<<doi:10.1093/bib/bbq015>\>
+- “Fast and Easy Levenshtein distance using a Trie” (2011)
+  \<<https://stevehanov.ca/blog/index.php?id=114>\>
+- “Spell Checker Application Based on Levenshtein Automaton” (2021)
+  \<<doi:10.1007/978-3-030-91608-4_5>\>

@@ -105,15 +105,15 @@ RadixTree_create <- function() {
     .Call(`_seqtrie_RadixTree_create`)
 }
 
-RadixTree_search <- function(xp, query, max_distance, mode = "global", gap_type = "linear", cost_matrix = NULL, nthreads = 1L, show_progress = FALSE) {
-    .Call(`_seqtrie_RadixTree_search`, xp, query, max_distance, mode, gap_type, cost_matrix, nthreads, show_progress)
+RadixTree_search <- function(xp, query, max_distance, mode = "global", cost_matrix = NULL, gap_cost = 1L, gap_open_cost = 0L, nthreads = 1L, show_progress = FALSE) {
+    .Call(`_seqtrie_RadixTree_search`, xp, query, max_distance, mode, cost_matrix, gap_cost, gap_open_cost, nthreads, show_progress)
 }
 
-c_dist_matrix <- function(query, target, mode = "global", gap_type = "linear", cost_matrix = NULL, nthreads = 1L, show_progress = FALSE) {
-    .Call(`_seqtrie_c_dist_matrix`, query, target, mode, gap_type, cost_matrix, nthreads, show_progress)
+c_dist_matrix <- function(query, target, mode = "global", cost_matrix = NULL, gap_cost = 1L, gap_open_cost = 0L, nthreads = 1L, show_progress = FALSE) {
+    .Call(`_seqtrie_c_dist_matrix`, query, target, mode, cost_matrix, gap_cost, gap_open_cost, nthreads, show_progress)
 }
 
-c_dist_pairwise <- function(query, target, mode = "levenshtein", gap_type = "linear", cost_matrix = NULL, nthreads = 1L, show_progress = FALSE) {
-    .Call(`_seqtrie_c_dist_pairwise`, query, target, mode, gap_type, cost_matrix, nthreads, show_progress)
+c_dist_pairwise <- function(query, target, mode = "levenshtein", cost_matrix = NULL, gap_cost = 1L, gap_open_cost = 0L, nthreads = 1L, show_progress = FALSE) {
+    .Call(`_seqtrie_c_dist_pairwise`, query, target, mode, cost_matrix, gap_cost, gap_open_cost, nthreads, show_progress)
 }
 

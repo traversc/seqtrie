@@ -28,11 +28,11 @@ LogicalVector RadixForest_insert(RadixForestRXPtr xp, CharacterVector sequences)
       // the insert has to happen after initialization (emplace)
       // otherwise the address of the root will change and the tree will be invalid because a child will point to the old root
       forest.emplace(sequence.size(), SeqTrie::RadixTreeR());
-      forest[sequence.size()].insert(sequence, SeqTrie::posidx);
-      result_ptr[i] = 1;
+      size_t idx = forest[sequence.size()].insert(sequence, SeqTrie::posidx);
+      result_ptr[i] = (idx == SeqTrie::nullidx) ? 1 : 0; // TRUE if newly inserted
     } else {
-      it->second.insert(sequence, SeqTrie::posidx);
-      result_ptr[i] = 0;
+      size_t idx = it->second.insert(sequence, SeqTrie::posidx);
+      result_ptr[i] = (idx == SeqTrie::nullidx) ? 1 : 0; // TRUE if newly inserted
     }
   }
   return result;
