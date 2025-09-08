@@ -172,30 +172,12 @@ DataFrame RadixTree_search(RadixTreeRXPtr xp,
     }, 0, nseqs, 1, nthreads);
   } else if(mode == "global" || mode == "gb" || mode == "lv" || mode == "levenshtein") {
     if(algo == AlignmentAlgo::GlobalUnit) {
-      bool use_myers = false;
-      CostMap cost_map;
-      if (!cost_matrix.isNull()) {
-        cost_map = convert_cost_matrix(cost_matrix.get(), gap_cost, gap_open_cost);
-        use_myers = (gap_cost == 1 && gap_open_cost == 0);
-        if (use_myers) {
-          for (const auto & kv : cost_map.char_cost_map) { if (kv.second != 0 && kv.second != 1) { use_myers = false; break; } }
+      do_parallel_for([&root, &query_span, max_distance_ptr, &output, &progress_bar](size_t begin, size_t end) {
+        for(size_t i=begin; i<end; ++i) {
+          output[i] = root.global_search(query_span[i], max_distance_ptr[i]);
+          progress_bar.increment();
         }
-      }
-      if (use_myers) {
-        do_parallel_for([&root, &query_span, max_distance_ptr, &output, &cost_map, &progress_bar](size_t begin, size_t end) {
-          for(size_t i=begin; i<end; ++i) {
-            output[i] = root.global_search_myers(query_span[i], max_distance_ptr[i], cost_map);
-            progress_bar.increment();
-          }
-        }, 0, nseqs, 1, nthreads);
-      } else {
-        do_parallel_for([&root, &query_span, max_distance_ptr, &output, &progress_bar](size_t begin, size_t end) {
-          for(size_t i=begin; i<end; ++i) {
-            output[i] = root.global_search(query_span[i], max_distance_ptr[i]);
-            progress_bar.increment();
-          }
-        }, 0, nseqs, 1, nthreads);
-      }
+      }, 0, nseqs, 1, nthreads);
     } else if(algo == AlignmentAlgo::GlobalLinear) {
       CostMap cost_map = convert_cost_matrix(cost_matrix.get(), gap_cost, gap_open_cost);
       do_parallel_for([&root, &query_span, max_distance_ptr, &output, &cost_map, &progress_bar](size_t begin, size_t end) {

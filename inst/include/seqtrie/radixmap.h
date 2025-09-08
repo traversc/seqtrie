@@ -99,8 +99,6 @@ public:
   search_context global_search_affine(const span_type query, int max_distance, const CostMap & cost_map) const;
   search_context anchored_search_affine(const span_type query, int max_distance, const CostMap & cost_map) const;
 
-  // Prototype: Myers global search (unit gaps + boolean substitution 0/1); no early pruning
-  search_context global_search_myers(const span_type query, int max_distance, const CostMap & cost_map) const;
 
 private:
   std::string print_impl(size_t depth) const;
@@ -120,8 +118,7 @@ private:
   static void global_search_affine_impl(const_weak_pointer_type node, const affine_col_type & previous_col, search_context & ctx, const CostMap & cost_map);
   static void anchored_search_affine_impl(const_weak_pointer_type node, const affine_col_type & previous_col, int row_min, search_context & ctx, const CostMap & cost_map);
 
-  // Myers helper (no pruning)
-  static void global_search_myers_impl(const_weak_pointer_type node, seqtrie::MyersState state, search_context & ctx, const seqtrie::MyersPattern & pat);
+  
 };
 
 // implementations
@@ -421,31 +418,7 @@ inline RadixMap::search_context RadixMap::global_search_affine(const RadixMap::s
   return ctx;
 }
 
-inline RadixMap::search_context RadixMap::global_search_myers(const RadixMap::span_type query, const int max_distance, const CostMap & cost_map) const {
-  search_context ctx(query, max_distance);
-  // Build Myers pattern for the query over the provided boolean cost map
-  seqtrie::MyersPattern pat(query, cost_map);
-  seqtrie::MyersState state(pat);
-  global_search_myers_impl(this, state, ctx, pat);
-  return ctx;
-}
-
-inline void RadixMap::global_search_myers_impl(RadixMap::const_weak_pointer_type node, seqtrie::MyersState state, RadixMap::search_context & ctx, const seqtrie::MyersPattern & pat) {
-  // Accept terminal if within threshold
-  if ((node->terminal_idx != nullidx) && (state.score <= ctx.max_distance)) {
-    ctx.match.push_back(path(node));
-    ctx.distance.push_back(state.score);
-  }
-  // Traverse children; update state through each branch label
-  for (auto & ch : node->child_nodes) {
-    auto st = state; // copy state per child
-    branch_type & branch = ch.second->branch;
-    for (size_t u = 0; u < branch.size(); ++u) {
-      st.step(static_cast<unsigned char>(branch[u]), pat);
-    }
-    global_search_myers_impl(ch.second.get(), st, ctx, pat);
-  }
-}
+ 
 
 inline RadixMap::search_context RadixMap::anchored_search_affine(const RadixMap::span_type query, const int max_distance, const CostMap & cost_map) const {
   search_context ctx(query, max_distance);

@@ -7,9 +7,6 @@
 // int levenshtein_distance(query, target) // Alias for above
 // int global_distance_linear(query, target, cost_map) // Global alignment, gap penalty is linear
 // int global_distance_affine(query, target, cost_map) // Global alignment, gap penalty is affine
-// int global_distance_myers(query, target, cost_map) // Global alignment, unit gaps + boolean substitution (0/1) via Myers (multiword)
-// tuple anchored_distance_myers(query, target, cost_map) // Anchored alignment (semi-global), unit gaps + boolean substitution via Myers
-// int global_distance_myers(query, target, cost_map) // Myers with boolean (0/1) substitution matrix precompiled into Peq
 // tuple anchored_distance(query, target) // Anchored alignment, mismatch and gap = 1, returns a tuple of distance, query_size, target_size
 // tuple anchored_distance_linear(query, target, cost_map) // Anchored alignment, gap penalty is linear
 // tuple anchored_distance_affine(query, target, cost_map) // Anchored alignment, gap penalty is affine
@@ -175,47 +172,7 @@ inline int global_distance_affine(cspan query, cspan target, const seqtrie::Cost
 }
 
 // Myers global distance using shared pattern/state and boolean substitution map (0/1)
-inline int global_distance_myers(cspan query, cspan target, const seqtrie::CostMap & cost_map) {
-  seqtrie::MyersPattern pat(query, cost_map);
-  if (pat.m == 0) return static_cast<int>(target.size());
-  seqtrie::MyersState state(pat);
-  for (size_t j = 0; j < target.size(); ++j) state.step(static_cast<unsigned char>(target[j]), pat);
-  return state.score;
-}
-
-// Anchored (semi-global) distance using Myers; returns (dist, query_size, target_size)
-// Note: result aligns with DP anchored definition: min over last row and last column
-inline std::tuple<int,int,int> anchored_distance_myers(cspan query, cspan target, const seqtrie::CostMap & cost_map) {
-  // Pass A: full query vs prefixes of target => min over j of dist(|q|, j)
-  seqtrie::MyersPattern pat_q(query, cost_map);
-  seqtrie::MyersState st_q(pat_q);
-  int best_dist = static_cast<int>(query.size());
-  int best_q = static_cast<int>(query.size());
-  int best_t = 0;
-  // consider j=0
-  best_dist = st_q.score; best_q = static_cast<int>(query.size()); best_t = 0;
-  for (size_t j = 0; j < target.size(); ++j) {
-    st_q.step(static_cast<unsigned char>(target[j]), pat_q);
-    if (st_q.score < best_dist) { best_dist = st_q.score; best_q = static_cast<int>(query.size()); best_t = static_cast<int>(j + 1); }
-  }
-
-  // Pass B: prefixes of query vs full target using original (query, target) orientation
-  // Build pattern with reversed pairs so Peq[text_char] tests cost_map(text_char, pattern_char) == 0
-  seqtrie::MyersPattern pat_t(target, cost_map, true);
-  seqtrie::MyersState st_t(pat_t);
-  int best_dist_b = static_cast<int>(target.size());
-  int best_q_b = 0;
-  int best_t_b = static_cast<int>(target.size());
-  // consider i=0
-  best_dist_b = st_t.score; best_q_b = 0; best_t_b = static_cast<int>(target.size());
-  for (size_t i = 0; i < query.size(); ++i) {
-    st_t.step(static_cast<unsigned char>(query[i]), pat_t);
-    if (st_t.score < best_dist_b) { best_dist_b = st_t.score; best_q_b = static_cast<int>(i + 1); best_t_b = static_cast<int>(target.size()); }
-  }
-
-  if (best_dist_b < best_dist) return std::make_tuple(best_dist_b, best_q_b, best_t_b);
-  return std::make_tuple(best_dist, best_q, best_t);
-}
+// Myers implementations removed temporarily
 
 
 std::tuple<int, int, int> anchored_distance(cspan query, cspan target) {

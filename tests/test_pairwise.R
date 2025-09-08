@@ -223,6 +223,7 @@ for(. in 1:NITER) {
     })
 
 
+
     print("Checking global search with affine gap for correctness")
     local({
       target <- c(random_strings(NSEQS, CHARSET),"") %>% unique

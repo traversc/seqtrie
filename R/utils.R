@@ -109,8 +109,8 @@ check_cost_matrix <- function(cost_matrix, gap_cost, gap_open_cost, charset, dia
     }
   }
   if (!is.null(gap_open_cost)) {
-    if (!(is_integerlike(gap_open_cost) && length(gap_open_cost) == 1 && gap_open_cost > 0)) {
-      stop("gap_open_cost must be a single positive integer when provided")
+    if (!(is_integerlike(gap_open_cost) && length(gap_open_cost) == 1 && gap_open_cost >= 0)) {
+      stop("gap_open_cost must be a single non-negative integer when provided")
     }
     if (is.null(gap_cost)) {
       stop("If gap_open_cost is defined, gap_cost must also be defined")
