@@ -152,13 +152,29 @@ inline AlignmentAlgo decide_alignment_algo(std::string mode,
   const bool unit_subs = is_unit_substitution(cost_matrix);
   const bool unit_gaps = (gap_cost == 1) && !affine; // unit gaps only when linear with gap=1
 
+  // Treat boolean (0/1) matrices with unit gaps as Unit, so callers can route to Myers
+  bool boolean_subs = unit_subs;
+  if (!unit_subs) {
+    // Check explicitly for 0/1 matrices (not necessarily identity)
+    Rcpp::IntegerMatrix m = cost_matrix.get();
+    if (m.nrow() == m.ncol()) {
+      boolean_subs = true;
+      for (int i = 0; i < m.nrow() && boolean_subs; ++i) {
+        for (int j = 0; j < m.ncol(); ++j) {
+          int v = m(i, j);
+          if (v != 0 && v != 1) { boolean_subs = false; break; }
+        }
+      }
+    }
+  }
+
   if (mode == "global") {
     if (affine) return AlignmentAlgo::GlobalAffine;
-    if (unit_subs && unit_gaps) return AlignmentAlgo::GlobalUnit;
+    if (unit_gaps && (unit_subs || boolean_subs)) return AlignmentAlgo::GlobalUnit;
     return AlignmentAlgo::GlobalLinear;
   } else { // anchored
     if (affine) return AlignmentAlgo::AnchoredAffine;
-    if (unit_subs && unit_gaps) return AlignmentAlgo::AnchoredUnit;
+    if (unit_gaps && (unit_subs || boolean_subs)) return AlignmentAlgo::AnchoredUnit;
     return AlignmentAlgo::AnchoredLinear;
   }
 }

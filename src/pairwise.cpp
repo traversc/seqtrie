@@ -28,24 +28,61 @@ IntegerMatrix c_dist_matrix(CharacterVector query, CharacterVector target,
     }, 0, target_span.size(), 1, nthreads);
   } else if(mode == "global" || mode == "gb" || mode == "lv" || mode == "levenshtein") {
     if(algo == AlignmentAlgo::GlobalUnit) {
-      do_parallel_for([&query_span, &target_span, &progress_bar, output_ptr](size_t begin, size_t end) {
-        for(size_t j=begin; j<end; ++j) {
-          for(size_t i=0; i<query_span.size(); ++i) {
-            output_ptr[i + j*query_span.size()] = pairwise::global_distance(query_span[i], target_span[j]);
-          }
-          progress_bar.increment();
+      // If a boolean cost_matrix with unit gaps was provided, prefer Myers; else unit DP
+      bool use_myers = false;
+      CostMap cost_map;
+      if (!cost_matrix.isNull()) {
+        cost_map = convert_cost_matrix(cost_matrix.get(), gap_cost, gap_open_cost);
+        use_myers = (gap_cost == 1 && gap_open_cost == 0);
+        if (use_myers) {
+          for (const auto & kv : cost_map.char_cost_map) { if (kv.second != 0 && kv.second != 1) { use_myers = false; break; } }
         }
-      }, 0, target_span.size(), 1, nthreads);
+      }
+      if (use_myers) {
+        do_parallel_for([&query_span, &target_span, &cost_map, &progress_bar, output_ptr](size_t begin, size_t end) {
+          for(size_t j=begin; j<end; ++j) {
+            for(size_t i=0; i<query_span.size(); ++i) {
+              output_ptr[i + j*query_span.size()] = pairwise::global_distance_myers(query_span[i], target_span[j], cost_map);
+            }
+            progress_bar.increment();
+          }
+        }, 0, target_span.size(), 1, nthreads);
+      } else {
+        do_parallel_for([&query_span, &target_span, &progress_bar, output_ptr](size_t begin, size_t end) {
+          for(size_t j=begin; j<end; ++j) {
+            for(size_t i=0; i<query_span.size(); ++i) {
+              output_ptr[i + j*query_span.size()] = pairwise::global_distance(query_span[i], target_span[j]);
+            }
+            progress_bar.increment();
+          }
+        }, 0, target_span.size(), 1, nthreads);
+      }
     } else if(algo == AlignmentAlgo::GlobalLinear) {
       CostMap cost_map = convert_cost_matrix(cost_matrix.get(), gap_cost, gap_open_cost);
-      do_parallel_for([&query_span, &target_span, &cost_map, &progress_bar, output_ptr](size_t begin, size_t end) {
-        for(size_t j=begin; j<end; ++j) {
-          for(size_t i=0; i<query_span.size(); ++i) {
-            output_ptr[i + j*query_span.size()] = pairwise::global_distance_linear(query_span[i], target_span[j], cost_map);
+      bool boolean_subs = true;
+      for (const auto & kv : cost_map.char_cost_map) {
+        if (kv.second != 0 && kv.second != 1) { boolean_subs = false; break; }
+      }
+      const bool unit_gaps = (gap_cost == 1) && (gap_open_cost == 0);
+      if (boolean_subs && unit_gaps) {
+        do_parallel_for([&query_span, &target_span, &cost_map, &progress_bar, output_ptr](size_t begin, size_t end) {
+          for(size_t j=begin; j<end; ++j) {
+            for(size_t i=0; i<query_span.size(); ++i) {
+              output_ptr[i + j*query_span.size()] = pairwise::global_distance_myers(query_span[i], target_span[j], cost_map);
+            }
+            progress_bar.increment();
           }
-          progress_bar.increment();
-        }
-      }, 0, target_span.size(), 1, nthreads);
+        }, 0, target_span.size(), 1, nthreads);
+      } else {
+        do_parallel_for([&query_span, &target_span, &cost_map, &progress_bar, output_ptr](size_t begin, size_t end) {
+          for(size_t j=begin; j<end; ++j) {
+            for(size_t i=0; i<query_span.size(); ++i) {
+              output_ptr[i + j*query_span.size()] = pairwise::global_distance_linear(query_span[i], target_span[j], cost_map);
+            }
+            progress_bar.increment();
+          }
+        }, 0, target_span.size(), 1, nthreads);
+      }
     } else { // GlobalAffine
       CostMap cost_map = convert_cost_matrix(cost_matrix.get(), gap_cost, gap_open_cost);
       do_parallel_for([&query_span, &target_span, &cost_map, &progress_bar, output_ptr](size_t begin, size_t end) {
@@ -63,30 +100,70 @@ IntegerMatrix c_dist_matrix(CharacterVector query, CharacterVector target,
     int * query_size_ptr = INTEGER(query_size);
     int * target_size_ptr = INTEGER(target_size);
     if(algo == AlignmentAlgo::AnchoredUnit) {
-      do_parallel_for([&query_span, &target_span, &progress_bar, output_ptr, query_size_ptr, target_size_ptr](size_t begin, size_t end) {
-        for(size_t j=begin; j<end; ++j) {
-          for(size_t i=0; i<query_span.size(); ++i) {
-            auto res = pairwise::anchored_distance(query_span[i], target_span[j]);
-            output_ptr[i + j*query_span.size()] = std::get<0>(res);
-            query_size_ptr[i + j*query_span.size()] = std::get<1>(res);
-            target_size_ptr[i + j*query_span.size()] = std::get<2>(res);
-          }
-          progress_bar.increment();
+      bool use_myers = false;
+      CostMap cost_map;
+      if (!cost_matrix.isNull()) {
+        cost_map = convert_cost_matrix(cost_matrix.get(), gap_cost, gap_open_cost);
+        use_myers = (gap_cost == 1 && gap_open_cost == 0);
+        if (use_myers) {
+          for (const auto & kv : cost_map.char_cost_map) { if (kv.second != 0 && kv.second != 1) { use_myers = false; break; } }
         }
-      }, 0, target_span.size(), 1, nthreads);
+      }
+      if (use_myers) {
+        do_parallel_for([&query_span, &target_span, &cost_map, &progress_bar, output_ptr, query_size_ptr, target_size_ptr](size_t begin, size_t end) {
+          for(size_t j=begin; j<end; ++j) {
+            for(size_t i=0; i<query_span.size(); ++i) {
+              auto res = pairwise::anchored_distance_myers(query_span[i], target_span[j], cost_map);
+              output_ptr[i + j*query_span.size()] = std::get<0>(res);
+              query_size_ptr[i + j*query_span.size()] = std::get<1>(res);
+              target_size_ptr[i + j*query_span.size()] = std::get<2>(res);
+            }
+            progress_bar.increment();
+          }
+        }, 0, target_span.size(), 1, nthreads);
+      } else {
+        do_parallel_for([&query_span, &target_span, &progress_bar, output_ptr, query_size_ptr, target_size_ptr](size_t begin, size_t end) {
+          for(size_t j=begin; j<end; ++j) {
+            for(size_t i=0; i<query_span.size(); ++i) {
+              auto res = pairwise::anchored_distance(query_span[i], target_span[j]);
+              output_ptr[i + j*query_span.size()] = std::get<0>(res);
+              query_size_ptr[i + j*query_span.size()] = std::get<1>(res);
+              target_size_ptr[i + j*query_span.size()] = std::get<2>(res);
+            }
+            progress_bar.increment();
+          }
+        }, 0, target_span.size(), 1, nthreads);
+      }
     } else if(algo == AlignmentAlgo::AnchoredLinear) {
       CostMap cost_map = convert_cost_matrix(cost_matrix.get(), gap_cost, gap_open_cost);
-      do_parallel_for([&query_span, &target_span, &cost_map, &progress_bar, output_ptr, query_size_ptr, target_size_ptr](size_t begin, size_t end) {
-        for(size_t j=begin; j<end; ++j) {
-          for(size_t i=0; i<query_span.size(); ++i) {
-            auto res = pairwise::anchored_distance_linear(query_span[i], target_span[j], cost_map);
-            output_ptr[i + j*query_span.size()] = std::get<0>(res);
-            query_size_ptr[i + j*query_span.size()] = std::get<1>(res);
-            target_size_ptr[i + j*query_span.size()] = std::get<2>(res);
+      bool boolean_subs = true;
+      for (const auto & kv : cost_map.char_cost_map) { if (kv.second != 0 && kv.second != 1) { boolean_subs = false; break; } }
+      const bool unit_gaps = (gap_cost == 1) && (gap_open_cost == 0);
+      if (boolean_subs && unit_gaps) {
+        do_parallel_for([&query_span, &target_span, &cost_map, &progress_bar, output_ptr, query_size_ptr, target_size_ptr](size_t begin, size_t end) {
+          for(size_t j=begin; j<end; ++j) {
+            for(size_t i=0; i<query_span.size(); ++i) {
+              auto res = pairwise::anchored_distance_myers(query_span[i], target_span[j], cost_map);
+              output_ptr[i + j*query_span.size()] = std::get<0>(res);
+              query_size_ptr[i + j*query_span.size()] = std::get<1>(res);
+              target_size_ptr[i + j*query_span.size()] = std::get<2>(res);
+            }
+            progress_bar.increment();
           }
-          progress_bar.increment();
-        }
-      }, 0, target_span.size(), 1, nthreads);
+        }, 0, target_span.size(), 1, nthreads);
+      } else {
+        do_parallel_for([&query_span, &target_span, &cost_map, &progress_bar, output_ptr, query_size_ptr, target_size_ptr](size_t begin, size_t end) {
+          for(size_t j=begin; j<end; ++j) {
+            for(size_t i=0; i<query_span.size(); ++i) {
+              auto res = pairwise::anchored_distance_linear(query_span[i], target_span[j], cost_map);
+              output_ptr[i + j*query_span.size()] = std::get<0>(res);
+              query_size_ptr[i + j*query_span.size()] = std::get<1>(res);
+              target_size_ptr[i + j*query_span.size()] = std::get<2>(res);
+            }
+            progress_bar.increment();
+          }
+        }, 0, target_span.size(), 1, nthreads);
+      }
     } else { // AnchoredAffine
       CostMap cost_map = convert_cost_matrix(cost_matrix.get(), gap_cost, gap_open_cost);
       do_parallel_for([&query_span, &target_span, &cost_map, &progress_bar, output_ptr, query_size_ptr, target_size_ptr](size_t begin, size_t end) {
@@ -135,20 +212,52 @@ IntegerVector c_dist_pairwise(CharacterVector query, CharacterVector target,
     }, 0, nseqs, 1, nthreads);
   } else if(mode == "global" || mode == "gb" || mode == "lv" || mode == "levenshtein") {
     if(algo == AlignmentAlgo::GlobalUnit) {
-      do_parallel_for([&query_span, &target_span, &progress_bar, output_ptr](size_t begin, size_t end) {
-        for(size_t i=begin; i<end; ++i) {
-          output_ptr[i] = pairwise::global_distance(query_span[i], target_span[i]);
-          progress_bar.increment();
+      bool use_myers = false;
+      CostMap cost_map;
+      if (!cost_matrix.isNull()) {
+        cost_map = convert_cost_matrix(cost_matrix.get(), gap_cost, gap_open_cost);
+        use_myers = (gap_cost == 1 && gap_open_cost == 0);
+        if (use_myers) {
+          for (const auto & kv : cost_map.char_cost_map) { if (kv.second != 0 && kv.second != 1) { use_myers = false; break; } }
         }
-      }, 0, nseqs, 1, nthreads);
+      }
+      if (use_myers) {
+        do_parallel_for([&query_span, &target_span, &cost_map, &progress_bar, output_ptr](size_t begin, size_t end) {
+          for(size_t i=begin; i<end; ++i) {
+            output_ptr[i] = pairwise::global_distance_myers(query_span[i], target_span[i], cost_map);
+            progress_bar.increment();
+          }
+        }, 0, nseqs, 1, nthreads);
+      } else {
+        do_parallel_for([&query_span, &target_span, &progress_bar, output_ptr](size_t begin, size_t end) {
+          for(size_t i=begin; i<end; ++i) {
+            output_ptr[i] = pairwise::global_distance(query_span[i], target_span[i]);
+            progress_bar.increment();
+          }
+        }, 0, nseqs, 1, nthreads);
+      }
     } else if(algo == AlignmentAlgo::GlobalLinear) {
       CostMap cost_map = convert_cost_matrix(cost_matrix.get(), gap_cost, gap_open_cost);
-      do_parallel_for([&query_span, &target_span, &cost_map, &progress_bar, output_ptr](size_t begin, size_t end) {
-        for(size_t i=begin; i<end; ++i) {
-          output_ptr[i] = pairwise::global_distance_linear(query_span[i], target_span[i], cost_map);
-          progress_bar.increment();
-        }
-      }, 0, nseqs, 1, nthreads);
+      bool boolean_subs = true;
+      for (const auto & kv : cost_map.char_cost_map) {
+        if (kv.second != 0 && kv.second != 1) { boolean_subs = false; break; }
+      }
+      const bool unit_gaps = (gap_cost == 1) && (gap_open_cost == 0);
+      if (boolean_subs && unit_gaps) {
+        do_parallel_for([&query_span, &target_span, &cost_map, &progress_bar, output_ptr](size_t begin, size_t end) {
+          for(size_t i=begin; i<end; ++i) {
+            output_ptr[i] = pairwise::global_distance_myers(query_span[i], target_span[i], cost_map);
+            progress_bar.increment();
+          }
+        }, 0, nseqs, 1, nthreads);
+      } else {
+        do_parallel_for([&query_span, &target_span, &cost_map, &progress_bar, output_ptr](size_t begin, size_t end) {
+          for(size_t i=begin; i<end; ++i) {
+            output_ptr[i] = pairwise::global_distance_linear(query_span[i], target_span[i], cost_map);
+            progress_bar.increment();
+          }
+        }, 0, nseqs, 1, nthreads);
+      }
     } else { // GlobalAffine
       CostMap cost_map = convert_cost_matrix(cost_matrix.get(), gap_cost, gap_open_cost);
       do_parallel_for([&query_span, &target_span, &cost_map, &progress_bar, output_ptr](size_t begin, size_t end) {
@@ -164,26 +273,62 @@ IntegerVector c_dist_pairwise(CharacterVector query, CharacterVector target,
     int * query_size_ptr = INTEGER(query_size);
     int * target_size_ptr = INTEGER(target_size);
     if(algo == AlignmentAlgo::AnchoredUnit) {
-      do_parallel_for([&query_span, &target_span, &progress_bar, output_ptr, query_size_ptr, target_size_ptr](size_t begin, size_t end) {
-        for(size_t i=begin; i<end; ++i) {
-          auto res = pairwise::anchored_distance(query_span[i], target_span[i]);
-          output_ptr[i] = std::get<0>(res);
-          query_size_ptr[i] = std::get<1>(res);
-          target_size_ptr[i] = std::get<2>(res);
-          progress_bar.increment();
+      bool use_myers = false;
+      CostMap cost_map;
+      if (!cost_matrix.isNull()) {
+        cost_map = convert_cost_matrix(cost_matrix.get(), gap_cost, gap_open_cost);
+        use_myers = (gap_cost == 1 && gap_open_cost == 0);
+        if (use_myers) {
+          for (const auto & kv : cost_map.char_cost_map) { if (kv.second != 0 && kv.second != 1) { use_myers = false; break; } }
         }
-      }, 0, nseqs, 1, nthreads);
+      }
+      if (use_myers) {
+        do_parallel_for([&query_span, &target_span, &cost_map, &progress_bar, output_ptr, query_size_ptr, target_size_ptr](size_t begin, size_t end) {
+          for(size_t i=begin; i<end; ++i) {
+            auto res = pairwise::anchored_distance_myers(query_span[i], target_span[i], cost_map);
+            output_ptr[i] = std::get<0>(res);
+            query_size_ptr[i] = std::get<1>(res);
+            target_size_ptr[i] = std::get<2>(res);
+            progress_bar.increment();
+          }
+        }, 0, nseqs, 1, nthreads);
+      } else {
+        do_parallel_for([&query_span, &target_span, &progress_bar, output_ptr, query_size_ptr, target_size_ptr](size_t begin, size_t end) {
+          for(size_t i=begin; i<end; ++i) {
+            auto res = pairwise::anchored_distance(query_span[i], target_span[i]);
+            output_ptr[i] = std::get<0>(res);
+            query_size_ptr[i] = std::get<1>(res);
+            target_size_ptr[i] = std::get<2>(res);
+            progress_bar.increment();
+          }
+        }, 0, nseqs, 1, nthreads);
+      }
     } else if(algo == AlignmentAlgo::AnchoredLinear) {
       CostMap cost_map = convert_cost_matrix(cost_matrix.get(), gap_cost, gap_open_cost);
-      do_parallel_for([&query_span, &target_span, &cost_map, &progress_bar, output_ptr, query_size_ptr, target_size_ptr](size_t begin, size_t end) {
-        for(size_t i=begin; i<end; ++i) {
-          auto res = pairwise::anchored_distance_linear(query_span[i], target_span[i], cost_map);
-          output_ptr[i] = std::get<0>(res);
-          query_size_ptr[i] = std::get<1>(res);
-          target_size_ptr[i] = std::get<2>(res);
-          progress_bar.increment();
-        }
-      }, 0, nseqs, 1, nthreads);
+      bool boolean_subs = true;
+      for (const auto & kv : cost_map.char_cost_map) { if (kv.second != 0 && kv.second != 1) { boolean_subs = false; break; } }
+      const bool unit_gaps = (gap_cost == 1) && (gap_open_cost == 0);
+      if (boolean_subs && unit_gaps) {
+        do_parallel_for([&query_span, &target_span, &cost_map, &progress_bar, output_ptr, query_size_ptr, target_size_ptr](size_t begin, size_t end) {
+          for(size_t i=begin; i<end; ++i) {
+            auto res = pairwise::anchored_distance_myers(query_span[i], target_span[i], cost_map);
+            output_ptr[i] = std::get<0>(res);
+            query_size_ptr[i] = std::get<1>(res);
+            target_size_ptr[i] = std::get<2>(res);
+            progress_bar.increment();
+          }
+        }, 0, nseqs, 1, nthreads);
+      } else {
+        do_parallel_for([&query_span, &target_span, &cost_map, &progress_bar, output_ptr, query_size_ptr, target_size_ptr](size_t begin, size_t end) {
+          for(size_t i=begin; i<end; ++i) {
+            auto res = pairwise::anchored_distance_linear(query_span[i], target_span[i], cost_map);
+            output_ptr[i] = std::get<0>(res);
+            query_size_ptr[i] = std::get<1>(res);
+            target_size_ptr[i] = std::get<2>(res);
+            progress_bar.increment();
+          }
+        }, 0, nseqs, 1, nthreads);
+      }
     } else { // AnchoredAffine
       CostMap cost_map = convert_cost_matrix(cost_matrix.get(), gap_cost, gap_open_cost);
       do_parallel_for([&query_span, &target_span, &cost_map, &progress_bar, output_ptr, query_size_ptr, target_size_ptr](size_t begin, size_t end) {

@@ -84,8 +84,8 @@ public:
   std::vector<path> all(size_t max_depth = -1) const;
   std::string print() const { return print_impl(0); }
   std::pair<std::vector<path>, std::vector<path>> graph(size_t max_depth = -1) const;
-  index_type find(const span_type query) const;
-  index_type insert(const span_type sequence, index_type idx);
+  path find(const span_type query) const;
+  path insert(const span_type sequence, index_type idx);
   index_type erase(const span_type sequence);
   std::vector<path> prefix_search(const span_type query) const;
 
@@ -98,6 +98,9 @@ public:
 
   search_context global_search_affine(const span_type query, int max_distance, const CostMap & cost_map) const;
   search_context anchored_search_affine(const span_type query, int max_distance, const CostMap & cost_map) const;
+
+  // Prototype: Myers global search (unit gaps + boolean substitution 0/1); no early pruning
+  search_context global_search_myers(const span_type query, int max_distance, const CostMap & cost_map) const;
 
 private:
   std::string print_impl(size_t depth) const;
@@ -116,6 +119,9 @@ private:
   static int update_col_affine(atomic_type branchval, const span_type query, affine_col_type & col, const CostMap & cost_map);
   static void global_search_affine_impl(const_weak_pointer_type node, const affine_col_type & previous_col, search_context & ctx, const CostMap & cost_map);
   static void anchored_search_affine_impl(const_weak_pointer_type node, const affine_col_type & previous_col, int row_min, search_context & ctx, const CostMap & cost_map);
+
+  // Myers helper (no pruning)
+  static void global_search_myers_impl(const_weak_pointer_type node, seqtrie::MyersState state, search_context & ctx, const seqtrie::MyersPattern & pat);
 };
 
 // implementations
@@ -231,32 +237,32 @@ inline std::pair<std::vector<RadixMap::path>, std::vector<RadixMap::path>> Radix
   return result;
 }
 
-inline RadixMap::index_type RadixMap::find(const RadixMap::span_type query) const {
+inline RadixMap::path RadixMap::find(const RadixMap::span_type query) const {
   const_weak_pointer_type node = this;
   size_t position=0;
   while(position < query.size()) {
     if(node->child_nodes.find(query[position]) != node->child_nodes.end()) {
       node = node->child_nodes.at(query[position]).get();
-      if(position + node->branch.size() > query.size()) return nullidx;
+      if(position + node->branch.size() > query.size()) return path();
       for(size_t j=0; j<node->branch.size(); ++j) {
-        if(node->branch[j] != query[position+j]) return nullidx;
+        if(node->branch[j] != query[position+j]) return path();
       }
       position += node->branch.size();
     } else {
-      return nullidx;
+      return path();
     }
   }
-  return node->terminal_idx;
+  return path(node);
 }
 
-inline RadixMap::index_type RadixMap::insert(const RadixMap::span_type sequence, index_type idx) {
+inline RadixMap::path RadixMap::insert(const RadixMap::span_type sequence, index_type idx) {
   if(sequence.size() == 0) {
     // std::cout << "case -1: end of sequence" << std::endl;
     if(terminal_idx == nullidx) {
       terminal_idx = idx;
-      return nullidx;
+      return path();
     } else {
-      return terminal_idx;
+      return path(this);
     }
   }
   atomic_type s = sequence[0];
@@ -266,7 +272,7 @@ inline RadixMap::index_type RadixMap::insert(const RadixMap::span_type sequence,
     child_nodes[s]->parent_node = this;
     child_nodes[s]->branch = subvector<branch_type>(sequence, 0);
     child_nodes[s]->terminal_idx = idx;
-    return nullidx;
+    return path();
   }
   size_t i = 0;
   while(i < child_nodes[s]->branch.size() && i < sequence.size() && sequence[i] == child_nodes[s]->branch[i]) { ++i; }
@@ -275,9 +281,9 @@ inline RadixMap::index_type RadixMap::insert(const RadixMap::span_type sequence,
     // std::cout << "case 1: sequence is same as branch" << std::endl;
     if(child_nodes[s]->terminal_idx == nullidx) {
       child_nodes[s]->terminal_idx = idx;
-      return nullidx;
+      return path();
     } else {
-      return child_nodes[s]->terminal_idx;
+      return path(child_nodes[s].get());
     }
   } else if(i == sequence.size()) {
     // std::cout << "case 2: sequence is shorter than branch" << std::endl;
@@ -292,7 +298,7 @@ inline RadixMap::index_type RadixMap::insert(const RadixMap::span_type sequence,
     inserted_node->terminal_idx = idx;
     inserted_node->child_nodes[s_insert]->branch = std::move(branch_suffix);
     child_nodes[s] = std::move(inserted_node);
-    return nullidx;
+    return path();
   } else if(i == child_nodes[s]->branch.size()) {
     // std::cout << "case 3: sequence is longer than branch" << std::endl;
     span_type seq_suffix = sequence.subspan(i); // will remain as span
@@ -316,7 +322,7 @@ inline RadixMap::index_type RadixMap::insert(const RadixMap::span_type sequence,
     inserted_node->child_nodes[s_insert_seq]->terminal_idx = idx;
     child_nodes[s] = std::move(inserted_node);
     child_nodes[s]->branch = std::move(branch_prefix);
-    return nullidx;
+    return path();
   }
 }
 
@@ -413,6 +419,32 @@ inline RadixMap::search_context RadixMap::global_search_affine(const RadixMap::s
   // std::cout << std::endl;
   global_search_affine_impl(this, col, ctx, cost_map);
   return ctx;
+}
+
+inline RadixMap::search_context RadixMap::global_search_myers(const RadixMap::span_type query, const int max_distance, const CostMap & cost_map) const {
+  search_context ctx(query, max_distance);
+  // Build Myers pattern for the query over the provided boolean cost map
+  seqtrie::MyersPattern pat(query, cost_map);
+  seqtrie::MyersState state(pat);
+  global_search_myers_impl(this, state, ctx, pat);
+  return ctx;
+}
+
+inline void RadixMap::global_search_myers_impl(RadixMap::const_weak_pointer_type node, seqtrie::MyersState state, RadixMap::search_context & ctx, const seqtrie::MyersPattern & pat) {
+  // Accept terminal if within threshold
+  if ((node->terminal_idx != nullidx) && (state.score <= ctx.max_distance)) {
+    ctx.match.push_back(path(node));
+    ctx.distance.push_back(state.score);
+  }
+  // Traverse children; update state through each branch label
+  for (auto & ch : node->child_nodes) {
+    auto st = state; // copy state per child
+    branch_type & branch = ch.second->branch;
+    for (size_t u = 0; u < branch.size(); ++u) {
+      st.step(static_cast<unsigned char>(branch[u]), pat);
+    }
+    global_search_myers_impl(ch.second.get(), st, ctx, pat);
+  }
 }
 
 inline RadixMap::search_context RadixMap::anchored_search_affine(const RadixMap::span_type query, const int max_distance, const CostMap & cost_map) const {
