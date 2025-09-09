@@ -86,6 +86,8 @@ public:
   std::pair<std::vector<path>, std::vector<path>> graph(size_t max_depth = -1) const;
   path find(const span_type query) const;
   path insert(const span_type sequence, index_type idx);
+  // Ensure sequence exists and return its terminal path
+  path insert_get_path(const span_type sequence, index_type idx);
   index_type erase(const span_type sequence);
   std::vector<path> prefix_search(const span_type query) const;
 
@@ -104,6 +106,10 @@ private:
   std::string print_impl(size_t depth) const;
   enum class erase_action { erase, merge, keep };
   static erase_action erase_impl(weak_pointer_type node, const span_type sequence, index_type & result);
+
+  // Implementation for both insert variants
+  template <bool ReturnPathAlways>
+  path insert_impl(const span_type sequence, index_type idx);
 
   static void hamming_search_impl(const_weak_pointer_type node, size_t position, int distance, search_context & ctx);
   static int update_col(atomic_type branchval, const span_type query, std::vector<int> & col);
@@ -253,37 +259,54 @@ inline RadixMap::path RadixMap::find(const RadixMap::span_type query) const {
 }
 
 inline RadixMap::path RadixMap::insert(const RadixMap::span_type sequence, index_type idx) {
+  return insert_impl<false>(sequence, idx);
+}
+
+inline RadixMap::path RadixMap::insert_get_path(const RadixMap::span_type sequence, index_type idx) {
+  return insert_impl<true>(sequence, idx);
+}
+
+template <bool ReturnPathAlways>
+inline RadixMap::path RadixMap::insert_impl(const RadixMap::span_type sequence, index_type idx) {
   if(sequence.size() == 0) {
-    // std::cout << "case -1: end of sequence" << std::endl;
     if(terminal_idx == nullidx) {
       terminal_idx = idx;
-      return path();
+      if constexpr (ReturnPathAlways) {
+        return path(this);
+      } else {
+        return path();
+      }
     } else {
       return path(this);
     }
   }
   atomic_type s = sequence[0];
   if(child_nodes.find(s) == child_nodes.end()) {
-    // std::cout << "case 0: no existing branch" << std::endl;
     child_nodes.emplace(s, pointer_type(new self_type));
     child_nodes[s]->parent_node = this;
     child_nodes[s]->branch = subvector<branch_type>(sequence, 0);
     child_nodes[s]->terminal_idx = idx;
-    return path();
+    if constexpr (ReturnPathAlways) {
+      return path(child_nodes[s].get());
+    } else {
+      return path();
+    }
   }
   size_t i = 0;
   while(i < child_nodes[s]->branch.size() && i < sequence.size() && sequence[i] == child_nodes[s]->branch[i]) { ++i; }
   
   if(i == sequence.size() && i == child_nodes[s]->branch.size()) {
-    // std::cout << "case 1: sequence is same as branch" << std::endl;
     if(child_nodes[s]->terminal_idx == nullidx) {
       child_nodes[s]->terminal_idx = idx;
-      return path();
+      if constexpr (ReturnPathAlways) {
+        return path(child_nodes[s].get());
+      } else {
+        return path();
+      }
     } else {
       return path(child_nodes[s].get());
     }
   } else if(i == sequence.size()) {
-    // std::cout << "case 2: sequence is shorter than branch" << std::endl;
     branch_type branch_prefix = subvector<branch_type>(child_nodes[s]->branch,0,i);
     branch_type branch_suffix = subvector<branch_type>(child_nodes[s]->branch,i);
     atomic_type s_insert = branch_suffix[0];
@@ -295,13 +318,15 @@ inline RadixMap::path RadixMap::insert(const RadixMap::span_type sequence, index
     inserted_node->terminal_idx = idx;
     inserted_node->child_nodes[s_insert]->branch = std::move(branch_suffix);
     child_nodes[s] = std::move(inserted_node);
-    return path();
+    if constexpr (ReturnPathAlways) {
+      return path(child_nodes[s].get());
+    } else {
+      return path();
+    }
   } else if(i == child_nodes[s]->branch.size()) {
-    // std::cout << "case 3: sequence is longer than branch" << std::endl;
-    span_type seq_suffix = sequence.subspan(i); // will remain as span
-    return child_nodes[s]->insert(seq_suffix, idx);
+    span_type seq_suffix = sequence.subspan(i);
+    return child_nodes[s]->insert_impl<ReturnPathAlways>(seq_suffix, idx);
   } else {
-    // std::cout << "case 4: sequence is different than branch" << std::endl;
     branch_type branch_prefix = subvector<branch_type>(child_nodes[s]->branch,0,i);
     branch_type branch_suffix = subvector<branch_type>(child_nodes[s]->branch,i);
     branch_type seq_suffix = subvector<branch_type>(sequence,i);
@@ -319,7 +344,11 @@ inline RadixMap::path RadixMap::insert(const RadixMap::span_type sequence, index
     inserted_node->child_nodes[s_insert_seq]->terminal_idx = idx;
     child_nodes[s] = std::move(inserted_node);
     child_nodes[s]->branch = std::move(branch_prefix);
-    return path();
+    if constexpr (ReturnPathAlways) {
+      return path(child_nodes[s]->child_nodes[s_insert_seq].get());
+    } else {
+      return path();
+    }
   }
 }
 
