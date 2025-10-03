@@ -75,9 +75,11 @@ test:
 	IS_LOCAL=Yes Rscript tests/test_RadixTree.R && unset IS_LOCAL
 	IS_LOCAL=Yes Rscript tests/test_RadixForest.R && unset IS_LOCAL
 
-local-bench:
+bench:
 	Rscript inst/extra_tests/benchmark.R
 
+simple-bench:
+	Rscript inst/extra_tests/simple_benchmark.R
 
 R_INCLUDE=$(shell R CMD config --cppflags)
 Rcpp_INCLUDE=$(shell Rscript -e 'cat(system.file("include", package = "Rcpp"))')

@@ -13,3 +13,4 @@ Makefile
 ^.vscode
 ^.github
 ^inst/extra_tests
+Rplots.pdf

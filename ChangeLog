@@ -1,3 +1,6 @@
+Version 0.3.1 (2025-10-03)
+   * (Performance) Reworked trie alignment searches to reuse dynamic-programming workspaces
+
 Version 0.3.0 (2025-09-05)
    * Code cleanup, documentation cleanup, cleaner interface
    * Minor bug fixes
