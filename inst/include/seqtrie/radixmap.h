@@ -4,6 +4,8 @@
 #include "seqtrie/utility.h"
 #include "ankerl/unordered_dense.h"
 #include "simple_array/small_array.h"
+#include <algorithm>
+#include <limits>
 #include <utility>
 
 #ifndef SEQTRIE_SMALL_ARRAY_SIZE
@@ -72,33 +74,96 @@ public:
     }
   };
 
-  template <typename Column>
-  struct ColumnWorkspace {
-    std::vector<Column> columns;
+  struct UnitWorkspace {
+    std::vector<std::vector<int>> columns;
+    std::vector<int> minima;
 
-    void initialize(Column initial, size_t depth_hint = 0) {
+    void initialize(std::vector<int> initial, size_t depth_hint = 0) {
       columns.clear();
-      if(depth_hint > 0 && columns.capacity() < depth_hint) {
-        columns.reserve(depth_hint);
+      minima.clear();
+      if(depth_hint > 0) {
+        if(columns.capacity() < depth_hint) columns.reserve(depth_hint);
+        if(minima.capacity() < depth_hint) minima.reserve(depth_hint);
       }
+      int min_value = initial.empty() ? std::numeric_limits<int>::max()
+                                      : *std::min_element(initial.begin(), initial.end());
       columns.emplace_back(std::move(initial));
+      minima.emplace_back(min_value);
     }
 
     void ensure_child_slot(size_t depth) {
       size_t required_size = depth + 2;
       if(columns.size() < required_size) {
         columns.resize(required_size);
+        minima.resize(required_size, std::numeric_limits<int>::max());
       }
     }
 
-    Column & at(const size_t depth) { return columns[depth]; }
-    const Column & at(const size_t depth) const { return columns[depth]; }
+    std::vector<int> & at(const size_t depth) { return columns[depth]; }
+    const std::vector<int> & at(const size_t depth) const { return columns[depth]; }
 
-    Column & child(const size_t depth) { return columns[depth + 1]; }
+    int min_at(size_t depth) const { return minima[depth]; }
+    void set_min(size_t depth, int value) { minima[depth] = value; }
+
+    std::vector<int> & clone_from_parent(size_t depth) {
+      ensure_child_slot(depth);
+      const auto & parent_col = columns[depth];
+      std::vector<int> & child_col = columns[depth + 1];
+      child_col.assign(parent_col.begin(), parent_col.end());
+      minima[depth + 1] = minima[depth];
+      return child_col;
+    }
   };
 
-  using unit_workspace = ColumnWorkspace<std::vector<int>>;
-  using affine_workspace = ColumnWorkspace<affine_col_type>;
+  struct AffineWorkspace {
+    std::vector<affine_col_type> columns;
+    std::vector<int> minima;
+
+    static int aggregate_min(const affine_col_type & column) {
+      int result = std::numeric_limits<int>::max();
+      const auto & M_col = std::get<0>(column);
+      const auto & X_col = std::get<1>(column);
+      const auto & Y_col = std::get<2>(column);
+      if(!M_col.empty()) result = std::min(result, *std::min_element(M_col.begin(), M_col.end()));
+      if(!X_col.empty()) result = std::min(result, *std::min_element(X_col.begin(), X_col.end()));
+      if(!Y_col.empty()) result = std::min(result, *std::min_element(Y_col.begin(), Y_col.end()));
+      return result;
+    }
+
+    void initialize(affine_col_type initial, size_t depth_hint = 0) {
+      columns.clear();
+      minima.clear();
+      if(depth_hint > 0) {
+        if(columns.capacity() < depth_hint) columns.reserve(depth_hint);
+        if(minima.capacity() < depth_hint) minima.reserve(depth_hint);
+      }
+      int min_value = aggregate_min(initial);
+      columns.emplace_back(std::move(initial));
+      minima.emplace_back(min_value);
+    }
+
+    void ensure_child_slot(size_t depth) {
+      size_t required_size = depth + 2;
+      if(columns.size() < required_size) {
+        columns.resize(required_size);
+        minima.resize(required_size, std::numeric_limits<int>::max());
+      }
+    }
+
+    affine_col_type & at(const size_t depth) { return columns[depth]; }
+    const affine_col_type & at(const size_t depth) const { return columns[depth]; }
+
+    int min_at(size_t depth) const { return minima[depth]; }
+    void set_min(size_t depth, int value) { minima[depth] = value; }
+
+    affine_col_type & clone_from_parent(size_t depth) {
+      ensure_child_slot(depth);
+      affine_col_type & child_col = columns[depth + 1];
+      child_col = columns[depth];
+      minima[depth + 1] = minima[depth];
+      return child_col;
+    }
+  };
 
   const map_type & get_child_nodes() const { return child_nodes; }
   const branch_type & get_branch() const { return branch; }
@@ -141,16 +206,16 @@ private:
 
   static void hamming_search_impl(const_weak_pointer_type node, size_t position, int distance, search_context & ctx);
   static int update_col(atomic_type branchval, const span_type query, std::vector<int> & col);
-  static void global_search_impl(const_weak_pointer_type node, size_t depth, search_context & ctx, unit_workspace & workspace);
-  static void anchored_search_impl(const_weak_pointer_type node, size_t depth, int row_min, search_context & ctx, unit_workspace & workspace);
+  static void global_search_impl(const_weak_pointer_type node, size_t depth, search_context & ctx, UnitWorkspace & workspace);
+  static void anchored_search_impl(const_weak_pointer_type node, size_t depth, int row_min, search_context & ctx, UnitWorkspace & workspace);
 
   static int update_col_linear(atomic_type branchval, const span_type query, std::vector<int> & col, const CostMap & cost_map);
-  static void global_search_linear_impl(const_weak_pointer_type node, size_t depth, search_context & ctx, unit_workspace & workspace, const CostMap & cost_map);
-  static void anchored_search_linear_impl(const_weak_pointer_type node, size_t depth, int row_min, search_context & ctx, unit_workspace & workspace, const CostMap & cost_map);
+  static void global_search_linear_impl(const_weak_pointer_type node, size_t depth, search_context & ctx, UnitWorkspace & workspace, const CostMap & cost_map);
+  static void anchored_search_linear_impl(const_weak_pointer_type node, size_t depth, int row_min, search_context & ctx, UnitWorkspace & workspace, const CostMap & cost_map);
 
   static int update_col_affine(atomic_type branchval, const span_type query, affine_col_type & col, const CostMap & cost_map);
-  static void global_search_affine_impl(const_weak_pointer_type node, size_t depth, search_context & ctx, affine_workspace & workspace, const CostMap & cost_map);
-  static void anchored_search_affine_impl(const_weak_pointer_type node, size_t depth, int row_min, search_context & ctx, affine_workspace & workspace, const CostMap & cost_map);
+  static void global_search_affine_impl(const_weak_pointer_type node, size_t depth, search_context & ctx, AffineWorkspace & workspace, const CostMap & cost_map);
+  static void anchored_search_affine_impl(const_weak_pointer_type node, size_t depth, int row_min, search_context & ctx, AffineWorkspace & workspace, const CostMap & cost_map);
 
   
 };
@@ -418,7 +483,7 @@ inline RadixMap::search_context RadixMap::hamming_search(const span_type query, 
 
 inline RadixMap::search_context RadixMap::global_search(const RadixMap::span_type query, const int max_distance) const {
   search_context ctx(query, max_distance);
-  unit_workspace workspace;
+  UnitWorkspace workspace;
   workspace.initialize(iota_range<std::vector<int>>(0, query.size() + 1), query.size() + 1);
   global_search_impl(this, 0, ctx, workspace); 
   return ctx;
@@ -429,7 +494,7 @@ inline RadixMap::search_context RadixMap::global_search(const RadixMap::span_typ
 // we need to keep track of the minimum value in the last row
 inline RadixMap::search_context RadixMap::anchored_search(const RadixMap::span_type query, const int max_distance) const {
   search_context ctx(query, max_distance);
-  unit_workspace workspace;
+  UnitWorkspace workspace;
   workspace.initialize(iota_range<std::vector<int>>(0, query.size() + 1), query.size() + 1);
   anchored_search_impl(this, 0, query.size(), ctx, workspace); 
   return ctx;
@@ -441,7 +506,7 @@ inline RadixMap::search_context RadixMap::global_search_linear(const RadixMap::s
   for(size_t i=1; i<col.size(); ++i) {
     col[i] = col[i-1] + cost_map.gap_cost; // gap in target
   }
-  unit_workspace workspace;
+  UnitWorkspace workspace;
   workspace.initialize(std::move(col), query.size() + 1);
   global_search_linear_impl(this, 0, ctx, workspace, cost_map);
   return ctx;
@@ -454,7 +519,7 @@ inline RadixMap::search_context RadixMap::anchored_search_linear(const RadixMap:
     col[i] = col[i-1] + cost_map.gap_cost; // gap in target
   }
   int row_min = col.back();
-  unit_workspace workspace;
+  UnitWorkspace workspace;
   workspace.initialize(std::move(col), query.size() + 1);
   anchored_search_linear_impl(this, 0, row_min, ctx, workspace, cost_map);
   return ctx;
@@ -480,7 +545,7 @@ inline RadixMap::search_context RadixMap::global_search_affine(const RadixMap::s
   // print_vec(X_col);
   // print_vec(Y_col);
   // std::cout << std::endl;
-  affine_workspace workspace;
+  AffineWorkspace workspace;
   workspace.initialize(std::move(col), query.size() + 1);
   global_search_affine_impl(this, 0, ctx, workspace, cost_map);
   return ctx;
@@ -505,7 +570,7 @@ inline RadixMap::search_context RadixMap::anchored_search_affine(const RadixMap:
     else       Y_col[i] = Y_col[i-1] + cost_map.gap_cost;
   }
   int row_min = std::min({M_col.back(), Y_col.back()});
-  affine_workspace workspace;
+  AffineWorkspace workspace;
   workspace.initialize(std::move(col), query.size() + 1);
   anchored_search_affine_impl(this, 0, row_min, ctx, workspace, cost_map);
   return ctx;
@@ -609,27 +674,22 @@ inline int RadixMap::update_col(const RadixMap::atomic_type branchval, const Rad
   return min_element;
 }
 
-inline void RadixMap::global_search_impl(RadixMap::const_weak_pointer_type node, const size_t depth, RadixMap::search_context & ctx, unit_workspace & workspace) {
+inline void RadixMap::global_search_impl(RadixMap::const_weak_pointer_type node, const size_t depth, RadixMap::search_context & ctx, UnitWorkspace & workspace) {
   workspace.ensure_child_slot(depth);
-  int column_min;
-  int terminal_distance;
-  {
-    const auto & column = workspace.at(depth);
-    column_min = *std::min_element(column.begin(), column.end());
-    terminal_distance = column.back();
-  }
+  int column_min = workspace.min_at(depth);
+  int terminal_distance = workspace.at(depth).back();
   if(column_min > ctx.max_distance) { return; }
   if((node->terminal_idx != nullidx) && (terminal_distance <= ctx.max_distance)) {
     ctx.match.push_back(path(node));
     ctx.distance.push_back(terminal_distance);
   }
   for (auto & ch : node->child_nodes) {
-    std::vector<int> & current_col = workspace.child(depth);
-    current_col = workspace.at(depth);
+    std::vector<int> & current_col = workspace.clone_from_parent(depth);
     branch_type & branch = ch.second->branch;
     bool max_distance_exceeded = false;
     for(size_t u=0; u<branch.size(); ++u) {
       int current_dist = update_col(branch[u], ctx.query, current_col);
+      workspace.set_min(depth + 1, current_dist);
       if(current_dist > ctx.max_distance) {
         max_distance_exceeded = true;
         break;
@@ -646,51 +706,45 @@ inline void RadixMap::global_search_impl(RadixMap::const_weak_pointer_type node,
 // col > max > row -- add all children (distance = row) and stop (case 2)
 // row > col > max -- stop (case 1)
 // col > row > max -- stop (case 1)
-inline void RadixMap::anchored_search_impl(RadixMap::const_weak_pointer_type node, const size_t depth, const int row_min, RadixMap::search_context & ctx, unit_workspace & workspace) {
+inline void RadixMap::anchored_search_impl(RadixMap::const_weak_pointer_type node, const size_t depth, const int row_min, RadixMap::search_context & ctx, UnitWorkspace & workspace) {
   workspace.ensure_child_slot(depth);
-  int current_col_min;
-  {
-    const auto & column = workspace.at(depth);
-    current_col_min = *std::min_element(column.begin(), column.end());
-  }
+  const int parent_min = workspace.min_at(depth);
+  int current_col_min = parent_min;
   int current_row_min = row_min;
   if( (current_col_min > ctx.max_distance) && (current_row_min > ctx.max_distance) ) { // case 1
     return;
   } else if( (current_row_min <= ctx.max_distance) && (current_row_min <= current_col_min) ) { // case 2
-    // if row_min <= col_min then the search ends on the column
-    // we can stop, since it's impossible to find a smaller value by continuing the search
     std::vector<path> child_sequences = node->all();
-    for(auto & chs : child_sequences) { // also includes current node
+    for(auto & chs : child_sequences) {
       if(chs->terminal_idx != nullidx) {
         ctx.match.push_back(chs);
         ctx.distance.push_back(current_row_min);
       }
     }
     return;
-  } else if(node->terminal_idx != nullidx) { // this is a terminal leaf and its best value is on the col // case 3
+  } else if(node->terminal_idx != nullidx) { // case 3
     if(current_col_min <= ctx.max_distance) {
       ctx.match.push_back(path(node));
       ctx.distance.push_back(current_col_min);
     }
   }
   for (auto & ch : node->child_nodes) {
-    std::vector<int> & current_col = workspace.child(depth);
-    current_col = workspace.at(depth);
+    std::vector<int> & current_col = workspace.clone_from_parent(depth);
+    current_col_min = parent_min;
     branch_type & branch = ch.second->branch;
     bool max_distance_exceeded = false;
     current_row_min = row_min;
     for(size_t u=0; u<branch.size(); ++u) {
       current_col_min = update_col(branch[u], ctx.query, current_col);
+      workspace.set_min(depth + 1, current_col_min);
       current_row_min = std::min(current_row_min, current_col.back());
       if( (current_col_min > ctx.max_distance) && (current_row_min > ctx.max_distance) ) { // case 1
         max_distance_exceeded = true;
         break;
       } else if( (current_row_min <= ctx.max_distance) && (current_row_min <= current_col_min) ) { // case 2
-        // if row_min <= col_min then the search ends on the column
-        // we can stop, since it's impossible to find a smaller value by continuing the search
-        max_distance_exceeded = true; // "exceeded" in the sense that we include all children below and don't need to keep searching
+        max_distance_exceeded = true;
         std::vector<path> grandchild_sequences = ch.second->all();
-        for(auto & gchs : grandchild_sequences) { // also includes ch node
+        for(auto & gchs : grandchild_sequences) {
           if(gchs->terminal_idx != nullidx) {
             ctx.match.push_back(gchs);
             ctx.distance.push_back(current_row_min);
@@ -698,7 +752,6 @@ inline void RadixMap::anchored_search_impl(RadixMap::const_weak_pointer_type nod
         }
         break;
       }
-      // case 3 does not need to be considered since we are never on top of a terminal leaf within this loop
     }
     if(!max_distance_exceeded) anchored_search_impl(ch.second.get(), depth + 1, current_row_min, ctx, workspace);
   }
@@ -719,27 +772,22 @@ inline int RadixMap::update_col_linear(const RadixMap::atomic_type branchval, co
   return min_element;
 }
 
-inline void RadixMap::global_search_linear_impl(RadixMap::const_weak_pointer_type node, const size_t depth, search_context & ctx, unit_workspace & workspace, const CostMap & cost_map) {
+inline void RadixMap::global_search_linear_impl(RadixMap::const_weak_pointer_type node, const size_t depth, search_context & ctx, UnitWorkspace & workspace, const CostMap & cost_map) {
   workspace.ensure_child_slot(depth);
-  int column_min;
-  int terminal_distance;
-  {
-    const auto & column = workspace.at(depth);
-    column_min = *std::min_element(column.begin(), column.end());
-    terminal_distance = column.back();
-  }
+  int column_min = workspace.min_at(depth);
+  int terminal_distance = workspace.at(depth).back();
   if(column_min > ctx.max_distance) { return; }
   if((node->terminal_idx != nullidx) && (terminal_distance <= ctx.max_distance)) {
     ctx.match.push_back(path(node));
     ctx.distance.push_back(terminal_distance);
   }
   for (auto & ch : node->child_nodes) {
-    std::vector<int> & current_col = workspace.child(depth);
-    current_col = workspace.at(depth);
+    std::vector<int> & current_col = workspace.clone_from_parent(depth);
     branch_type & branch = ch.second->branch;
     bool max_distance_exceeded = false;
     for(size_t u=0; u<branch.size(); ++u) {
       int current_dist = update_col_linear(branch[u], ctx.query, current_col, cost_map);
+      workspace.set_min(depth + 1, current_dist);
       if(current_dist > ctx.max_distance) {
         max_distance_exceeded = true;
         break;
@@ -749,13 +797,10 @@ inline void RadixMap::global_search_linear_impl(RadixMap::const_weak_pointer_typ
   }
 }
 
-inline void RadixMap::anchored_search_linear_impl(RadixMap::const_weak_pointer_type node, const size_t depth, const int row_min, search_context & ctx, unit_workspace & workspace, const CostMap & cost_map) {
+inline void RadixMap::anchored_search_linear_impl(RadixMap::const_weak_pointer_type node, const size_t depth, const int row_min, search_context & ctx, UnitWorkspace & workspace, const CostMap & cost_map) {
   workspace.ensure_child_slot(depth);
-  int current_col_min;
-  {
-    const auto & column = workspace.at(depth);
-    current_col_min = *std::min_element(column.begin(), column.end());
-  }
+  const int parent_min = workspace.min_at(depth);
+  int current_col_min = parent_min;
   int current_row_min = row_min;
   if( (current_col_min > ctx.max_distance) && (current_row_min > ctx.max_distance) ) { // case 1
     return;
@@ -777,13 +822,14 @@ inline void RadixMap::anchored_search_linear_impl(RadixMap::const_weak_pointer_t
     }
   }
   for (auto & ch : node->child_nodes) {
-    std::vector<int> & current_col = workspace.child(depth);
-    current_col = workspace.at(depth);
+    std::vector<int> & current_col = workspace.clone_from_parent(depth);
+    current_col_min = parent_min;
     branch_type & branch = ch.second->branch;
     bool max_distance_exceeded = false;
     current_row_min = row_min;
     for(size_t u=0; u<branch.size(); ++u) {
       current_col_min = update_col_linear(branch[u], ctx.query, current_col, cost_map);
+      workspace.set_min(depth + 1, current_col_min);
       current_row_min = std::min(current_row_min, current_col.back());
       if( (current_col_min > ctx.max_distance) && (current_row_min > ctx.max_distance) ) { // case 1
         max_distance_exceeded = true;
@@ -851,34 +897,26 @@ inline int RadixMap::update_col_affine(const RadixMap::atomic_type branchval, co
   return min_element;
 }
 
-inline void RadixMap::global_search_affine_impl(RadixMap::const_weak_pointer_type node, const size_t depth, search_context & ctx, affine_workspace & workspace, const CostMap & cost_map) {
+inline void RadixMap::global_search_affine_impl(RadixMap::const_weak_pointer_type node, const size_t depth, search_context & ctx, AffineWorkspace & workspace, const CostMap & cost_map) {
   workspace.ensure_child_slot(depth);
-  int M_min;
-  int X_min;
-  int Y_min;
-  int terminal_distance;
-  {
-    const auto & column = workspace.at(depth);
-    const auto & M_col = std::get<0>(column);
-    const auto & X_col = std::get<1>(column);
-    const auto & Y_col = std::get<2>(column);
-    M_min = *std::min_element(M_col.begin(), M_col.end());
-    X_min = *std::min_element(X_col.begin(), X_col.end());
-    Y_min = *std::min_element(Y_col.begin(), Y_col.end());
-    terminal_distance = std::min({M_col.back(), X_col.back(), Y_col.back()});
-  }
-  if( (M_min > ctx.max_distance) && (X_min > ctx.max_distance) && (Y_min > ctx.max_distance) ) { return; }
+  const auto & parent_column = workspace.at(depth);
+  int column_min = workspace.min_at(depth);
+  int terminal_distance = std::min({
+    std::get<0>(parent_column).back(),
+    std::get<1>(parent_column).back(),
+    std::get<2>(parent_column).back()});
+  if(column_min > ctx.max_distance) { return; }
   if((node->terminal_idx != nullidx) && (terminal_distance <= ctx.max_distance)) {
     ctx.match.push_back(path(node));
     ctx.distance.push_back(terminal_distance);
   }
   for (auto & ch : node->child_nodes) {
-    affine_col_type & current_col = workspace.child(depth);
-    current_col = workspace.at(depth);
+    affine_col_type & current_col = workspace.clone_from_parent(depth);
     branch_type & branch = ch.second->branch;
     bool max_distance_exceeded = false;
     for(size_t u=0; u<branch.size(); ++u) {
       int current_dist = update_col_affine(branch[u], ctx.query, current_col, cost_map);
+      workspace.set_min(depth + 1, current_dist);
       if(current_dist > ctx.max_distance) {
         max_distance_exceeded = true;
         break;
@@ -888,16 +926,10 @@ inline void RadixMap::global_search_affine_impl(RadixMap::const_weak_pointer_typ
   }
 }
 
-inline void RadixMap::anchored_search_affine_impl(RadixMap::const_weak_pointer_type node, const size_t depth, const int row_min, search_context & ctx, affine_workspace & workspace, const CostMap & cost_map) {
+inline void RadixMap::anchored_search_affine_impl(RadixMap::const_weak_pointer_type node, const size_t depth, const int row_min, search_context & ctx, AffineWorkspace & workspace, const CostMap & cost_map) {
   workspace.ensure_child_slot(depth);
-  int current_col_min;
-  {
-    const auto & column = workspace.at(depth);
-    current_col_min = std::min({
-      *std::min_element(std::get<0>(column).begin(), std::get<0>(column).end()),
-      *std::min_element(std::get<1>(column).begin(), std::get<1>(column).end()),
-      *std::min_element(std::get<2>(column).begin(), std::get<2>(column).end())});
-  }
+  const int parent_min = workspace.min_at(depth);
+  int current_col_min = parent_min;
   int current_row_min = row_min;
   if( (current_col_min > ctx.max_distance) && (current_row_min > ctx.max_distance) ) { // case 1
     return;
@@ -919,13 +951,14 @@ inline void RadixMap::anchored_search_affine_impl(RadixMap::const_weak_pointer_t
     }
   }
   for (auto & ch : node->child_nodes) {
-    affine_col_type & current_col = workspace.child(depth);
-    current_col = workspace.at(depth);
+    affine_col_type & current_col = workspace.clone_from_parent(depth);
+    current_col_min = parent_min;
     branch_type & branch = ch.second->branch;
     bool max_distance_exceeded = false;
     current_row_min = row_min;
     for(size_t u=0; u<branch.size(); ++u) {
       current_col_min = update_col_affine(branch[u], ctx.query, current_col, cost_map);
+      workspace.set_min(depth + 1, current_col_min);
       int current_col_back = std::min({
         std::get<0>(current_col).back(),
         std::get<1>(current_col).back(),

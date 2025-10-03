@@ -1,3 +1,6 @@
+Version 0.3.2 (2025-10-03)
+   * (Performance) Track DP column min to avoid redundant calculation
+
 Version 0.3.1 (2025-10-03)
    * (Performance) Reworked trie alignment searches to reuse dynamic-programming workspaces
 
