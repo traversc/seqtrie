@@ -76,7 +76,7 @@ test:
 	IS_LOCAL=Yes Rscript tests/test_RadixForest.R && unset IS_LOCAL
 
 test-trie:
-        IS_LOCAL=Yes Rscript tests/test_RadixTree.R && unset IS_LOCAL
+	IS_LOCAL=Yes Rscript tests/test_RadixTree.R && unset IS_LOCAL
 
 bench:
 	Rscript inst/extra_tests/benchmark.R

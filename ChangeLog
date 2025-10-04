@@ -1,3 +1,6 @@
+Version 0.3.3 (2025-10-04)
+   * (Performance) Implement Ukkonen style banding to limit DP calculations to near diagonals
+
 Version 0.3.2 (2025-10-03)
    * (Performance) Track DP column min to avoid redundant calculation
 
