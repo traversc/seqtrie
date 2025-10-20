@@ -3,6 +3,8 @@ print("Running test_single_gap_search.R")
 if(requireNamespace("seqtrie", quietly=TRUE) &&
    requireNamespace("dplyr", quietly=TRUE)
 ) {
+library(seqtrie)
+library(dplyr)
 
 NTHREADS <- 2
 cost_mat <- seqtrie::generate_cost_matrix(charset = "ACGT", match = 0L, mismatch = 1L)
