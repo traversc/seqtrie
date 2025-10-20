@@ -9,8 +9,8 @@ dist_pairwise(
   target,
   mode,
   cost_matrix = NULL,
-  gap_cost = NULL,
-  gap_open_cost = NULL,
+  gap_cost = NA_integer_,
+  gap_open_cost = NA_integer_,
   nthreads = 1,
   show_progress = FALSE
 )

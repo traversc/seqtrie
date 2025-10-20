@@ -141,9 +141,7 @@ RadixForest <- R6::R6Class("RadixForest", list(
     }
     
     if(!is.null(max_distance)) {
-      if(length(max_distance) == 1) {
-        max_distance <- rep(max_distance, length(query))
-      }
+      max_distance <- recycle_arg(max_distance, query)
     } else if(!is.null(max_fraction)) {
       max_distance <- as.integer(nchar(query) * max_fraction)
     } else {

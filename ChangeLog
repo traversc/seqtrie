@@ -1,8 +1,8 @@
-Version 0.3.3 (2025-10-04)
-   * (Performance) Implement Ukkonen style banding to limit DP calculations to near diagonals
+Version 0.3.5 (2025-10-19)
+   * (Performance) Specialized fast `single_gap_search` algorithm, see `RadixTree$single_gap_search`
 
-Version 0.3.2 (2025-10-03)
-   * (Performance) Track DP column min to avoid redundant calculation
+Version 0.3.3 (2025-10-04)
+   * (Performance) Implement Ukkonen style banding to limit DP calculations to near diagonals, improves performance 30-40%
 
 Version 0.3.1 (2025-10-03)
    * (Performance) Reworked trie alignment searches to reuse dynamic-programming workspaces
@@ -24,3 +24,4 @@ Version 0.2.7 (2024-01-25)
 
 Version 0.2.6 (2024-01-25)
    * Minor fix for CRAN checks, std::basic_string<uint8_t> deprecated in Clang 18
+ 

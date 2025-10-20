@@ -67,7 +67,7 @@ sd_search <- function(query, target, method = "lv") {
   dplyr::arrange(results, query, target)
 }
 
-dist_matrix_search <- function(query, target, cost_matrix = NULL, gap_cost = NULL, gap_open_cost = NULL, mode = "anchored") {
+dist_matrix_search <- function(query, target, cost_matrix = NULL, gap_cost = NA_integer_, gap_open_cost = NA_integer_, mode = "anchored") {
   results <- seqtrie::dist_matrix(query, target, mode = mode, cost_matrix, gap_cost, gap_open_cost, nthreads=NTHREADS)
   if(mode == "anchored") {
     results <- data.frame(query = rep(query, times=length(target)),

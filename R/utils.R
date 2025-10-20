@@ -58,6 +58,14 @@ is_integerlike <- function(x) {
   }
 }
 
+is_missing_arg <- function(x) {
+  is.null(x) || (length(x) == 1L && is.na(x))
+}
+
+recycle_arg <- function(recycle_vector, target_vector) {
+  rep(recycle_vector, length.out = length(target_vector))
+}
+
 # A cost matrix must
 # 1) Be a square matrix _OR_ NULL
 # 2) If gap_cost is NULL, cost_matrix must have a "gap" entry instead
@@ -103,16 +111,16 @@ check_cost_matrix <- function(cost_matrix, gap_cost, gap_open_cost, charset, dia
 
   # gap parameters are provided separately in the R APIs now
   # validate gap_cost / gap_open_cost here, independent of matrix contents
-  if (!is.null(gap_cost)) {
+  if (!is_missing_arg(gap_cost)) {
     if (!(is_integerlike(gap_cost) && length(gap_cost) == 1 && gap_cost > 0)) {
       stop("gap_cost must be a single positive integer when provided")
     }
   }
-  if (!is.null(gap_open_cost)) {
+  if (!is_missing_arg(gap_open_cost)) {
     if (!(is_integerlike(gap_open_cost) && length(gap_open_cost) == 1 && gap_open_cost >= 0)) {
       stop("gap_open_cost must be a single non-negative integer when provided")
     }
-    if (is.null(gap_cost)) {
+    if (is_missing_arg(gap_cost)) {
       stop("If gap_open_cost is defined, gap_cost must also be defined")
     }
   }
@@ -133,7 +141,7 @@ check_alignment_params <- function(mode, cost_matrix, gap_cost, gap_open_cost, c
     stop("mode must be one of hamming (hm), global (gb, lv, levenshtein) or anchored (an, en, extension)")
   }
   check_cost_matrix(cost_matrix, gap_cost, gap_open_cost, charset, diag_must_be_zero)
-  if ((mode %in% c("hamming", "hm")) && (!is.null(cost_matrix) || !is.null(gap_cost) || !is.null(gap_open_cost))) {
+  if ((mode %in% c("hamming", "hm")) && (!is.null(cost_matrix) || !is_missing_arg(gap_cost) || !is_missing_arg(gap_open_cost))) {
     warning("cost_matrix and gap parameters are ignored when mode is 'hamming'")
   }
 }

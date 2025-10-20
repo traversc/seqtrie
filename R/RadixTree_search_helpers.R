@@ -23,7 +23,7 @@
 #' dist_search(c("ACGT", "AAAA"), c("ACG", "ACGT"), max_distance = 1, mode = "levenshtein")
 #' @name dist_search
 dist_search <- function(query, target, max_distance = NULL, max_fraction = NULL, mode = "levenshtein",
-                        cost_matrix = NULL, gap_cost = NULL, gap_open_cost = NULL, tree_class = "RadixTree",
+                        cost_matrix = NULL, gap_cost = NA_integer_, gap_open_cost = NA_integer_, tree_class = "RadixTree",
                         nthreads = 1, show_progress = FALSE) {
   if (!tree_class %in% c("RadixTree", "RadixForest")) {
     stop("tree_class must be one of RadixTree or RadixForest")
@@ -33,7 +33,9 @@ dist_search <- function(query, target, max_distance = NULL, max_fraction = NULL,
     obj$insert(target)
     obj$search(query, max_distance, max_fraction, mode, cost_matrix, gap_cost, gap_open_cost, nthreads, show_progress)
   } else if(tree_class == "RadixForest") {
-    if(!is.null(cost_matrix) || !is.null(gap_cost) || !is.null(gap_open_cost)) {
+    gap_cost_provided <- !(length(gap_cost) == 1L && is.na(gap_cost))
+    gap_open_provided <- !(length(gap_open_cost) == 1L && is.na(gap_open_cost))
+    if(!is.null(cost_matrix) || gap_cost_provided || gap_open_provided) {
       stop("cost_matrix, gap_cost and gap_open_cost are not supported for RadixForest")
     }
     obj <- RadixForest$new()

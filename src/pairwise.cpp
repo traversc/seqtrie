@@ -7,8 +7,8 @@
 IntegerMatrix c_dist_matrix(CharacterVector query, CharacterVector target, 
                           const std::string mode = "global", // global, anchored or hamming
                           Rcpp::Nullable<IntegerMatrix> cost_matrix = R_NilValue,
-                          const int gap_cost = 1,
-                          const int gap_open_cost = 0,
+                          int gap_cost = NA_INTEGER,
+                          int gap_open_cost = NA_INTEGER,
                           const int nthreads = 1, const bool show_progress = false) {
   std::vector<cspan> query_span = strsxp_to_cspan(query);
   std::vector<cspan> target_span = strsxp_to_cspan(target);
@@ -111,8 +111,8 @@ IntegerMatrix c_dist_matrix(CharacterVector query, CharacterVector target,
 IntegerVector c_dist_pairwise(CharacterVector query, CharacterVector target, 
                             const std::string mode = "levenshtein", 
                             Rcpp::Nullable<IntegerMatrix> cost_matrix = R_NilValue,
-                            const int gap_cost = 1,
-                            const int gap_open_cost = 0,
+                            int gap_cost = NA_INTEGER,
+                            int gap_open_cost = NA_INTEGER,
                             const int nthreads = 1, const bool show_progress = false) {
 
   std::vector<cspan> query_span = strsxp_to_cspan(query);

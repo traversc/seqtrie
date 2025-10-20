@@ -11,8 +11,8 @@ dist_search(
   max_fraction = NULL,
   mode = "levenshtein",
   cost_matrix = NULL,
-  gap_cost = NULL,
-  gap_open_cost = NULL,
+  gap_cost = NA_integer_,
+  gap_open_cost = NA_integer_,
   tree_class = "RadixTree",
   nthreads = 1,
   show_progress = FALSE

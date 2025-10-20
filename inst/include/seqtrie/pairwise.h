@@ -63,17 +63,18 @@ int hamming_distance(cspan query, cspan target) {
 }
 
 // Starting boundaries are the same for both levenshtein and anchored
-IMatrix get_dprog_matrix(cspan query, cspan target) {
+inline IMatrix get_dprog_matrix(cspan query, cspan target, const int gap_cost = 1) {
   IMatrix mat(query.size()+1, target.size()+1);
-  for(size_t j=1; j<mat.size2(); ++j) mat(0,j) = j;
-  for(size_t i=0; i<mat.size1(); ++i) mat(i,0) = i;
+  mat(0,0) = 0;
+  for(size_t j=1; j<mat.size2(); ++j) mat(0,j) = mat(0,j-1) + gap_cost;
+  for(size_t i=1; i<mat.size1(); ++i) mat(i,0) = mat(i-1,0) + gap_cost;
   
   // fill it in
   for(size_t i=1; i<mat.size1(); ++i) {
     for(size_t j=1; j<mat.size2(); ++j) {
       int match_cost  = mat(i-1, j-1) + (query[i-1] == target[j-1] ? 0 : 1);
-      int gap_in_query = mat(i, j-1) + 1;
-      int gap_in_target = mat(i-1, j) + 1;
+      int gap_in_query = mat(i, j-1) + gap_cost;
+      int gap_in_target = mat(i-1, j) + gap_cost;
       mat(i,j) = std::min({match_cost, gap_in_query, gap_in_target});
     }
   }
@@ -143,8 +144,8 @@ inline std::tuple<IMatrix, IMatrix, IMatrix> get_dprog_matrix_affine(cspan query
   return mats;
 }
 
-int global_distance(cspan query, cspan target) {
-  IMatrix mat = get_dprog_matrix(query, target);
+inline int global_distance(cspan query, cspan target) {
+  IMatrix mat = get_dprog_matrix(query, target, 1);
   return mat(mat.size1()-1, mat.size2()-1);
 }
 const auto& levenshtein_distance = global_distance; // alias
@@ -170,10 +171,6 @@ inline int global_distance_affine(cspan query, cspan target, const seqtrie::Cost
   size_t ylast = M.size2()-1;
   return std::min({M(xlast, ylast), X(xlast, ylast), Y(xlast, ylast)});
 }
-
-// Myers global distance using shared pattern/state and boolean substitution map (0/1)
-// Myers implementations removed temporarily
-
 
 std::tuple<int, int, int> anchored_distance(cspan query, cspan target) {
   IMatrix mat = get_dprog_matrix(query, target);

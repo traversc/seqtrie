@@ -132,8 +132,8 @@ inline bool is_unit_substitution(const Rcpp::Nullable<Rcpp::IntegerMatrix>& cm) 
 
 inline AlignmentAlgo decide_alignment_algo(std::string mode,
                                            const Rcpp::Nullable<Rcpp::IntegerMatrix>& cost_matrix,
-                                           int gap_cost,
-                                           int gap_open_cost) {
+                                           int & gap_cost,
+                                           int & gap_open_cost) {
   // normalize mode
   for (auto& c : mode) c = static_cast<char>(std::tolower(c));
   if (mode == "hm") mode = "hamming";
@@ -142,10 +142,28 @@ inline AlignmentAlgo decide_alignment_algo(std::string mode,
 
   if (mode == "hamming") return AlignmentAlgo::Hamming;
 
+  const bool gap_cost_provided = gap_cost != NA_INTEGER;
+  bool gap_open_provided = gap_open_cost != NA_INTEGER;
+
   // If substitution matrix is NULL, always use unit substitution and unit gaps
   // ignoring gap_cost and gap_open_cost entirely, per refined logic.
   if (cost_matrix.isNull()) {
+    if (gap_cost_provided || gap_open_provided) {
+      Rcpp::warning("gap_cost and gap_open_cost are ignored when cost_matrix is NULL; provide a cost_matrix to enable custom gap penalties");
+    }
     return (mode == "global") ? AlignmentAlgo::GlobalUnit : AlignmentAlgo::AnchoredUnit;
+  }
+
+  if (!gap_cost_provided && gap_open_provided) {
+    Rcpp::warning("gap_open_cost is defined but gap_cost is NA; ignoring gap_open_cost");
+    gap_open_provided = false;
+  }
+
+  if (!gap_cost_provided) {
+    gap_cost = 1;
+  }
+  if (!gap_open_provided) {
+    gap_open_cost = 0;
   }
 
   // New semantics: gap_open_cost includes the first extension.

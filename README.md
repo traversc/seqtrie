@@ -336,17 +336,6 @@ tree$prefix_search("car")
     ## 3   car carburetor
     ## 4   car  carbuncle
 
-### Why not just use Bowtie2, BWA or other fast alignment software?
-
-There are no apples-to-apples comparisons. With NGS alignment software,
-you are looking for alignments of reads (queries) *within* a genome
-reference (target). Here, we’re looking for alignments from the query to
-the *full* target. However, many NGS aligners do use Tries and similar
-data structures.
-
-Compared to pairwise alignment packages, calculating all alignment pairs
-takes much longer, but on the other hand gives you more information.
-
 ### References and literature
 
 - “Fast string correction with Levenshtein automata” (2002)

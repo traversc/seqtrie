@@ -52,7 +52,6 @@ public:
       print(counter.load());
       REprintf("\n");
     }
-    counter.~atomic();
   }
 };
 

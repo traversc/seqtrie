@@ -63,6 +63,7 @@ https://en.wikipedia.org/wiki/Radix_tree
 \item \href{#method-RadixTree-find}{\code{RadixTree$find()}}
 \item \href{#method-RadixTree-prefix_search}{\code{RadixTree$prefix_search()}}
 \item \href{#method-RadixTree-search}{\code{RadixTree$search()}}
+\item \href{#method-RadixTree-single_gap_search}{\code{RadixTree$single_gap_search()}}
 \item \href{#method-RadixTree-validate}{\code{RadixTree$validate()}}
 }
 }
@@ -249,8 +250,8 @@ Search for sequences in the tree that are with a specified distance metric to a 
   max_fraction = NULL,
   mode = "levenshtein",
   cost_matrix = NULL,
-  gap_cost = NULL,
-  gap_open_cost = NULL,
+  gap_cost = NA_integer_,
+  gap_open_cost = NA_integer_,
   nthreads = 1,
   show_progress = FALSE
 )}\if{html}{\out{</div>}}
@@ -282,6 +283,40 @@ Search for sequences in the tree that are with a specified distance metric to a 
 \subsection{Returns}{
 The output is a data.frame of all matches with columns "query" and "target".
 For anchored searches, the output also includes attributes "query_size" and "target_size" which are vectors containing the portion of the query and target sequences that are aligned.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-RadixTree-single_gap_search"></a>}}
+\if{latex}{\out{\hypertarget{method-RadixTree-single_gap_search}{}}}
+\subsection{Method \code{single_gap_search()}}{
+A specialized algorithm for searching for sequences allowing at most a single gap within the alignment itself. The mode is always "anchored" and does not penalize end gaps.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{RadixTree$single_gap_search(
+  query,
+  max_distance,
+  gap_cost = 1L,
+  nthreads = 1,
+  show_progress = FALSE
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{query}}{A character vector of query sequences.}
+
+\item{\code{max_distance}}{how far to search in units of absolute distance. Can be a single value or a vector. Mutually exclusive with max_fraction.}
+
+\item{\code{gap_cost}}{The cost of a gap for use with the "global" or "anchored" distance metrics. See details.}
+
+\item{\code{nthreads}}{The number of threads to use for parallel computation.}
+
+\item{\code{show_progress}}{Whether to show a progress bar.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+The output is a data.frame of matches with columns "query", "target" and "distance".
 }
 }
 \if{html}{\out{<hr>}}

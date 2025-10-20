@@ -18,16 +18,14 @@
 #' @examples
 #' dist_matrix(c("ACGT", "AAAA"), c("ACG", "ACGT"), mode = "global")
 #' @name dist_matrix
-dist_matrix <- function(query, target, mode, cost_matrix = NULL, gap_cost = NULL, gap_open_cost = NULL, nthreads = 1, show_progress = FALSE) {
+dist_matrix <- function(query, target, mode, cost_matrix = NULL, gap_cost = NA_integer_, gap_open_cost = NA_integer_, nthreads = 1, show_progress = FALSE) {
   charset <- unique(c(get_charset(query), get_charset(target)))
   check_alignment_params(mode, cost_matrix, gap_cost, gap_open_cost, charset, diag_must_be_zero = FALSE)
   mode <- normalize_mode_parameter(mode)
-  # defaults for C++ plain ints
-  if (is.null(gap_cost)) gap_cost <- 1L
-  if (is.null(gap_open_cost)) gap_open_cost <- 0L
-  # Align conventions with pwalign/Biostrings: first gap includes one extension
-  if (gap_open_cost > 0L) gap_open_cost <- gap_open_cost + gap_cost
-  c_dist_matrix(query, target, mode, cost_matrix, as.integer(gap_cost), as.integer(gap_open_cost), nthreads, show_progress)
+  if (!is.na(gap_open_cost) && !is.na(gap_cost) && gap_open_cost > 0L) {
+    gap_open_cost <- gap_open_cost + gap_cost
+  }
+  c_dist_matrix(query, target, mode, cost_matrix, gap_cost, gap_open_cost, nthreads, show_progress)
 }
 
 #' @title Pairwise distance between two sets of sequences
@@ -50,17 +48,15 @@ dist_matrix <- function(query, target, mode, cost_matrix = NULL, gap_cost = NULL
 #' @examples
 #' dist_pairwise(c("ACGT", "AAAA"), c("ACG", "ACGT"), mode = "global")
 #' @name dist_pairwise
-dist_pairwise <- function(query, target, mode, cost_matrix = NULL, gap_cost = NULL, gap_open_cost = NULL, nthreads = 1, show_progress = FALSE) {
+dist_pairwise <- function(query, target, mode, cost_matrix = NULL, gap_cost = NA_integer_, gap_open_cost = NA_integer_, nthreads = 1, show_progress = FALSE) {
   if (length(query) != length(target)) {
     stop("query and target must be the same length")
   }
   charset <- unique(c(get_charset(query), get_charset(target)))
   check_alignment_params(mode, cost_matrix, gap_cost, gap_open_cost, charset, diag_must_be_zero = FALSE)
   mode <- normalize_mode_parameter(mode)
-  # defaults for C++ plain ints
-  if (is.null(gap_cost)) gap_cost <- 1L
-  if (is.null(gap_open_cost)) gap_open_cost <- 0L
-  # Align conventions with pwalign/Biostrings: first gap includes one extension
-  if (gap_open_cost > 0L) gap_open_cost <- gap_open_cost + gap_cost
-  c_dist_pairwise(query, target, mode, cost_matrix, as.integer(gap_cost), as.integer(gap_open_cost), nthreads, show_progress)
+  if (!is.na(gap_open_cost) && !is.na(gap_cost) && gap_open_cost > 0L) {
+    gap_open_cost <- gap_open_cost + gap_cost
+  }
+  c_dist_pairwise(query, target, mode, cost_matrix, gap_cost, gap_open_cost, nthreads, show_progress)
 }

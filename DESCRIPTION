@@ -1,7 +1,7 @@
 Package: seqtrie
 Title: Radix Tree and Trie-Based String Distances
-Version: 0.3.4
-Date: 2025-10-04
+Version: 0.3.5
+Date: 2025-10-19
 Authors@R: c(
     person("Travers", "Ching", email = "traversc@gmail.com", role = c("aut", "cre", "cph")),
     person("Martin", "Moene", role = c("ctb", "cph"), comment = "span-lite C++ library"),
@@ -20,7 +20,7 @@ LinkingTo:
 Imports: 
     Rcpp (>= 0.12.18.3), RcppParallel (>= 5.1.3), R6, rlang, dplyr, stringi
 Suggests:
-    knitr, rmarkdown, stringdist, qs, pwalign, igraph, ggplot2
+    knitr, rmarkdown, stringdist, pwalign, igraph, ggplot2
 VignetteBuilder: knitr
 RoxygenNote: 7.3.2
 Roxygen: list(markdown = TRUE)

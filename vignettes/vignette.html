@@ -633,17 +633,6 @@ predictive text.</p>
 ## 3   car carburetor
 ## 4   car  carbuncle</code></pre>
 </div>
-<div id="why-not-just-use-bowtie2-bwa-or-other-fast-alignment-software" class="section level3">
-<h3>Why not just use Bowtie2, BWA or other fast alignment software?</h3>
-<p>There are no apples-to-apples comparisons. With NGS alignment
-software, you are looking for alignments of reads (queries)
-<em>within</em> a genome reference (target). Here, we’re looking for
-alignments from the query to the <em>full</em> target. However, many NGS
-aligners do use Tries and similar data structures.</p>
-<p>Compared to pairwise alignment packages, calculating all alignment
-pairs takes much longer, but on the other hand gives you more
-information.</p>
-</div>
 <div id="references-and-literature" class="section level3">
 <h3>References and literature</h3>
 <ul>

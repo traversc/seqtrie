@@ -141,15 +141,13 @@ RadixTree <- R6::R6Class("RadixTree", public = list(
   #' @param show_progress `r rdoc("show_progress")`
   #' @return The output is a data.frame of all matches with columns "query" and "target".
   #' For anchored searches, the output also includes attributes "query_size" and "target_size" which are vectors containing the portion of the query and target sequences that are aligned.
-  search = function(query, max_distance = NULL, max_fraction = NULL, mode = "levenshtein", cost_matrix = NULL, gap_cost = NULL, gap_open_cost = NULL, nthreads = 1, show_progress = FALSE) {
+  search = function(query, max_distance = NULL, max_fraction = NULL, mode = "levenshtein", cost_matrix = NULL, gap_cost = NA_integer_, gap_open_cost = NA_integer_, nthreads = 1, show_progress = FALSE) {
     charset <- unique(c(CharCounter_keys(self$char_counter_pointer), get_charset(query)))
     check_alignment_params(mode, cost_matrix, gap_cost, gap_open_cost, charset, diag_must_be_zero = TRUE)
     mode <- normalize_mode_parameter(mode)
 
     if (!is.null(max_distance)) {
-      if (length(max_distance) == 1) {
-        max_distance <- rep(max_distance, length(query))
-      }
+      max_distance <- recycle_arg(max_distance, query)
     } else if (!is.null(max_fraction)) {
       max_distance <- as.integer(nchar(query) * max_fraction)
     } else {
@@ -159,14 +157,12 @@ RadixTree <- R6::R6Class("RadixTree", public = list(
       stop("max_distance/max_fraction must be non-negative")
     }
 
-    # defaults for C++ plain ints
-    if (is.null(gap_cost)) gap_cost <- 1L
-    if (is.null(gap_open_cost)) gap_open_cost <- 0L
-    # Align conventions with pwalign/Biostrings: first gap includes one extension
-    if (gap_open_cost > 0L) gap_open_cost <- gap_open_cost + gap_cost
-    result <- RadixTree_search(self$root_pointer, query, max_distance, mode, cost_matrix, as.integer(gap_cost), as.integer(gap_open_cost), nthreads, show_progress)
+    if (!is.na(gap_open_cost) && !is.na(gap_cost) && gap_open_cost > 0L) {
+      gap_open_cost <- gap_open_cost + gap_cost
+    }
+    result <- RadixTree_search(self$root_pointer, query, max_distance, mode, cost_matrix, gap_cost, gap_open_cost, nthreads, show_progress)
     if (mode == "anchored") { # Append query_size and target_size attributes
-      result2 <- c_dist_pairwise(result$query, result$target, mode, cost_matrix, as.integer(gap_cost), as.integer(gap_open_cost), nthreads, show_progress = FALSE)
+      result2 <- c_dist_pairwise(result$query, result$target, mode, cost_matrix, gap_cost, gap_open_cost, nthreads, show_progress = FALSE)
       if (any(result$distance != result2)) {
         stop("Internal error: anchored search results do not match pairwise results")
       }
@@ -174,6 +170,29 @@ RadixTree <- R6::R6Class("RadixTree", public = list(
       result$target_size <- attr(result2, "target_size")
     }
     result
+  },
+  #' @description A specialized algorithm for searching for sequences allowing at most a single gap within the alignment itself. The mode is always "anchored" and does not penalize end gaps.
+  #' @param query `r rdoc("query")`
+  #' @param max_distance `r rdoc("max_distance")`
+  #' @param gap_cost `r rdoc("gap_cost")`
+  #' @param nthreads `r rdoc("nthreads")`
+  #' @param show_progress `r rdoc("show_progress")`
+  #' @return The output is a data.frame of matches with columns "query", "target" and "distance".
+  single_gap_search = function(query,
+                               max_distance,
+                               gap_cost = 1L,
+                               nthreads = 1,
+                               show_progress = FALSE) {
+    if (!is.null(max_distance)) {
+      max_distance <- recycle_arg(max_distance, query)
+    } else {
+      stop("Either max_distance must be non-null")
+    }
+    if (any(max_distance < 0)) {
+      stop("max_distance/max_fraction must be non-negative")
+    }
+
+    RadixTree_single_gap_search(self$root_pointer, query, max_distance, gap_cost, nthreads, show_progress)
   },
   #' @description Validate the tree
   #' @return A logical indicating whether the tree is valid (TRUE) or not (FALSE). This is mostly an internal function for debugging purposes and should always return TRUE.

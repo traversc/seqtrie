@@ -149,8 +149,8 @@ DataFrame RadixTree_search(RadixTreeRXPtr xp,
                            IntegerVector max_distance,
                            const std::string mode = "global", // global, anchored or hamming
                            Rcpp::Nullable<IntegerMatrix> cost_matrix = R_NilValue,
-                           const int gap_cost = 1,
-                           const int gap_open_cost = 0,
+                           int gap_cost = NA_INTEGER,
+                           int gap_open_cost = NA_INTEGER,
                            const int nthreads = 1, const bool show_progress = false) {
   auto & root = *xp;
   size_t nseqs = Rf_xlength(query);
@@ -221,5 +221,36 @@ DataFrame RadixTree_search(RadixTreeRXPtr xp,
       }, 0, nseqs, 1, nthreads);
     }
   }
+  return seqtrie_results_to_dataframe(query, output);
+}
+
+// [[Rcpp::export(rng = false)]]
+DataFrame RadixTree_single_gap_search(RadixTreeRXPtr xp,
+                                      CharacterVector query,
+                                      IntegerVector max_distance,
+                                      const int gap_cost = 1,
+                                      const int nthreads = 1,
+                                      const bool show_progress = false) {
+  auto & root = *xp;
+  const size_t nseqs = Rf_xlength(query);
+  if(nseqs == 0) {
+    return DataFrame::create(_["query"] = CharacterVector(),
+                             _["target"] = CharacterVector(),
+                             _["distance"] = IntegerVector(),
+                             _["stringsAsFactors"] = false);
+  }
+
+  int * max_distance_ptr = INTEGER(max_distance);
+  std::vector<cspan> query_span = strsxp_to_cspan(query);
+  std::vector<SeqTrie::search_context> output(nseqs);
+  trqwe::simple_progress progress_bar(nseqs, show_progress);
+
+  do_parallel_for([&root, &query_span, max_distance_ptr, &output, gap_cost, &progress_bar](size_t begin, size_t end) {
+    for(size_t i = begin; i < end; ++i) {
+      output[i] = root.single_gap_search(query_span[i], max_distance_ptr[i], gap_cost);
+      progress_bar.increment();
+    }
+  }, 0, nseqs, 1, nthreads);
+
   return seqtrie_results_to_dataframe(query, output);
 }
