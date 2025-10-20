@@ -56,11 +56,11 @@ forest$search("ACG", max_distance = 1, mode = "hamming")
 \if{latex}{\out{\hypertarget{method-RadixForest-new}{}}}
 \subsection{Method \code{new()}}{
 Create a new RadixForest object
-\subsection{Usage}{
+\subsection{Usage - new}{
 \if{html}{\out{<div class="r">}}\preformatted{RadixForest$new(sequences = NULL)}\if{html}{\out{</div>}}
 }
 
-\subsection{Arguments}{
+\subsection{Arguments - new}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{sequences}}{A character vector of sequences to insert into the forest}
@@ -73,7 +73,7 @@ Create a new RadixForest object
 \if{latex}{\out{\hypertarget{method-RadixForest-show}{}}}
 \subsection{Method \code{show()}}{
 Print the forest to screen
-\subsection{Usage}{
+\subsection{Usage - show}{
 \if{html}{\out{<div class="r">}}\preformatted{RadixForest$show()}\if{html}{\out{</div>}}
 }
 
@@ -83,7 +83,7 @@ Print the forest to screen
 \if{latex}{\out{\hypertarget{method-RadixForest-to_string}{}}}
 \subsection{Method \code{to_string()}}{
 Print the forest to a string
-\subsection{Usage}{
+\subsection{Usage - to_string}{
 \if{html}{\out{<div class="r">}}\preformatted{RadixForest$to_string()}\if{html}{\out{</div>}}
 }
 
@@ -93,11 +93,11 @@ Print the forest to a string
 \if{latex}{\out{\hypertarget{method-RadixForest-graph}{}}}
 \subsection{Method \code{graph()}}{
 Plot of the forest using igraph
-\subsection{Usage}{
+\subsection{Usage - graph}{
 \if{html}{\out{<div class="r">}}\preformatted{RadixForest$graph(depth = -1, root_label = "root", plot = TRUE)}\if{html}{\out{</div>}}
 }
 
-\subsection{Arguments}{
+\subsection{Arguments - graph}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{depth}}{The tree depth to plot for each tree in the forest.}
@@ -108,7 +108,7 @@ Plot of the forest using igraph
 }
 \if{html}{\out{</div>}}
 }
-\subsection{Returns}{
+\subsection{Returns - graph}{
 A data frame of parent-child relationships used to generate the igraph plot OR a ggplot2 object
 }
 }
@@ -117,11 +117,11 @@ A data frame of parent-child relationships used to generate the igraph plot OR a
 \if{latex}{\out{\hypertarget{method-RadixForest-to_vector}{}}}
 \subsection{Method \code{to_vector()}}{
 Output all sequences held by the forest as a character vector
-\subsection{Usage}{
+\subsection{Usage - to_vector}{
 \if{html}{\out{<div class="r">}}\preformatted{RadixForest$to_vector()}\if{html}{\out{</div>}}
 }
 
-\subsection{Returns}{
+\subsection{Returns - to_vector}{
 A character vector of all sequences contained in the forest.
 }
 }
@@ -130,11 +130,11 @@ A character vector of all sequences contained in the forest.
 \if{latex}{\out{\hypertarget{method-RadixForest-size}{}}}
 \subsection{Method \code{size()}}{
 Output the size of the forest (i.e. how many sequences are contained)
-\subsection{Usage}{
+\subsection{Usage - size}{
 \if{html}{\out{<div class="r">}}\preformatted{RadixForest$size()}\if{html}{\out{</div>}}
 }
 
-\subsection{Returns}{
+\subsection{Returns - size}{
 The size of the forest
 }
 }
@@ -143,18 +143,18 @@ The size of the forest
 \if{latex}{\out{\hypertarget{method-RadixForest-insert}{}}}
 \subsection{Method \code{insert()}}{
 Insert new sequences into the forest
-\subsection{Usage}{
+\subsection{Usage - insert}{
 \if{html}{\out{<div class="r">}}\preformatted{RadixForest$insert(sequences)}\if{html}{\out{</div>}}
 }
 
-\subsection{Arguments}{
+\subsection{Arguments - insert}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{sequences}}{A character vector of sequences to insert into the forest}
 }
 \if{html}{\out{</div>}}
 }
-\subsection{Returns}{
+\subsection{Returns - insert}{
 A logical vector indicating whether the sequence was inserted (TRUE) or already existing in the forest (FALSE)
 }
 }
@@ -163,18 +163,18 @@ A logical vector indicating whether the sequence was inserted (TRUE) or already 
 \if{latex}{\out{\hypertarget{method-RadixForest-erase}{}}}
 \subsection{Method \code{erase()}}{
 Erase sequences from the forest
-\subsection{Usage}{
+\subsection{Usage - erase}{
 \if{html}{\out{<div class="r">}}\preformatted{RadixForest$erase(sequences)}\if{html}{\out{</div>}}
 }
 
-\subsection{Arguments}{
+\subsection{Arguments - erase}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{sequences}}{A character vector of sequences to erase from the forest}
 }
 \if{html}{\out{</div>}}
 }
-\subsection{Returns}{
+\subsection{Returns - erase}{
 A logical vector indicating whether the sequence was erased (TRUE) or not found in the forest (FALSE)
 }
 }
@@ -183,18 +183,18 @@ A logical vector indicating whether the sequence was erased (TRUE) or not found 
 \if{latex}{\out{\hypertarget{method-RadixForest-find}{}}}
 \subsection{Method \code{find()}}{
 Find sequences in the forest
-\subsection{Usage}{
+\subsection{Usage - find}{
 \if{html}{\out{<div class="r">}}\preformatted{RadixForest$find(query)}\if{html}{\out{</div>}}
 }
 
-\subsection{Arguments}{
+\subsection{Arguments - find}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{query}}{A character vector of sequences to find in the forest}
 }
 \if{html}{\out{</div>}}
 }
-\subsection{Returns}{
+\subsection{Returns - find}{
 A logical vector indicating whether the sequence was found (TRUE) or not found in the forest (FALSE)
 }
 }
@@ -204,18 +204,18 @@ A logical vector indicating whether the sequence was found (TRUE) or not found i
 \subsection{Method \code{prefix_search()}}{
 Search for sequences in the forest that start with a specified prefix.
 E.g.: a query of "CAR" will find "CART", "CARBON", "CARROT", etc. but not "CATS".
-\subsection{Usage}{
+\subsection{Usage - prefix_search}{
 \if{html}{\out{<div class="r">}}\preformatted{RadixForest$prefix_search(query)}\if{html}{\out{</div>}}
 }
 
-\subsection{Arguments}{
+\subsection{Arguments - prefix_search}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{query}}{A character vector of sequences to search for in the forest}
 }
 \if{html}{\out{</div>}}
 }
-\subsection{Returns}{
+\subsection{Returns - prefix_search}{
 A data frame of all matches with columns "query" and "target".
 }
 }
@@ -224,7 +224,7 @@ A data frame of all matches with columns "query" and "target".
 \if{latex}{\out{\hypertarget{method-RadixForest-search}{}}}
 \subsection{Method \code{search()}}{
 Search for sequences in the forest that are with a specified distance metric to a specified query.
-\subsection{Usage}{
+\subsection{Usage - search}{
 \if{html}{\out{<div class="r">}}\preformatted{RadixForest$search(
   query,
   max_distance = NULL,
@@ -235,7 +235,7 @@ Search for sequences in the forest that are with a specified distance metric to 
 )}\if{html}{\out{</div>}}
 }
 
-\subsection{Arguments}{
+\subsection{Arguments - search}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{query}}{A character vector of query sequences.}
@@ -252,7 +252,7 @@ Search for sequences in the forest that are with a specified distance metric to 
 }
 \if{html}{\out{</div>}}
 }
-\subsection{Returns}{
+\subsection{Returns - search}{
 The output is a data.frame of all matches with columns "query" and "target".
 }
 }
@@ -261,11 +261,11 @@ The output is a data.frame of all matches with columns "query" and "target".
 \if{latex}{\out{\hypertarget{method-RadixForest-validate}{}}}
 \subsection{Method \code{validate()}}{
 Validate the forest
-\subsection{Usage}{
+\subsection{Usage - validate}{
 \if{html}{\out{<div class="r">}}\preformatted{RadixForest$validate()}\if{html}{\out{</div>}}
 }
 
-\subsection{Returns}{
+\subsection{Returns - validate}{
 A logical indicating whether the forest is valid (TRUE) or not (FALSE). This is mostly an internal function for debugging purposes and should always return TRUE.
 }
 }

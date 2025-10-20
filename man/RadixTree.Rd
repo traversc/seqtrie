@@ -72,11 +72,11 @@ https://en.wikipedia.org/wiki/Radix_tree
 \if{latex}{\out{\hypertarget{method-RadixTree-new}{}}}
 \subsection{Method \code{new()}}{
 Create a new RadixTree object
-\subsection{Usage}{
+\subsection{Usage - new}{
 \if{html}{\out{<div class="r">}}\preformatted{RadixTree$new(sequences = NULL)}\if{html}{\out{</div>}}
 }
 
-\subsection{Arguments}{
+\subsection{Arguments - new}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{sequences}}{A character vector of sequences to insert into the tree}
@@ -89,7 +89,7 @@ Create a new RadixTree object
 \if{latex}{\out{\hypertarget{method-RadixTree-show}{}}}
 \subsection{Method \code{show()}}{
 Print the tree to screen
-\subsection{Usage}{
+\subsection{Usage - show}{
 \if{html}{\out{<div class="r">}}\preformatted{RadixTree$show()}\if{html}{\out{</div>}}
 }
 
@@ -99,11 +99,11 @@ Print the tree to screen
 \if{latex}{\out{\hypertarget{method-RadixTree-to_string}{}}}
 \subsection{Method \code{to_string()}}{
 Print the tree to a string
-\subsection{Usage}{
+\subsection{Usage - to_string}{
 \if{html}{\out{<div class="r">}}\preformatted{RadixTree$to_string()}\if{html}{\out{</div>}}
 }
 
-\subsection{Returns}{
+\subsection{Returns - to_string}{
 A string representation of the tree
 }
 }
@@ -112,11 +112,11 @@ A string representation of the tree
 \if{latex}{\out{\hypertarget{method-RadixTree-graph}{}}}
 \subsection{Method \code{graph()}}{
 Plot of the tree using igraph (needs to be installed separately)
-\subsection{Usage}{
+\subsection{Usage - graph}{
 \if{html}{\out{<div class="r">}}\preformatted{RadixTree$graph(depth = -1, root_label = "root", plot = TRUE)}\if{html}{\out{</div>}}
 }
 
-\subsection{Arguments}{
+\subsection{Arguments - graph}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{depth}}{The tree depth to plot. If -1 (default), plot the entire tree.}
@@ -127,7 +127,7 @@ Plot of the tree using igraph (needs to be installed separately)
 }
 \if{html}{\out{</div>}}
 }
-\subsection{Returns}{
+\subsection{Returns - graph}{
 A data frame of parent-child relationships used to generate the igraph plot OR a ggplot2 object
 }
 }
@@ -136,11 +136,11 @@ A data frame of parent-child relationships used to generate the igraph plot OR a
 \if{latex}{\out{\hypertarget{method-RadixTree-to_vector}{}}}
 \subsection{Method \code{to_vector()}}{
 Output all sequences held by the tree as a character vector
-\subsection{Usage}{
+\subsection{Usage - to_vector}{
 \if{html}{\out{<div class="r">}}\preformatted{RadixTree$to_vector()}\if{html}{\out{</div>}}
 }
 
-\subsection{Returns}{
+\subsection{Returns - to_vector}{
 A character vector of all sequences contained in the tree. Return order is not guaranteed.
 }
 }
@@ -149,11 +149,11 @@ A character vector of all sequences contained in the tree. Return order is not g
 \if{latex}{\out{\hypertarget{method-RadixTree-size}{}}}
 \subsection{Method \code{size()}}{
 Output the size of the tree (i.e. how many sequences are contained)
-\subsection{Usage}{
+\subsection{Usage - size}{
 \if{html}{\out{<div class="r">}}\preformatted{RadixTree$size()}\if{html}{\out{</div>}}
 }
 
-\subsection{Returns}{
+\subsection{Returns - size}{
 The size of the tree
 }
 }
@@ -162,18 +162,18 @@ The size of the tree
 \if{latex}{\out{\hypertarget{method-RadixTree-insert}{}}}
 \subsection{Method \code{insert()}}{
 Insert new sequences into the tree
-\subsection{Usage}{
+\subsection{Usage - insert}{
 \if{html}{\out{<div class="r">}}\preformatted{RadixTree$insert(sequences)}\if{html}{\out{</div>}}
 }
 
-\subsection{Arguments}{
+\subsection{Arguments - insert}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{sequences}}{A character vector of sequences to insert into the tree}
 }
 \if{html}{\out{</div>}}
 }
-\subsection{Returns}{
+\subsection{Returns - insert}{
 A logical vector indicating whether the sequence was inserted (TRUE) or already existing in the tree (FALSE)
 }
 }
@@ -182,18 +182,18 @@ A logical vector indicating whether the sequence was inserted (TRUE) or already 
 \if{latex}{\out{\hypertarget{method-RadixTree-erase}{}}}
 \subsection{Method \code{erase()}}{
 Erase sequences from the tree
-\subsection{Usage}{
+\subsection{Usage - erase}{
 \if{html}{\out{<div class="r">}}\preformatted{RadixTree$erase(sequences)}\if{html}{\out{</div>}}
 }
 
-\subsection{Arguments}{
+\subsection{Arguments - erase}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{sequences}}{A character vector of sequences to erase from the tree}
 }
 \if{html}{\out{</div>}}
 }
-\subsection{Returns}{
+\subsection{Returns - erase}{
 A logical vector indicating whether the sequence was erased (TRUE) or not found in the tree (FALSE)
 }
 }
@@ -202,18 +202,18 @@ A logical vector indicating whether the sequence was erased (TRUE) or not found 
 \if{latex}{\out{\hypertarget{method-RadixTree-find}{}}}
 \subsection{Method \code{find()}}{
 Find sequences in the tree
-\subsection{Usage}{
+\subsection{Usage - find}{
 \if{html}{\out{<div class="r">}}\preformatted{RadixTree$find(query)}\if{html}{\out{</div>}}
 }
 
-\subsection{Arguments}{
+\subsection{Arguments - find}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{query}}{A character vector of sequences to find in the tree}
 }
 \if{html}{\out{</div>}}
 }
-\subsection{Returns}{
+\subsection{Returns - find}{
 A logical vector indicating whether the sequence was found (TRUE) or not found in the tree (FALSE)
 }
 }
@@ -223,18 +223,18 @@ A logical vector indicating whether the sequence was found (TRUE) or not found i
 \subsection{Method \code{prefix_search()}}{
 Search for sequences in the tree that start with a specified prefix.
 E.g.: a query of "CAR" will find "CART", "CARBON", "CARROT", etc. but not "CATS".
-\subsection{Usage}{
+\subsection{Usage - prefix_search}{
 \if{html}{\out{<div class="r">}}\preformatted{RadixTree$prefix_search(query)}\if{html}{\out{</div>}}
 }
 
-\subsection{Arguments}{
+\subsection{Arguments - prefix_search}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{query}}{A character vector of sequences to search for in the tree}
 }
 \if{html}{\out{</div>}}
 }
-\subsection{Returns}{
+\subsection{Returns - prefix_search}{
 A data frame of all matches with columns "query" and "target".
 }
 }
@@ -243,7 +243,7 @@ A data frame of all matches with columns "query" and "target".
 \if{latex}{\out{\hypertarget{method-RadixTree-search}{}}}
 \subsection{Method \code{search()}}{
 Search for sequences in the tree that are with a specified distance metric to a specified query.
-\subsection{Usage}{
+\subsection{Usage - search}{
 \if{html}{\out{<div class="r">}}\preformatted{RadixTree$search(
   query,
   max_distance = NULL,
@@ -257,7 +257,7 @@ Search for sequences in the tree that are with a specified distance metric to a 
 )}\if{html}{\out{</div>}}
 }
 
-\subsection{Arguments}{
+\subsection{Arguments - search}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{query}}{A character vector of query sequences.}
@@ -280,7 +280,7 @@ Search for sequences in the tree that are with a specified distance metric to a 
 }
 \if{html}{\out{</div>}}
 }
-\subsection{Returns}{
+\subsection{Returns - search}{
 The output is a data.frame of all matches with columns "query" and "target".
 For anchored searches, the output also includes attributes "query_size" and "target_size" which are vectors containing the portion of the query and target sequences that are aligned.
 }
@@ -290,7 +290,7 @@ For anchored searches, the output also includes attributes "query_size" and "tar
 \if{latex}{\out{\hypertarget{method-RadixTree-single_gap_search}{}}}
 \subsection{Method \code{single_gap_search()}}{
 A specialized algorithm for searching for sequences allowing at most a single gap within the alignment itself. The mode is always "anchored" and does not penalize end gaps.
-\subsection{Usage}{
+\subsection{Usage - single_gap_search}{
 \if{html}{\out{<div class="r">}}\preformatted{RadixTree$single_gap_search(
   query,
   max_distance,
@@ -300,7 +300,7 @@ A specialized algorithm for searching for sequences allowing at most a single ga
 )}\if{html}{\out{</div>}}
 }
 
-\subsection{Arguments}{
+\subsection{Arguments - single_gap_search}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{query}}{A character vector of query sequences.}
@@ -315,7 +315,7 @@ A specialized algorithm for searching for sequences allowing at most a single ga
 }
 \if{html}{\out{</div>}}
 }
-\subsection{Returns}{
+\subsection{Returns - single_gap_search}{
 The output is a data.frame of matches with columns "query", "target" and "distance".
 }
 }
@@ -324,11 +324,11 @@ The output is a data.frame of matches with columns "query", "target" and "distan
 \if{latex}{\out{\hypertarget{method-RadixTree-validate}{}}}
 \subsection{Method \code{validate()}}{
 Validate the tree
-\subsection{Usage}{
+\subsection{Usage - validate}{
 \if{html}{\out{<div class="r">}}\preformatted{RadixTree$validate()}\if{html}{\out{</div>}}
 }
 
-\subsection{Returns}{
+\subsection{Returns - validate}{
 A logical indicating whether the tree is valid (TRUE) or not (FALSE). This is mostly an internal function for debugging purposes and should always return TRUE.
 }
 }

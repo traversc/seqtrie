@@ -34,6 +34,7 @@ build:
 	# ./cleanup
 	Rscript -e "library(Rcpp); compileAttributes('.');"
 	Rscript -e "devtools::load_all(); roxygen2::roxygenise('.');"
+	Rscript inst/fix_rd_subsections.R
 	find . -iname "*.a" -exec rm {} \;
 	find . -iname "*.o" -exec rm {} \;
 	find . -iname "*.so" -exec rm {} \;
@@ -52,6 +53,7 @@ install:
 	find . -iname "*.so" -exec rm {} \;
 	Rscript -e "library(Rcpp); compileAttributes('.');"
 	Rscript -e "devtools::load_all(); roxygen2::roxygenise('.');"
+	Rscript inst/fix_rd_subsections.R
 	find . -iname "*.a" -exec rm {} \;
 	find . -iname "*.o" -exec rm {} \;
 	find . -iname "*.so" -exec rm {} \;
