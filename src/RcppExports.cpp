@@ -350,6 +350,15 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// test_search_hook
+List test_search_hook();
+RcppExport SEXP _seqtrie_test_search_hook() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    rcpp_result_gen = Rcpp::wrap(test_search_hook());
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_seqtrie_CharCounter_create", (DL_FUNC) &_seqtrie_CharCounter_create, 0},
@@ -382,6 +391,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_seqtrie_RadixTree_single_gap_search", (DL_FUNC) &_seqtrie_RadixTree_single_gap_search, 6},
     {"_seqtrie_c_dist_matrix", (DL_FUNC) &_seqtrie_c_dist_matrix, 8},
     {"_seqtrie_c_dist_pairwise", (DL_FUNC) &_seqtrie_c_dist_pairwise, 8},
+    {"_seqtrie_test_search_hook", (DL_FUNC) &_seqtrie_test_search_hook, 0},
     {NULL, NULL, 0}
 };
 

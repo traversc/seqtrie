@@ -77,7 +77,7 @@ test:
 	IS_LOCAL=Yes Rscript tests/test_RadixTree.R && unset IS_LOCAL
 	IS_LOCAL=Yes Rscript tests/test_RadixForest.R && unset IS_LOCAL
 	IS_LOCAL=Yes Rscript tests/test_single_gap_search.R && unset IS_LOCAL
-
+	IS_LOCAL=Yes Rscript tests/test_search_hook.R && unset IS_LOCAL
 test-trie:
 	IS_LOCAL=Yes Rscript tests/test_RadixTree.R && unset IS_LOCAL
 

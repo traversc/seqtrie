@@ -127,7 +127,7 @@ cc3_subset <- sample(covid_cdr3, size = 1000)
 
 ################################################################################
 
-grid <- expand.grid(nseqs = c(100,300,1000,3000,10000), maxdist = c(2,3), iter = 1:NITER, method = names(methods)) %>% sample_n(nrow(.))
+grid <- expand.grid(nseqs = c(100,300,1000,3000,10000), maxdist = c(5,6), iter = 1:NITER, method = names(methods)) %>% sample_n(nrow(.))
 # grid <- filter(grid, nseqs <= 1000 | method %in% c("DNATree", "RadixTree", "RadixForest", "PrefixTree"))
 grid$time <- rep(0, nrow(grid))
 for(i in 1:nrow(grid)) {
@@ -154,8 +154,8 @@ for(i in 1:nrow(grid)) {
 }
 maxfrac_results <- grid
 
-maxdist_results %>% group_by(nseqs, method, maxdist) %>% summarize(time = mean(time)) %>% as.data.frame %>% print
-maxfrac_results %>% group_by(nseqs, method, maxfrac) %>% summarize(time = mean(time)) %>% as.data.frame %>% print
+maxdist_results %>% mutate(time = as.numeric(time, units = "secs")) %>% group_by(nseqs, method, maxdist) %>% summarize(time = mean(time)) %>% as.data.frame %>% print
+maxfrac_results %>% mutate(time = as.numeric(time, units = "secs")) %>% group_by(nseqs, method, maxfrac) %>% summarize(time = mean(time)) %>% as.data.frame %>% print
 
 ggplot(maxfrac_results, aes(x = nseqs, y = time, color = method)) + geom_point() + geom_smooth(fill = NA) +
   scale_x_log10() +
