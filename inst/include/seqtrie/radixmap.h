@@ -964,34 +964,72 @@ inline RadixMap::hook_ret<Hook> RadixMap::global_search_impl(RadixMap::const_wea
                                                              UnitWorkspace & workspace,
                                                              Hook hook) {
   constexpr bool use_hook = !std::is_same_v<Hook, NullSearchHook>;
-  workspace.ensure_child_slot(node_depth);
   const size_t query_len = ctx.query.size();
   const size_t band_radius = static_cast<size_t>(ctx.max_distance);
-  const BandLimits band = BandLimits::around(char_depth, band_radius, query_len);
 
-  std::vector<int> & current_col = workspace.at(node_depth);
-  int current_col_min = NO_ALIGN;
-  if(band.lower <= band.upper) {
-    for(size_t i = band.lower; i <= band.upper; ++i) {
-      current_col_min = std::min(current_col_min, current_col[i]);
+  struct Frame {
+    const_weak_pointer_type node;
+    size_t node_depth;
+    size_t char_depth;
+    map_type::const_iterator next_child;
+    map_type::const_iterator end_child;
+    bool entered;
+
+    Frame(const_weak_pointer_type node, size_t node_depth, size_t char_depth)
+      : node(node), node_depth(node_depth), char_depth(char_depth),
+        next_child(), end_child(), entered(false) {}
+  };
+
+  std::vector<Frame> stack;
+  stack.reserve(query_len + 1);
+  stack.emplace_back(node, node_depth, char_depth);
+
+  while(!stack.empty()) {
+    Frame & frame = stack.back();
+
+    if(!frame.entered) {
+      workspace.ensure_child_slot(frame.node_depth);
+      const BandLimits band = BandLimits::around(frame.char_depth, band_radius, query_len);
+
+      std::vector<int> & current_col = workspace.at(frame.node_depth);
+      int current_col_min = NO_ALIGN;
+      if(band.lower <= band.upper) {
+        for(size_t i = band.lower; i <= band.upper; ++i) {
+          current_col_min = std::min(current_col_min, current_col[i]);
+        }
+      }
+      if(current_col_min > ctx.max_distance) {
+        stack.pop_back();
+        continue;
+      }
+
+      const int terminal_distance = (band.upper == query_len) ? current_col.back() : NO_ALIGN;
+      if((frame.node->terminal_idx != nullidx) && (terminal_distance <= ctx.max_distance)) {
+        if constexpr (use_hook) {
+          if(!search_add<Hook>(ctx, path(frame.node), terminal_distance, hook)) return false;
+        } else {
+          search_add<Hook>(ctx, path(frame.node), terminal_distance, hook);
+        }
+      }
+
+      frame.next_child = frame.node->child_nodes.begin();
+      frame.end_child = frame.node->child_nodes.end();
+      frame.entered = true;
     }
-  }
-  if(current_col_min > ctx.max_distance) { if constexpr (use_hook) return true; else return; }
 
-  const int terminal_distance = (band.upper == query_len) ? current_col.back() : NO_ALIGN;
-  if((node->terminal_idx != nullidx) && (terminal_distance <= ctx.max_distance)) {
-    if constexpr (use_hook) {
-      if(!search_add<Hook>(ctx, path(node), terminal_distance, hook)) return false;
-    } else {
-      search_add<Hook>(ctx, path(node), terminal_distance, hook);
+    if(frame.next_child == frame.end_child) {
+      stack.pop_back();
+      continue;
     }
-  }
 
-  for (auto & ch : node->child_nodes) {
-    std::vector<int> & child_col = workspace.clone_from_parent(node_depth);
+    auto child_it = frame.next_child;
+    ++frame.next_child;
+
+    std::vector<int> & child_col = workspace.clone_from_parent(frame.node_depth);
     bool prune_child = false;
-    size_t child_char_depth = char_depth;
-    const branch_type & branch = ch.second->branch;
+    size_t child_char_depth = frame.char_depth;
+    const_weak_pointer_type child_node = child_it->second.get();
+    const branch_type & branch = child_node->branch;
     for(atomic_type branchval : branch) {
       ++child_char_depth;
       const BandLimits child_band = BandLimits::around(child_char_depth, band_radius, query_len);
@@ -1002,13 +1040,10 @@ inline RadixMap::hook_ret<Hook> RadixMap::global_search_impl(RadixMap::const_wea
       }
     }
     if(!prune_child) {
-      if constexpr (use_hook) {
-        if(!global_search_impl<Hook>(ch.second.get(), node_depth + 1, child_char_depth, ctx, workspace, hook)) return false;
-      } else {
-        global_search_impl<Hook>(ch.second.get(), node_depth + 1, child_char_depth, ctx, workspace, hook);
-      }
+      stack.emplace_back(child_node, frame.node_depth + 1, child_char_depth);
     }
   }
+
   if constexpr (use_hook) return true;
 }
 
