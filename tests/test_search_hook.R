@@ -13,5 +13,5 @@ if(requireNamespace("seqtrie", quietly = TRUE)) {
   }
 
   res <- seqtrie:::test_search_hook()
-  lapply(res, expect_head_equal)
+  invisible(lapply(res, expect_head_equal))
 }

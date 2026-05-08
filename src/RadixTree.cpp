@@ -1,6 +1,8 @@
 #include "seqtrie_types.h"
 #include "simple_progress/simple_progress.h"
 
+#include <utility>
+
 ////////////////////////////////////////////////////////////////////////////////
 // RadixTree R functions
 
@@ -173,8 +175,11 @@ DataFrame RadixTree_search(RadixTreeRXPtr xp,
   } else if(mode == "global" || mode == "gb" || mode == "lv" || mode == "levenshtein") {
     if(algo == AlignmentAlgo::GlobalUnit) {
       do_parallel_for([&root, &query_span, max_distance_ptr, &output, &progress_bar](size_t begin, size_t end) {
+        SeqTrie::RadixTreeR::UnitWorkspace workspace;
         for(size_t i=begin; i<end; ++i) {
-          output[i] = root.global_search(query_span[i], max_distance_ptr[i]);
+          SeqTrie::search_context ctx(query_span[i], max_distance_ptr[i]);
+          root.global_search_into(ctx, workspace);
+          output[i] = std::move(ctx);
           progress_bar.increment();
         }
       }, 0, nseqs, 1, nthreads);

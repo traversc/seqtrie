@@ -190,7 +190,7 @@ inline CostMap convert_cost_matrix(IntegerMatrix cost_matrix, int gap_cost, int 
   List dimnames = cost_matrix.attr("dimnames");
   CharacterVector rownames = dimnames[0];
   map_elements.resize(rownames.size());
-  for(size_t i = 0; i < rownames.size(); ++i) {
+  for(size_t i = 0; i < map_elements.size(); ++i) {
     if(rownames[i] == "gap" || rownames[i] == "gap_open") {
       // special tokens are ignored for substitution table
       map_elements[i] = '\0';
@@ -201,7 +201,7 @@ inline CostMap convert_cost_matrix(IntegerMatrix cost_matrix, int gap_cost, int 
   }
   // Collect alphabet (exclude special rows/cols)
   std::vector<char> alphabet;
-  for(size_t i = 0; i < rownames.size(); ++i) {
+  for(size_t i = 0; i < map_elements.size(); ++i) {
     if(rownames[i] != "gap" && rownames[i] != "gap_open") {
       alphabet.push_back(map_elements[i]);
     }

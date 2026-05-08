@@ -1,5 +1,6 @@
 #include "seqtrie_types.h"
 #include "simple_progress/simple_progress.h"
+#include <utility>
 
 ////////////////////////////////////////////////////////////////////////////////
 // RadixForest
@@ -224,17 +225,26 @@ DataFrame RadixForest_search(RadixForestRXPtr xp,
     }, 0, nseqs, 1, nthreads);
   } else if(mode == "global") {
     do_parallel_for([&forest, &query_span, max_distance_ptr, &output, &progress_bar](size_t begin, size_t end) {
+      SeqTrie::RadixTreeR::UnitWorkspace workspace;
       for(size_t i=begin; i<end; ++i) {
-        size_t len = query_span[i].size();
-        size_t min_search_len = len > static_cast<size_t>(max_distance_ptr[i]) ? len - static_cast<size_t>(max_distance_ptr[i]) : 0;
-        size_t max_search_len = len + static_cast<size_t>(max_distance_ptr[i]);
+        const cspan query_i = query_span[i];
+        const int max_distance_i = max_distance_ptr[i];
+        const size_t max_distance_size = max_distance_i > 0 ? static_cast<size_t>(max_distance_i) : 0;
+        const size_t len = query_i.size();
+        const size_t min_search_len = len > max_distance_size ? len - max_distance_size : 0;
+        const size_t max_search_len = len + max_distance_size;
+
+        SeqTrie::search_context ctx(query_i, max_distance_i);
+        workspace.reset_global(query_i.size(), max_search_len + 1);
+
         for(size_t j=min_search_len; j<=max_search_len; ++j) {
           auto it = forest.find(j);
           if(it != forest.end()) {
-            SeqTrie::search_context res = it->second.global_search(query_span[i], max_distance_ptr[i]);
-            output[i].append(res);
+            it->second.global_search_into_prepared(ctx, workspace);
           }
         }
+
+        output[i] = std::move(ctx);
         progress_bar.increment();
       }
     }, 0, nseqs, 1, nthreads);

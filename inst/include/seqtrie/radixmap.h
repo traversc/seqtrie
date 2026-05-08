@@ -9,40 +9,39 @@
 #include <type_traits>
 #include <limits>
 #include <utility>
+#include <tuple>
+#include <vector>
 
 #ifndef SEQTRIE_SMALL_ARRAY_SIZE
 #error "SEQTRIE_SMALL_ARRAY_SIZE must be defined"
 #endif
-
-// template parameters moved to macros
-#define CHAR_T char
-#define MAP_T ankerl::unordered_dense::map
-#define BRANCH_T trqwe::small_array<CHAR_T, std::allocator<CHAR_T>, size_t, std::integral_constant<size_t, SEQTRIE_SMALL_ARRAY_SIZE>>
-#define INDEX_T size_t
 
 namespace seqtrie {
 
 class RadixMap {
 public:
   // fundamental types
-  typedef CHAR_T                                   atomic_type;
-  typedef BRANCH_T                                 branch_type;
-  typedef INDEX_T                                  index_type;
-  typedef size_t                                  size_type;
-  typedef RadixMap                                self_type;
-  typedef std::unique_ptr<self_type>              pointer_type;
-  typedef const self_type*                        const_weak_pointer_type;
-  typedef self_type*                              weak_pointer_type;
-  typedef MAP_T<CHAR_T,pointer_type>              map_type;
-  typedef std::pair<CHAR_T,CHAR_T>                pairchar_type;
-  typedef nonstd::span<const CHAR_T>              span_type;
-  typedef std::tuple<std::vector<int>,std::vector<int>,std::vector<int>> affine_col_type;
+  using atomic_type = char;
+  using branch_type = trqwe::small_array<atomic_type,
+                                         std::allocator<atomic_type>,
+                                         size_t,
+                                         std::integral_constant<size_t, SEQTRIE_SMALL_ARRAY_SIZE>>;
+  using index_type = size_t;
+  using size_type = size_t;
+  using self_type = RadixMap;
+  using pointer_type = std::unique_ptr<self_type>;
+  using const_weak_pointer_type = const self_type*;
+  using weak_pointer_type = self_type*;
+  using map_type = ankerl::unordered_dense::map<atomic_type, pointer_type>;
+  using pairchar_type = std::pair<atomic_type, atomic_type>;
+  using span_type = nonstd::span<const atomic_type>;
+  using affine_col_type = std::tuple<std::vector<int>,std::vector<int>,std::vector<int>>;
 
   // constants
-  static constexpr INDEX_T nullidx     = std::numeric_limits<INDEX_T>::max();
-  static constexpr atomic_type GAP_CHAR      = CHAR_T(0);                                      // '\0' gap for non-affine
+  static constexpr index_type nullidx  = std::numeric_limits<index_type>::max();
+  static constexpr atomic_type GAP_CHAR      = atomic_type(0);                                 // '\0' gap for non-affine
   static constexpr atomic_type GAP_OPEN_CHAR = std::numeric_limits<atomic_type>::min();        // '\255' gap open for affine
-  static constexpr atomic_type GAP_EXTN_CHAR = CHAR_T(0);                                      // '\0' gap extension for affine
+  static constexpr atomic_type GAP_EXTN_CHAR = atomic_type(0);                                 // '\0' gap extension for affine
   static constexpr int         NO_ALIGN     = std::numeric_limits<int>::max() / 2;             // impossible positions
 
 private:
@@ -103,6 +102,22 @@ public:
       columns.emplace_back(std::move(initial));
     }
 
+    void reset_global(size_t query_len, size_t depth_hint = 0) {
+      if(depth_hint > 0) {
+        if(columns.capacity() < depth_hint) columns.reserve(depth_hint);
+      }
+      reset_global_root(query_len);
+    }
+
+    void reset_global_root(size_t query_len) {
+      if(columns.empty()) columns.emplace_back();
+      std::vector<int> & root_col = columns[0];
+      root_col.resize(query_len + 1);
+      for(size_t i=0; i<root_col.size(); ++i) {
+        root_col[i] = static_cast<int>(i);
+      }
+    }
+
     void ensure_child_slot(size_t depth) {
       size_t required_size = depth + 2;
       if(columns.size() < required_size) {
@@ -117,7 +132,11 @@ public:
       ensure_child_slot(depth);
       const auto & parent_col = columns[depth];
       std::vector<int> & child_col = columns[depth + 1];
-      child_col.assign(parent_col.begin(), parent_col.end());
+      if(child_col.size() == parent_col.size()) {
+        std::copy(parent_col.begin(), parent_col.end(), child_col.begin());
+      } else {
+        child_col.assign(parent_col.begin(), parent_col.end());
+      }
       return child_col;
     }
   };
@@ -236,6 +255,11 @@ public:
   template <typename Hook = NullSearchHook>
   search_context global_search(const span_type query, int max_distance, Hook hook = Hook()) const;
   template <typename Hook = NullSearchHook>
+  hook_ret<Hook> global_search_into(search_context & ctx, UnitWorkspace & workspace, Hook hook = Hook()) const;
+  // Caller must initialize workspace for ctx.query before each new query.
+  template <typename Hook = NullSearchHook>
+  hook_ret<Hook> global_search_into_prepared(search_context & ctx, UnitWorkspace & workspace, Hook hook = Hook()) const;
+  template <typename Hook = NullSearchHook>
   search_context anchored_search(const span_type query, int max_distance, Hook hook = Hook()) const;
 
   template <typename Hook = NullSearchHook>
@@ -262,6 +286,11 @@ private:
   template <typename Hook>
   static hook_ret<Hook> search_add_all(search_context & ctx, path node_path, int distance, Hook hook);
 
+  static int min3(const int a, const int b, const int c) noexcept {
+    int out = a < b ? a : b;
+    return c < out ? c : out;
+  }
+
   std::string print_impl(size_t depth) const;
   enum class erase_action { erase, merge, keep };
   static erase_action erase_impl(weak_pointer_type node, const span_type sequence, index_type & result);
@@ -272,25 +301,25 @@ private:
   static hook_ret<Hook> hamming_search_impl(const_weak_pointer_type node, size_t position, int distance, search_context & ctx, Hook hook);
   static int update_col_banded(atomic_type branchval, const span_type query, std::vector<int> & col, size_t lower, size_t upper);
   template <typename Hook>
-  static hook_ret<Hook> global_search_impl(const_weak_pointer_type node, size_t node_depth, size_t char_depth, search_context & ctx, UnitWorkspace & workspace, Hook hook); // unitary cost
+  static hook_ret<Hook> global_search_impl(const_weak_pointer_type node, size_t node_depth, size_t char_depth, search_context & ctx, UnitWorkspace & workspace, Hook hook, int col_min); // unitary cost
   template <typename Hook>
-  static hook_ret<Hook> anchored_search_impl(const_weak_pointer_type node, size_t node_depth, size_t char_depth, int row_min, search_context & ctx, UnitWorkspace & workspace, Hook hook); // unitary cost
+  static hook_ret<Hook> anchored_search_impl(const_weak_pointer_type node, size_t node_depth, size_t char_depth, int row_min, search_context & ctx, UnitWorkspace & workspace, Hook hook, int col_min); // unitary cost
 
   static int update_col_linear_banded(atomic_type branchval, const span_type query, std::vector<int> & col, size_t lower, size_t upper, const CostMap & cost_map);
   template <typename Hook>
-  static hook_ret<Hook> global_search_linear_impl(const_weak_pointer_type node, size_t node_depth, size_t char_depth, search_context & ctx, UnitWorkspace & workspace, const CostMap & cost_map, Hook hook);
+  static hook_ret<Hook> global_search_linear_impl(const_weak_pointer_type node, size_t node_depth, size_t char_depth, search_context & ctx, UnitWorkspace & workspace, const CostMap & cost_map, Hook hook, int col_min);
   template <typename Hook>
-  static hook_ret<Hook> anchored_search_linear_impl(const_weak_pointer_type node, size_t node_depth, size_t char_depth, int row_min, search_context & ctx, UnitWorkspace & workspace, const CostMap & cost_map, Hook hook);
+  static hook_ret<Hook> anchored_search_linear_impl(const_weak_pointer_type node, size_t node_depth, size_t char_depth, int row_min, search_context & ctx, UnitWorkspace & workspace, const CostMap & cost_map, Hook hook, int col_min);
 
   static int update_col_affine_banded(atomic_type branchval, const span_type query, affine_col_type & col, size_t lower, size_t upper, const CostMap & cost_map);
   template <typename Hook>
-  static hook_ret<Hook> global_search_affine_impl(const_weak_pointer_type node, size_t node_depth, size_t char_depth, search_context & ctx, AffineWorkspace & workspace, const CostMap & cost_map, Hook hook);
+  static hook_ret<Hook> global_search_affine_impl(const_weak_pointer_type node, size_t node_depth, size_t char_depth, search_context & ctx, AffineWorkspace & workspace, const CostMap & cost_map, Hook hook, int col_min);
   template <typename Hook>
-  static hook_ret<Hook> anchored_search_affine_impl(const_weak_pointer_type node, size_t node_depth, size_t char_depth, int row_min, search_context & ctx, AffineWorkspace & workspace, const CostMap & cost_map, Hook hook);
+  static hook_ret<Hook> anchored_search_affine_impl(const_weak_pointer_type node, size_t node_depth, size_t char_depth, int row_min, search_context & ctx, AffineWorkspace & workspace, const CostMap & cost_map, Hook hook, int col_min);
 
   static int update_col_single_gap(atomic_type branchval, const span_type query, size_t ref_len, SingleGapCol & col, const int gap_cost);
   template <typename Hook>
-  static hook_ret<Hook> single_gap_search_impl(const_weak_pointer_type node, size_t node_depth, size_t char_depth, int row_min, search_context & ctx, SingleGapWorkspace & workspace, const int gap_cost, Hook hook);
+  static hook_ret<Hook> single_gap_search_impl(const_weak_pointer_type node, size_t node_depth, size_t char_depth, int row_min, search_context & ctx, SingleGapWorkspace & workspace, const int gap_cost, Hook hook, int col_min);
 };
 
 // implementations
@@ -559,9 +588,24 @@ template <typename Hook>
 inline RadixMap::search_context RadixMap::global_search(const RadixMap::span_type query, const int max_distance, Hook hook) const {
   search_context ctx(query, max_distance);
   UnitWorkspace workspace;
-  workspace.initialize(iota_range<std::vector<int>>(0, query.size() + 1), query.size() + 1);
-  global_search_impl<Hook>(this, 0, 0, ctx, workspace, hook); 
+  global_search_into<Hook>(ctx, workspace, hook);
   return ctx;
+}
+
+template <typename Hook>
+inline RadixMap::hook_ret<Hook> RadixMap::global_search_into(RadixMap::search_context & ctx,
+                                                            UnitWorkspace & workspace,
+                                                            Hook hook) const {
+  const size_t max_distance = ctx.max_distance > 0 ? static_cast<size_t>(ctx.max_distance) : 0;
+  workspace.reset_global(ctx.query.size(), ctx.query.size() + max_distance + 1);
+  return global_search_into_prepared<Hook>(ctx, workspace, hook);
+}
+
+template <typename Hook>
+inline RadixMap::hook_ret<Hook> RadixMap::global_search_into_prepared(RadixMap::search_context & ctx,
+                                                                      UnitWorkspace & workspace,
+                                                                      Hook hook) const {
+  return global_search_impl<Hook>(this, 0, 0, ctx, workspace, hook, 0);
 }
 
 // an "anchored" search can end on the last column or col of the dynamic programming array
@@ -572,7 +616,7 @@ inline RadixMap::search_context RadixMap::anchored_search(const RadixMap::span_t
   search_context ctx(query, max_distance);
   UnitWorkspace workspace;
   workspace.initialize(iota_range<std::vector<int>>(0, query.size() + 1), query.size() + 1);
-  anchored_search_impl<Hook>(this, 0, 0, query.size(), ctx, workspace, hook); 
+  anchored_search_impl<Hook>(this, 0, 0, query.size(), ctx, workspace, hook, 0);
   return ctx;
 }
 
@@ -585,7 +629,7 @@ inline RadixMap::search_context RadixMap::global_search_linear(const RadixMap::s
   }
   UnitWorkspace workspace;
   workspace.initialize(std::move(col), query.size() + 1);
-  global_search_linear_impl<Hook>(this, 0, 0, ctx, workspace, cost_map, hook);
+  global_search_linear_impl<Hook>(this, 0, 0, ctx, workspace, cost_map, hook, 0);
   return ctx;
 }
 
@@ -599,7 +643,7 @@ inline RadixMap::search_context RadixMap::anchored_search_linear(const RadixMap:
   int row_min = col.back();
   UnitWorkspace workspace;
   workspace.initialize(std::move(col), query.size() + 1);
-  anchored_search_linear_impl<Hook>(this, 0, 0, row_min, ctx, workspace, cost_map, hook);
+  anchored_search_linear_impl<Hook>(this, 0, 0, row_min, ctx, workspace, cost_map, hook, 0);
   return ctx;
 }
 
@@ -626,7 +670,7 @@ inline RadixMap::search_context RadixMap::global_search_affine(const RadixMap::s
   // std::cout << std::endl;
   AffineWorkspace workspace;
   workspace.initialize(std::move(col), query.size() + 1);
-  global_search_affine_impl<Hook>(this, 0, 0, ctx, workspace, cost_map, hook);
+  global_search_affine_impl<Hook>(this, 0, 0, ctx, workspace, cost_map, hook, 0);
   return ctx;
 }
 
@@ -649,10 +693,10 @@ inline RadixMap::search_context RadixMap::anchored_search_affine(const RadixMap:
     if(i == 1) Y_col[i] = cost_map.gap_open_cost;
     else       Y_col[i] = Y_col[i-1] + cost_map.gap_cost;
   }
-  int row_min = std::min({M_col.back(), Y_col.back()});
+  int row_min = std::min(M_col.back(), Y_col.back());
   AffineWorkspace workspace;
   workspace.initialize(std::move(col), query.size() + 1);
-  anchored_search_affine_impl<Hook>(this, 0, 0, row_min, ctx, workspace, cost_map, hook);
+  anchored_search_affine_impl<Hook>(this, 0, 0, row_min, ctx, workspace, cost_map, hook, 0);
   return ctx;
 }
 
@@ -668,7 +712,7 @@ inline RadixMap::search_context RadixMap::single_gap_search(const RadixMap::span
   int row_min = query.size() == 0 ? 0 :
                 query.size() == 1 ? gap_cost :
                 NO_ALIGN;
-  single_gap_search_impl<Hook>(this, 0, 0, row_min, ctx, workspace, gap_cost, hook);
+  single_gap_search_impl<Hook>(this, 0, 0, row_min, ctx, workspace, gap_cost, hook, 0);
   return ctx;
 }
 
@@ -737,7 +781,7 @@ inline int RadixMap::update_col_single_gap(const RadixMap::atomic_type branchval
   } else {
     col.upper = NO_ALIGN;
   }
-  return std::min({col.diag, col.upper, col.lower});
+  return min3(col.diag, col.upper, col.lower);
 }
 
 template <typename Hook>
@@ -748,20 +792,20 @@ inline RadixMap::hook_ret<Hook> RadixMap::single_gap_search_impl(RadixMap::const
                                                                 RadixMap::search_context & ctx,
                                                                 SingleGapWorkspace & workspace,
                                                                 const int gap_cost,
-                                                                Hook hook) {
+                                                                Hook hook,
+                                                                int current_col_min) {
   constexpr bool use_hook = !std::is_same_v<Hook, NullSearchHook>;
   workspace.ensure_child_slot(node_depth);
   const size_t query_len = ctx.query.size();
 
   SingleGapCol & current_col = workspace.at(node_depth);
-  int current_col_min = std::min({current_col.diag, current_col.upper, current_col.lower});
   auto get_row_min = [query_len](const SingleGapCol & col, size_t char_depth, int row_min) -> int {
-    if(char_depth == query_len - 1) {
+    if(query_len > 0 && char_depth + 1 == query_len) {
       return col.upper;
     } else if(char_depth == query_len) {
-      return std::min({row_min, col.diag});
+      return std::min(row_min, col.diag);
     } else if(char_depth == query_len + 1) {
-      return std::min({row_min, col.lower});
+      return std::min(row_min, col.lower);
     } else {
       return NO_ALIGN;
     }
@@ -813,9 +857,9 @@ inline RadixMap::hook_ret<Hook> RadixMap::single_gap_search_impl(RadixMap::const
     }
     if(!max_distance_exceeded) {
       if constexpr (use_hook) {
-        if(!single_gap_search_impl<Hook>(ch.second.get(), node_depth + 1, child_char_depth, child_row_min, ctx, workspace, gap_cost, hook)) return false;
+        if(!single_gap_search_impl<Hook>(ch.second.get(), node_depth + 1, child_char_depth, child_row_min, ctx, workspace, gap_cost, hook, current_col_min)) return false;
       } else {
-        single_gap_search_impl<Hook>(ch.second.get(), node_depth + 1, child_char_depth, child_row_min, ctx, workspace, gap_cost, hook);
+        single_gap_search_impl<Hook>(ch.second.get(), node_depth + 1, child_char_depth, child_row_min, ctx, workspace, gap_cost, hook, current_col_min);
       }
     }
   }
@@ -942,7 +986,8 @@ inline int RadixMap::update_col_banded(const RadixMap::atomic_type branchval, co
     int match_cost = previous_diag + (query[i-1] == branchval ? 0 : 1);
     int insert_cost = left + 1;
     int delete_cost = original + 1;
-    int new_val = std::min({match_cost, insert_cost, delete_cost});
+    int new_val = match_cost < insert_cost ? match_cost : insert_cost;
+    if(delete_cost < new_val) new_val = delete_cost;
     col[i] = new_val;
     previous_diag = original;
     if(new_val < min_element) min_element = new_val;
@@ -951,7 +996,9 @@ inline int RadixMap::update_col_banded(const RadixMap::atomic_type branchval, co
   if(lower > 0) {
     col[lower - 1] = NO_ALIGN;
   }
-  for(size_t i = upper + 1; i < col.size(); ++i) col[i] = NO_ALIGN;
+  if(upper + 1 < col.size()) {
+    col[upper + 1] = NO_ALIGN;
+  }
 
   return min_element;
 }
@@ -962,98 +1009,48 @@ inline RadixMap::hook_ret<Hook> RadixMap::global_search_impl(RadixMap::const_wea
                                                              const size_t char_depth,
                                                              RadixMap::search_context & ctx,
                                                              UnitWorkspace & workspace,
-                                                             Hook hook) {
+                                                             Hook hook,
+                                                             int current_col_min) {
   constexpr bool use_hook = !std::is_same_v<Hook, NullSearchHook>;
-  const size_t query_len = ctx.query.size();
-  const size_t band_radius = static_cast<size_t>(ctx.max_distance);
+  workspace.ensure_child_slot(node_depth);
+  const span_type query = ctx.query;
+  const int max_distance = ctx.max_distance;
+  const size_t query_len = query.size();
+  const size_t band_radius = static_cast<size_t>(max_distance);
+  const BandLimits band = BandLimits::around(char_depth, band_radius, query_len);
 
-  struct Frame {
-    const_weak_pointer_type node;
-    size_t node_depth;
-    size_t char_depth;
-    map_type::const_iterator next_child;
-    map_type::const_iterator end_child;
-    int col_min;
-    bool col_min_known;
-    bool entered;
+  std::vector<int> & current_col = workspace.at(node_depth);
+  if(current_col_min > max_distance) { if constexpr (use_hook) return true; else return; }
 
-    Frame(const_weak_pointer_type node, size_t node_depth, size_t char_depth)
-      : node(node), node_depth(node_depth), char_depth(char_depth),
-        next_child(), end_child(), col_min(NO_ALIGN), col_min_known(false),
-        entered(false) {}
-    Frame(const_weak_pointer_type node, size_t node_depth, size_t char_depth, int col_min)
-      : node(node), node_depth(node_depth), char_depth(char_depth),
-        next_child(), end_child(), col_min(col_min), col_min_known(true),
-        entered(false) {}
-  };
-
-  std::vector<Frame> stack;
-  stack.reserve(query_len + 1);
-  stack.emplace_back(node, node_depth, char_depth);
-
-  while(!stack.empty()) {
-    Frame & frame = stack.back();
-
-    if(!frame.entered) {
-      workspace.ensure_child_slot(frame.node_depth);
-      const BandLimits band = BandLimits::around(frame.char_depth, band_radius, query_len);
-
-      std::vector<int> & current_col = workspace.at(frame.node_depth);
-      int current_col_min = frame.col_min;
-      if(!frame.col_min_known && band.lower <= band.upper) {
-        for(size_t i = band.lower; i <= band.upper; ++i) {
-          current_col_min = std::min(current_col_min, current_col[i]);
-        }
-      }
-      if(current_col_min > ctx.max_distance) {
-        stack.pop_back();
-        continue;
-      }
-
-      const int terminal_distance = (band.upper == query_len) ? current_col.back() : NO_ALIGN;
-      if((frame.node->terminal_idx != nullidx) && (terminal_distance <= ctx.max_distance)) {
-        if constexpr (use_hook) {
-          if(!search_add<Hook>(ctx, path(frame.node), terminal_distance, hook)) return false;
-        } else {
-          search_add<Hook>(ctx, path(frame.node), terminal_distance, hook);
-        }
-      }
-
-      frame.next_child = frame.node->child_nodes.begin();
-      frame.end_child = frame.node->child_nodes.end();
-      frame.entered = true;
+  const int terminal_distance = (band.upper == query_len) ? current_col.back() : NO_ALIGN;
+  if((node->terminal_idx != nullidx) && (terminal_distance <= max_distance)) {
+    if constexpr (use_hook) {
+      if(!search_add<Hook>(ctx, path(node), terminal_distance, hook)) return false;
+    } else {
+      search_add<Hook>(ctx, path(node), terminal_distance, hook);
     }
+  }
 
-    if(frame.next_child == frame.end_child) {
-      stack.pop_back();
-      continue;
-    }
-
-    auto child_it = frame.next_child;
-    ++frame.next_child;
-
-    std::vector<int> & child_col = workspace.clone_from_parent(frame.node_depth);
+  for (auto & ch : node->child_nodes) {
+    std::vector<int> & child_col = workspace.clone_from_parent(node_depth);
     bool prune_child = false;
-    bool child_col_min_known = false;
-    int child_col_min = NO_ALIGN;
-    size_t child_char_depth = frame.char_depth;
-    const_weak_pointer_type child_node = child_it->second.get();
-    const branch_type & branch = child_node->branch;
+    int child_col_min = current_col_min;
+    size_t child_char_depth = char_depth;
+    const branch_type & branch = ch.second->branch;
     for(atomic_type branchval : branch) {
       ++child_char_depth;
       const BandLimits child_band = BandLimits::around(child_char_depth, band_radius, query_len);
-      child_col_min = update_col_banded(branchval, ctx.query, child_col, child_band.lower, child_band.upper);
-      child_col_min_known = true;
-      if(child_col_min > ctx.max_distance) {
+      child_col_min = update_col_banded(branchval, query, child_col, child_band.lower, child_band.upper);
+      if(child_col_min > max_distance) {
         prune_child = true;
         break;
       }
     }
     if(!prune_child) {
-      if(child_col_min_known) {
-        stack.emplace_back(child_node, frame.node_depth + 1, child_char_depth, child_col_min);
+      if constexpr (use_hook) {
+        if(!global_search_impl<Hook>(ch.second.get(), node_depth + 1, child_char_depth, ctx, workspace, hook, child_col_min)) return false;
       } else {
-        stack.emplace_back(child_node, frame.node_depth + 1, child_char_depth);
+        global_search_impl<Hook>(ch.second.get(), node_depth + 1, child_char_depth, ctx, workspace, hook, child_col_min);
       }
     }
   }
@@ -1075,20 +1072,12 @@ inline RadixMap::hook_ret<Hook> RadixMap::anchored_search_impl(RadixMap::const_w
                                                               const int row_min,
                                                               RadixMap::search_context & ctx,
                                                               UnitWorkspace & workspace,
-                                                              Hook hook) {
+                                                              Hook hook,
+                                                              int current_col_min) {
   constexpr bool use_hook = !std::is_same_v<Hook, NullSearchHook>;
   workspace.ensure_child_slot(node_depth);
   const size_t query_len = ctx.query.size();
   const size_t band_radius = static_cast<size_t>(ctx.max_distance);
-  const BandLimits band = BandLimits::around(char_depth, band_radius, query_len);
-
-  std::vector<int> & current_col = workspace.at(node_depth);
-  int current_col_min = NO_ALIGN;
-  if(band.lower <= band.upper) {
-    for(size_t i = band.lower; i <= band.upper; ++i) {
-      current_col_min = std::min(current_col_min, current_col[i]);
-    }
-  }
 
   int current_row_min = row_min;
   if( (current_col_min > ctx.max_distance) && (current_row_min > ctx.max_distance) ) { // case 1
@@ -1139,9 +1128,9 @@ inline RadixMap::hook_ret<Hook> RadixMap::anchored_search_impl(RadixMap::const_w
     }
     if(!max_distance_exceeded) {
       if constexpr (use_hook) {
-        if(!anchored_search_impl<Hook>(ch.second.get(), node_depth + 1, child_char_depth, child_row_min, ctx, workspace, hook)) return false;
+        if(!anchored_search_impl<Hook>(ch.second.get(), node_depth + 1, child_char_depth, child_row_min, ctx, workspace, hook, current_col_min)) return false;
       } else {
-        anchored_search_impl<Hook>(ch.second.get(), node_depth + 1, child_char_depth, child_row_min, ctx, workspace, hook);
+        anchored_search_impl<Hook>(ch.second.get(), node_depth + 1, child_char_depth, child_row_min, ctx, workspace, hook, current_col_min);
       }
     }
   }
@@ -1176,7 +1165,7 @@ inline int RadixMap::update_col_linear_banded(const RadixMap::atomic_type branch
     int match_cost = previous_diag + cost_map.char_cost_map.at(std::make_pair(query[i-1], static_cast<char>(branchval)));
     int gap_in_query = left + cost_map.gap_cost;
     int gap_in_target = original + cost_map.gap_cost;
-    int new_val = std::min({match_cost, gap_in_query, gap_in_target});
+    int new_val = min3(match_cost, gap_in_query, gap_in_target);
     col[i] = new_val;
     previous_diag = original;
     if(new_val < min_element) min_element = new_val;
@@ -1185,7 +1174,9 @@ inline int RadixMap::update_col_linear_banded(const RadixMap::atomic_type branch
   if(lower > 0) {
     col[lower - 1] = NO_ALIGN;
   }
-  for(size_t i = upper + 1; i < col.size(); ++i) col[i] = NO_ALIGN;
+  if(upper + 1 < col.size()) {
+    col[upper + 1] = NO_ALIGN;
+  }
 
   return min_element;
 }
@@ -1197,7 +1188,8 @@ inline RadixMap::hook_ret<Hook> RadixMap::global_search_linear_impl(RadixMap::co
                                                                    search_context & ctx,
                                                                    UnitWorkspace & workspace,
                                                                    const CostMap & cost_map,
-                                                                   Hook hook) {
+                                                                   Hook hook,
+                                                                   int current_col_min) {
   constexpr bool use_hook = !std::is_same_v<Hook, NullSearchHook>;
   workspace.ensure_child_slot(node_depth);
   const size_t query_len = ctx.query.size();
@@ -1205,12 +1197,6 @@ inline RadixMap::hook_ret<Hook> RadixMap::global_search_linear_impl(RadixMap::co
   const BandLimits band = BandLimits::around(char_depth, band_radius, query_len);
 
   std::vector<int> & current_col = workspace.at(node_depth);
-  int current_col_min = NO_ALIGN;
-  if(band.lower <= band.upper) {
-    for(size_t i = band.lower; i <= band.upper; ++i) {
-      current_col_min = std::min(current_col_min, current_col[i]);
-    }
-  }
   if(current_col_min > ctx.max_distance) { if constexpr (use_hook) return true; else return; }
 
   const int terminal_distance = (band.upper == query_len) ? current_col.back() : NO_ALIGN;
@@ -1225,22 +1211,23 @@ inline RadixMap::hook_ret<Hook> RadixMap::global_search_linear_impl(RadixMap::co
   for (auto & ch : node->child_nodes) {
     std::vector<int> & child_col = workspace.clone_from_parent(node_depth);
     bool prune_child = false;
+    int child_col_min = current_col_min;
     size_t child_char_depth = char_depth;
     const branch_type & branch = ch.second->branch;
     for(atomic_type branchval : branch) {
       ++child_char_depth;
       const BandLimits child_band = BandLimits::around(child_char_depth, band_radius, query_len);
-      const int current_dist = update_col_linear_banded(branchval, ctx.query, child_col, child_band.lower, child_band.upper, cost_map);
-      if(current_dist > ctx.max_distance) {
+      child_col_min = update_col_linear_banded(branchval, ctx.query, child_col, child_band.lower, child_band.upper, cost_map);
+      if(child_col_min > ctx.max_distance) {
         prune_child = true;
         break;
       }
     }
     if(!prune_child) {
       if constexpr (use_hook) {
-        if(!global_search_linear_impl<Hook>(ch.second.get(), node_depth + 1, child_char_depth, ctx, workspace, cost_map, hook)) return false;
+        if(!global_search_linear_impl<Hook>(ch.second.get(), node_depth + 1, child_char_depth, ctx, workspace, cost_map, hook, child_col_min)) return false;
       } else {
-        global_search_linear_impl<Hook>(ch.second.get(), node_depth + 1, child_char_depth, ctx, workspace, cost_map, hook);
+        global_search_linear_impl<Hook>(ch.second.get(), node_depth + 1, child_char_depth, ctx, workspace, cost_map, hook, child_col_min);
       }
     }
   }
@@ -1255,20 +1242,12 @@ inline RadixMap::hook_ret<Hook> RadixMap::anchored_search_linear_impl(RadixMap::
                                                                      search_context & ctx,
                                                                      UnitWorkspace & workspace,
                                                                      const CostMap & cost_map,
-                                                                     Hook hook) {
+                                                                     Hook hook,
+                                                                     int current_col_min) {
   constexpr bool use_hook = !std::is_same_v<Hook, NullSearchHook>;
   workspace.ensure_child_slot(node_depth);
   const size_t query_len = ctx.query.size();
   const size_t band_radius = BandLimits::linear_radius(ctx.max_distance, cost_map.gap_cost, query_len);
-  const BandLimits band = BandLimits::around(char_depth, band_radius, query_len);
-
-  std::vector<int> & current_col = workspace.at(node_depth);
-  int current_col_min = NO_ALIGN;
-  if(band.lower <= band.upper) {
-    for(size_t i = band.lower; i <= band.upper; ++i) {
-      current_col_min = std::min(current_col_min, current_col[i]);
-    }
-  }
 
   int current_row_min = row_min;
   if( (current_col_min > ctx.max_distance) && (current_row_min > ctx.max_distance) ) { // case 1
@@ -1320,9 +1299,9 @@ inline RadixMap::hook_ret<Hook> RadixMap::anchored_search_linear_impl(RadixMap::
     }
     if(!max_distance_exceeded) {
       if constexpr (use_hook) {
-        if(!anchored_search_linear_impl<Hook>(ch.second.get(), node_depth + 1, child_char_depth, child_row_min, ctx, workspace, cost_map, hook)) return false;
+        if(!anchored_search_linear_impl<Hook>(ch.second.get(), node_depth + 1, child_char_depth, child_row_min, ctx, workspace, cost_map, hook, current_col_min)) return false;
       } else {
-        anchored_search_linear_impl<Hook>(ch.second.get(), node_depth + 1, child_char_depth, child_row_min, ctx, workspace, cost_map, hook);
+        anchored_search_linear_impl<Hook>(ch.second.get(), node_depth + 1, child_char_depth, child_row_min, ctx, workspace, cost_map, hook, current_col_min);
       }
     }
   }
@@ -1371,11 +1350,6 @@ inline int RadixMap::update_col_affine_banded(const RadixMap::atomic_type branch
     previous_M_i_minus_1 = M_col[lower - 1];
     previous_X_i_minus_1 = X_col[lower - 1];
     previous_Y_i_minus_1 = Y_col[lower - 1];
-    for(size_t i = 0; i < lower; ++i) {
-      M_col[i] = NO_ALIGN;
-      X_col[i] = NO_ALIGN;
-      Y_col[i] = NO_ALIGN;
-    }
   }
 
   for(size_t i = start; i <= upper; ++i) {
@@ -1384,19 +1358,17 @@ inline int RadixMap::update_col_affine_banded(const RadixMap::atomic_type branch
     int original_Y = Y_col[i];
 
     int match_cost = cost_map.char_cost_map.at(std::make_pair(query[i-1], static_cast<char>(branchval)));
-    int M_col_i = match_cost + std::min({previous_M_i_minus_1, previous_X_i_minus_1, previous_Y_i_minus_1});
-    int X_col_i = std::min({
-      cost_map.gap_open_cost + original_M,
-      cost_map.gap_cost      + original_X,
-      cost_map.gap_open_cost + original_Y});
+    int M_col_i = match_cost + min3(previous_M_i_minus_1, previous_X_i_minus_1, previous_Y_i_minus_1);
+    int X_col_i = min3(cost_map.gap_open_cost + original_M,
+                       cost_map.gap_cost      + original_X,
+                       cost_map.gap_open_cost + original_Y);
     const bool at_band_top = (lower > 0 && i == lower);
     const int prev_M_for_Y = at_band_top ? NO_ALIGN : M_col[i-1];
     const int prev_X_for_Y = at_band_top ? NO_ALIGN : X_col[i-1];
     const int prev_Y_for_Y = at_band_top ? NO_ALIGN : Y_col[i-1];
-    int Y_col_i = std::min({
-      cost_map.gap_open_cost + prev_M_for_Y,
-      cost_map.gap_open_cost + prev_X_for_Y,
-      cost_map.gap_cost      + prev_Y_for_Y});
+    int Y_col_i = min3(cost_map.gap_open_cost + prev_M_for_Y,
+                       cost_map.gap_open_cost + prev_X_for_Y,
+                       cost_map.gap_cost      + prev_Y_for_Y);
 
     previous_M_i_minus_1 = original_M;
     previous_X_i_minus_1 = original_X;
@@ -1405,14 +1377,19 @@ inline int RadixMap::update_col_affine_banded(const RadixMap::atomic_type branch
     M_col[i] = M_col_i;
     X_col[i] = X_col_i;
     Y_col[i] = Y_col_i;
-    int current_min = std::min({M_col_i, X_col_i, Y_col_i});
+    int current_min = min3(M_col_i, X_col_i, Y_col_i);
     if(current_min < min_element) min_element = current_min;
   }
 
-  for(size_t i = upper + 1; i < col_size; ++i) {
-    M_col[i] = NO_ALIGN;
-    X_col[i] = NO_ALIGN;
-    Y_col[i] = NO_ALIGN;
+  if(lower > 0) {
+    M_col[lower - 1] = NO_ALIGN;
+    X_col[lower - 1] = NO_ALIGN;
+    Y_col[lower - 1] = NO_ALIGN;
+  }
+  if(upper + 1 < col_size) {
+    M_col[upper + 1] = NO_ALIGN;
+    X_col[upper + 1] = NO_ALIGN;
+    Y_col[upper + 1] = NO_ALIGN;
   }
 
   return min_element;
@@ -1425,7 +1402,8 @@ inline RadixMap::hook_ret<Hook> RadixMap::global_search_affine_impl(RadixMap::co
                                                                     search_context & ctx,
                                                                     AffineWorkspace & workspace,
                                                                     const CostMap & cost_map,
-                                                                    Hook hook) {
+                                                                    Hook hook,
+                                                                    int current_col_min) {
   constexpr bool use_hook = !std::is_same_v<Hook, NullSearchHook>;
   workspace.ensure_child_slot(node_depth);
   const size_t query_len = ctx.query.size();
@@ -1437,17 +1415,11 @@ inline RadixMap::hook_ret<Hook> RadixMap::global_search_affine_impl(RadixMap::co
   const auto & X_col = std::get<1>(parent_column);
   const auto & Y_col = std::get<2>(parent_column);
 
-  int current_col_min = NO_ALIGN;
-  if(band.lower <= band.upper) {
-    for(size_t i = band.lower; i <= band.upper; ++i) {
-      current_col_min = std::min(current_col_min, std::min({M_col[i], X_col[i], Y_col[i]}));
-    }
-  }
   if(current_col_min > ctx.max_distance) { if constexpr (use_hook) return true; else return; }
 
   int terminal_distance = NO_ALIGN;
   if(band.upper == query_len) {
-    terminal_distance = std::min({M_col[query_len], X_col[query_len], Y_col[query_len]});
+    terminal_distance = min3(M_col[query_len], X_col[query_len], Y_col[query_len]);
   }
   if((node->terminal_idx != nullidx) && (terminal_distance <= ctx.max_distance)) {
     if constexpr (use_hook) {
@@ -1460,22 +1432,23 @@ inline RadixMap::hook_ret<Hook> RadixMap::global_search_affine_impl(RadixMap::co
   for (auto & ch : node->child_nodes) {
     affine_col_type & child_col = workspace.clone_from_parent(node_depth);
     bool max_distance_exceeded = false;
+    int child_col_min = current_col_min;
     size_t child_char_depth = char_depth;
     const branch_type & branch = ch.second->branch;
     for(atomic_type branchval : branch) {
       ++child_char_depth;
       const BandLimits child_band = BandLimits::around(child_char_depth, band_radius, query_len);
-      int current_dist = update_col_affine_banded(branchval, ctx.query, child_col, child_band.lower, child_band.upper, cost_map);
-      if(current_dist > ctx.max_distance) {
+      child_col_min = update_col_affine_banded(branchval, ctx.query, child_col, child_band.lower, child_band.upper, cost_map);
+      if(child_col_min > ctx.max_distance) {
         max_distance_exceeded = true;
         break;
       }
     }
     if(!max_distance_exceeded) {
       if constexpr (use_hook) {
-        if(!global_search_affine_impl<Hook>(ch.second.get(), node_depth + 1, child_char_depth, ctx, workspace, cost_map, hook)) return false;
+        if(!global_search_affine_impl<Hook>(ch.second.get(), node_depth + 1, child_char_depth, ctx, workspace, cost_map, hook, child_col_min)) return false;
       } else {
-        global_search_affine_impl<Hook>(ch.second.get(), node_depth + 1, child_char_depth, ctx, workspace, cost_map, hook);
+        global_search_affine_impl<Hook>(ch.second.get(), node_depth + 1, child_char_depth, ctx, workspace, cost_map, hook, child_col_min);
       }
     }
   }
@@ -1490,24 +1463,12 @@ inline RadixMap::hook_ret<Hook> RadixMap::anchored_search_affine_impl(RadixMap::
                                                                       search_context & ctx,
                                                                       AffineWorkspace & workspace,
                                                                       const CostMap & cost_map,
-                                                                      Hook hook) {
+                                                                      Hook hook,
+                                                                      int current_col_min) {
   constexpr bool use_hook = !std::is_same_v<Hook, NullSearchHook>;
   workspace.ensure_child_slot(node_depth);
   const size_t query_len = ctx.query.size();
   const size_t band_radius = BandLimits::affine_radius(ctx.max_distance, cost_map.gap_cost, cost_map.gap_open_cost, query_len);
-  const BandLimits band = BandLimits::around(char_depth, band_radius, query_len);
-
-  const affine_col_type & parent_column = workspace.at(node_depth);
-  const auto & M_col = std::get<0>(parent_column);
-  const auto & X_col = std::get<1>(parent_column);
-  const auto & Y_col = std::get<2>(parent_column);
-
-  int current_col_min = NO_ALIGN;
-  if(band.lower <= band.upper) {
-    for(size_t i = band.lower; i <= band.upper; ++i) {
-      current_col_min = std::min(current_col_min, std::min({M_col[i], X_col[i], Y_col[i]}));
-    }
-  }
 
   int current_row_min = row_min;
   if( (current_col_min > ctx.max_distance) && (current_row_min > ctx.max_distance) ) { // case 1
@@ -1543,10 +1504,9 @@ inline RadixMap::hook_ret<Hook> RadixMap::anchored_search_affine_impl(RadixMap::
       const BandLimits child_band = BandLimits::around(child_char_depth, band_radius, query_len);
       current_col_min = update_col_affine_banded(branchval, ctx.query, child_col, child_band.lower, child_band.upper, cost_map);
       int current_col_back = (child_band.upper == query_len)
-                               ? std::min({
-                                   std::get<0>(child_col)[query_len],
-                                   std::get<1>(child_col)[query_len],
-                                   std::get<2>(child_col)[query_len]})
+                               ? min3(std::get<0>(child_col)[query_len],
+                                      std::get<1>(child_col)[query_len],
+                                      std::get<2>(child_col)[query_len])
                                : NO_ALIGN;
       child_row_min = std::min(child_row_min, current_col_back);
       if( (current_col_min > ctx.max_distance) && (child_row_min > ctx.max_distance) ) { // case 1
@@ -1564,23 +1524,14 @@ inline RadixMap::hook_ret<Hook> RadixMap::anchored_search_affine_impl(RadixMap::
     }
     if(!max_distance_exceeded) {
       if constexpr (use_hook) {
-        if(!anchored_search_affine_impl<Hook>(ch.second.get(), node_depth + 1, child_char_depth, child_row_min, ctx, workspace, cost_map, hook)) return false;
+        if(!anchored_search_affine_impl<Hook>(ch.second.get(), node_depth + 1, child_char_depth, child_row_min, ctx, workspace, cost_map, hook, current_col_min)) return false;
       } else {
-        anchored_search_affine_impl<Hook>(ch.second.get(), node_depth + 1, child_char_depth, child_row_min, ctx, workspace, cost_map, hook);
+        anchored_search_affine_impl<Hook>(ch.second.get(), node_depth + 1, child_char_depth, child_row_min, ctx, workspace, cost_map, hook, current_col_min);
       }
     }
   }
   if constexpr (use_hook) return true;
 }
-
-#undef CHAR_T
-#undef MAP_T
-#undef BRANCH_T
-#undef INDEX_T
-#undef GAP_CHAR
-#undef GAP_OPEN_CHAR
-#undef GAP_EXTN_CHAR
-#undef NO_ALIGN
 
 } // namespace seqtrie
 
