@@ -973,11 +973,18 @@ inline RadixMap::hook_ret<Hook> RadixMap::global_search_impl(RadixMap::const_wea
     size_t char_depth;
     map_type::const_iterator next_child;
     map_type::const_iterator end_child;
+    int col_min;
+    bool col_min_known;
     bool entered;
 
     Frame(const_weak_pointer_type node, size_t node_depth, size_t char_depth)
       : node(node), node_depth(node_depth), char_depth(char_depth),
-        next_child(), end_child(), entered(false) {}
+        next_child(), end_child(), col_min(NO_ALIGN), col_min_known(false),
+        entered(false) {}
+    Frame(const_weak_pointer_type node, size_t node_depth, size_t char_depth, int col_min)
+      : node(node), node_depth(node_depth), char_depth(char_depth),
+        next_child(), end_child(), col_min(col_min), col_min_known(true),
+        entered(false) {}
   };
 
   std::vector<Frame> stack;
@@ -992,8 +999,8 @@ inline RadixMap::hook_ret<Hook> RadixMap::global_search_impl(RadixMap::const_wea
       const BandLimits band = BandLimits::around(frame.char_depth, band_radius, query_len);
 
       std::vector<int> & current_col = workspace.at(frame.node_depth);
-      int current_col_min = NO_ALIGN;
-      if(band.lower <= band.upper) {
+      int current_col_min = frame.col_min;
+      if(!frame.col_min_known && band.lower <= band.upper) {
         for(size_t i = band.lower; i <= band.upper; ++i) {
           current_col_min = std::min(current_col_min, current_col[i]);
         }
@@ -1027,20 +1034,27 @@ inline RadixMap::hook_ret<Hook> RadixMap::global_search_impl(RadixMap::const_wea
 
     std::vector<int> & child_col = workspace.clone_from_parent(frame.node_depth);
     bool prune_child = false;
+    bool child_col_min_known = false;
+    int child_col_min = NO_ALIGN;
     size_t child_char_depth = frame.char_depth;
     const_weak_pointer_type child_node = child_it->second.get();
     const branch_type & branch = child_node->branch;
     for(atomic_type branchval : branch) {
       ++child_char_depth;
       const BandLimits child_band = BandLimits::around(child_char_depth, band_radius, query_len);
-      const int current_dist = update_col_banded(branchval, ctx.query, child_col, child_band.lower, child_band.upper);
-      if(current_dist > ctx.max_distance) {
+      child_col_min = update_col_banded(branchval, ctx.query, child_col, child_band.lower, child_band.upper);
+      child_col_min_known = true;
+      if(child_col_min > ctx.max_distance) {
         prune_child = true;
         break;
       }
     }
     if(!prune_child) {
-      stack.emplace_back(child_node, frame.node_depth + 1, child_char_depth);
+      if(child_col_min_known) {
+        stack.emplace_back(child_node, frame.node_depth + 1, child_char_depth, child_col_min);
+      } else {
+        stack.emplace_back(child_node, frame.node_depth + 1, child_char_depth);
+      }
     }
   }
 
