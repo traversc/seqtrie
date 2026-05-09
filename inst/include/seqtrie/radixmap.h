@@ -439,16 +439,14 @@ inline RadixMap::path RadixMap::find(const RadixMap::span_type query) const {
   const_weak_pointer_type node = this;
   size_t position=0;
   while(position < query.size()) {
-    if(node->child_nodes.find(query[position]) != node->child_nodes.end()) {
-      node = node->child_nodes.at(query[position]).get();
-      if(position + node->branch.size() > query.size()) return path();
-      for(size_t j=0; j<node->branch.size(); ++j) {
-        if(node->branch[j] != query[position+j]) return path();
-      }
-      position += node->branch.size();
-    } else {
-      return path();
+    auto it = node->child_nodes.find(query[position]);
+    if(it == node->child_nodes.end()) return path();
+    node = it->second.get();
+    if(position + node->branch.size() > query.size()) return path();
+    for(size_t j=0; j<node->branch.size(); ++j) {
+      if(node->branch[j] != query[position+j]) return path();
     }
+    position += node->branch.size();
   }
   return path(node);
 }
@@ -476,71 +474,77 @@ inline RadixMap::path RadixMap::insert_impl(const RadixMap::span_type sequence, 
     }
   }
   atomic_type s = sequence[0];
-  if(child_nodes.find(s) == child_nodes.end()) {
-    child_nodes.emplace(s, pointer_type(new self_type));
-    child_nodes[s]->parent_node = this;
-    child_nodes[s]->branch = subvector<branch_type>(sequence, 0);
-    child_nodes[s]->terminal_idx = idx;
+  auto it = child_nodes.find(s);
+  if(it == child_nodes.end()) {
+    auto emplaced = child_nodes.emplace(s, pointer_type(new self_type));
+    auto & new_child = emplaced.first->second;
+    new_child->parent_node = this;
+    new_child->branch = subvector<branch_type>(sequence, 0);
+    new_child->terminal_idx = idx;
     if constexpr (ReturnPathAlways) {
-      return path(child_nodes[s].get());
+      return path(new_child.get());
     } else {
       return path();
     }
   }
+  pointer_type & child_ptr = it->second;
+  const size_t child_branch_size = child_ptr->branch.size();
   size_t i = 0;
-  while(i < child_nodes[s]->branch.size() && i < sequence.size() && sequence[i] == child_nodes[s]->branch[i]) { ++i; }
-  
-  if(i == sequence.size() && i == child_nodes[s]->branch.size()) {
-    if(child_nodes[s]->terminal_idx == nullidx) {
-      child_nodes[s]->terminal_idx = idx;
+  while(i < child_branch_size && i < sequence.size() && sequence[i] == child_ptr->branch[i]) { ++i; }
+
+  if(i == sequence.size() && i == child_branch_size) {
+    if(child_ptr->terminal_idx == nullidx) {
+      child_ptr->terminal_idx = idx;
       if constexpr (ReturnPathAlways) {
-        return path(child_nodes[s].get());
+        return path(child_ptr.get());
       } else {
         return path();
       }
     } else {
-      return path(child_nodes[s].get());
+      return path(child_ptr.get());
     }
   } else if(i == sequence.size()) {
-    branch_type branch_prefix = subvector<branch_type>(child_nodes[s]->branch,0,i);
-    branch_type branch_suffix = subvector<branch_type>(child_nodes[s]->branch,i);
+    branch_type branch_prefix = subvector<branch_type>(child_ptr->branch, 0, i);
+    branch_type branch_suffix = subvector<branch_type>(child_ptr->branch, i);
     atomic_type s_insert = branch_suffix[0];
     pointer_type inserted_node(new self_type);
     inserted_node->parent_node = this;
-    inserted_node->child_nodes[s_insert] = std::move(child_nodes[s]);
+    inserted_node->child_nodes[s_insert] = std::move(child_ptr);
     inserted_node->child_nodes[s_insert]->parent_node = inserted_node.get();
     inserted_node->branch = std::move(branch_prefix);
     inserted_node->terminal_idx = idx;
     inserted_node->child_nodes[s_insert]->branch = std::move(branch_suffix);
-    child_nodes[s] = std::move(inserted_node);
+    child_ptr = std::move(inserted_node);
     if constexpr (ReturnPathAlways) {
-      return path(child_nodes[s].get());
+      return path(child_ptr.get());
     } else {
       return path();
     }
-  } else if(i == child_nodes[s]->branch.size()) {
+  } else if(i == child_branch_size) {
     span_type seq_suffix = sequence.subspan(i);
-    return child_nodes[s]->insert_impl<ReturnPathAlways>(seq_suffix, idx);
+    return child_ptr->insert_impl<ReturnPathAlways>(seq_suffix, idx);
   } else {
-    branch_type branch_prefix = subvector<branch_type>(child_nodes[s]->branch,0,i);
-    branch_type branch_suffix = subvector<branch_type>(child_nodes[s]->branch,i);
-    branch_type seq_suffix = subvector<branch_type>(sequence,i);
+    branch_type branch_prefix = subvector<branch_type>(child_ptr->branch, 0, i);
+    branch_type branch_suffix = subvector<branch_type>(child_ptr->branch, i);
+    branch_type seq_suffix = subvector<branch_type>(sequence, i);
     atomic_type s_insert_branch = branch_suffix[0];
     atomic_type s_insert_seq = seq_suffix[0];
-    
+
     pointer_type inserted_node(new self_type);
     inserted_node->parent_node = this;
-    inserted_node->child_nodes[s_insert_branch] = std::move(child_nodes[s]);
+    inserted_node->child_nodes[s_insert_branch] = std::move(child_ptr);
     inserted_node->child_nodes[s_insert_branch]->parent_node = inserted_node.get();
     inserted_node->child_nodes[s_insert_branch]->branch = std::move(branch_suffix);
-    inserted_node->child_nodes[s_insert_seq] = pointer_type(new self_type);
-    inserted_node->child_nodes[s_insert_seq]->parent_node = inserted_node.get();
-    inserted_node->child_nodes[s_insert_seq]->branch = std::move(seq_suffix);
-    inserted_node->child_nodes[s_insert_seq]->terminal_idx = idx;
-    child_nodes[s] = std::move(inserted_node);
-    child_nodes[s]->branch = std::move(branch_prefix);
+    auto & new_seq_child = inserted_node->child_nodes[s_insert_seq];
+    new_seq_child = pointer_type(new self_type);
+    new_seq_child->parent_node = inserted_node.get();
+    new_seq_child->branch = std::move(seq_suffix);
+    new_seq_child->terminal_idx = idx;
+    self_type * seq_child_raw = new_seq_child.get();
+    child_ptr = std::move(inserted_node);
+    child_ptr->branch = std::move(branch_prefix);
     if constexpr (ReturnPathAlways) {
-      return path(child_nodes[s]->child_nodes[s_insert_seq].get());
+      return path(seq_child_raw);
     } else {
       return path();
     }
@@ -560,18 +564,16 @@ inline std::vector<RadixMap::path> RadixMap::prefix_search(const RadixMap::span_
   size_t branch_position = 0;
   while(query_position < query.size()) {
     if(branch_position >= node->branch.size()) {
-      if(node->child_nodes.find(query[query_position]) != node->child_nodes.end()) {
-        node = node->child_nodes.at(query[query_position]).get();
-        branch_position = 0;
-      } else {
-        return std::vector<path>(0);
-      }
+      auto it = node->child_nodes.find(query[query_position]);
+      if(it == node->child_nodes.end()) return std::vector<path>();
+      node = it->second.get();
+      branch_position = 0;
     }
     if(node->branch[branch_position] == query[query_position]) {
       branch_position++;
       query_position++;
     } else {
-      return std::vector<path>(0);
+      return std::vector<path>();
     }
   }
   return node->all();
@@ -693,6 +695,7 @@ inline RadixMap::search_context RadixMap::anchored_search_affine(const RadixMap:
     if(i == 1) Y_col[i] = cost_map.gap_open_cost;
     else       Y_col[i] = Y_col[i-1] + cost_map.gap_cost;
   }
+  // X_col.back() is NO_ALIGN here (initial column), so it is omitted from the min
   int row_min = std::min(M_col.back(), Y_col.back());
   AffineWorkspace workspace;
   workspace.initialize(std::move(col), query.size() + 1);
@@ -870,52 +873,45 @@ inline RadixMap::erase_action RadixMap::erase_impl(RadixMap::weak_pointer_type n
   if(sequence.size() == 0) {
     std::swap(result, node->terminal_idx); // if sequence doesn't exist, terminal_idx should be nullidx which is fine since result is initialized as nullidx
     size_t nc = node->child_nodes.size();
-    if(nc == 0) { // no children
-      return erase_action::erase;
-    } else if(nc == 1) { // one child
-      return erase_action::merge;
-    } else { // two or more
-      return erase_action::keep;
-    }
-  }
-  
-  // check that sequence actually exists in tree - we shouldn't assume it does
-  atomic_type s = sequence[0];
-  if(node->child_nodes.find(s) == node->child_nodes.end()) {
+    if(nc == 0) return erase_action::erase;
+    if(nc == 1) return erase_action::merge;
     return erase_action::keep;
   }
-  
+
+  // check that sequence actually exists in tree - we shouldn't assume it does
+  atomic_type s = sequence[0];
+  auto it = node->child_nodes.find(s);
+  if(it == node->child_nodes.end()) return erase_action::keep;
+
   // travelling down tree
+  pointer_type & child_ptr = it->second;
+  const branch_type & child_branch = child_ptr->branch;
   size_t i = 0;
-  for(; i<node->child_nodes[s]->branch.size(); ++i) {
+  for(; i < child_branch.size(); ++i) {
     if(i == sequence.size()) return erase_action::keep; // branch is longer than sequence, doesn't match
-    if(node->child_nodes[s]->branch[i] != sequence[i]) return erase_action::keep; // branch and sequence don't match
+    if(child_branch[i] != sequence[i]) return erase_action::keep; // branch and sequence don't match
   }
-  erase_action action = erase_impl(node->child_nodes[s].get(), sequence.subspan(i), result); // sequence is longer or same
-  
+  erase_action action = erase_impl(child_ptr.get(), sequence.subspan(i), result); // sequence is longer or same
+
   // travelling back up
   if(action == erase_action::keep) {
     return erase_action::keep;
   } else if(action == erase_action::merge) {
-    size_t next_s = 0;
-    for(auto & x : node->child_nodes[s]->child_nodes) {
-      next_s = x.first;
-      break;
-    }
-    appendspan(node->child_nodes[s]->branch, node->child_nodes[s]->child_nodes[next_s]->branch);
-    branch_type next_branch = std::move(node->child_nodes[s]->branch);
-    node->child_nodes[s] = std::move(node->child_nodes[s]->child_nodes[next_s]);
-    node->child_nodes[s]->parent_node = node;
-    node->child_nodes[s]->branch = std::move(next_branch);
+    auto first_it = child_ptr->child_nodes.begin();
+    appendspan(child_ptr->branch, first_it->second->branch);
+    branch_type next_branch = std::move(child_ptr->branch);
+    child_ptr = std::move(first_it->second); // first_it invalidated here; old child destroyed
+    child_ptr->parent_node = node;
+    child_ptr->branch = std::move(next_branch);
     return erase_action::keep;
-  } else { // if(action == erase_action::erase) {
-    node->child_nodes.erase(s);
+  } else { // erase_action::erase
+    node->child_nodes.erase(it);
     size_t nc = node->child_nodes.size();
-    if((nc == 0) && (node->terminal_idx == nullidx)) { // no children and not a sequence
+    if((nc == 0) && (node->terminal_idx == nullidx)) {
       return erase_action::erase;
-    } else if((nc == 1) && (node->terminal_idx == nullidx)) { // one child and not a sequence
+    } else if((nc == 1) && (node->terminal_idx == nullidx)) {
       return erase_action::merge;
-    } else { // 2+ children or node is a sequence
+    } else {
       return erase_action::keep;
     }
   }
