@@ -26,7 +26,6 @@
 #define span_FEATURE_MAKE_SPAN 1
 #include "nonstd/span.hpp"
 
-// requires boost
 // #include <boost/mpl/string.hpp>
 // #include <boost/mpl/for_each.hpp>
 // #include <boost/mpl/range_c.hpp>

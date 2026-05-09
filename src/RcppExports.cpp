@@ -350,6 +350,26 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// c_split_search
+DataFrame c_split_search(CharacterVector query, CharacterVector target, IntegerVector query_split, IntegerVector target_split, const int edge_trim, IntegerVector max_distance, Rcpp::Nullable<IntegerMatrix> cost_matrix, int gap_cost, int gap_open_cost, const int nthreads, const bool show_progress);
+RcppExport SEXP _seqtrie_c_split_search(SEXP querySEXP, SEXP targetSEXP, SEXP query_splitSEXP, SEXP target_splitSEXP, SEXP edge_trimSEXP, SEXP max_distanceSEXP, SEXP cost_matrixSEXP, SEXP gap_costSEXP, SEXP gap_open_costSEXP, SEXP nthreadsSEXP, SEXP show_progressSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< CharacterVector >::type query(querySEXP);
+    Rcpp::traits::input_parameter< CharacterVector >::type target(targetSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type query_split(query_splitSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type target_split(target_splitSEXP);
+    Rcpp::traits::input_parameter< const int >::type edge_trim(edge_trimSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type max_distance(max_distanceSEXP);
+    Rcpp::traits::input_parameter< Rcpp::Nullable<IntegerMatrix> >::type cost_matrix(cost_matrixSEXP);
+    Rcpp::traits::input_parameter< int >::type gap_cost(gap_costSEXP);
+    Rcpp::traits::input_parameter< int >::type gap_open_cost(gap_open_costSEXP);
+    Rcpp::traits::input_parameter< const int >::type nthreads(nthreadsSEXP);
+    Rcpp::traits::input_parameter< const bool >::type show_progress(show_progressSEXP);
+    rcpp_result_gen = Rcpp::wrap(c_split_search(query, target, query_split, target_split, edge_trim, max_distance, cost_matrix, gap_cost, gap_open_cost, nthreads, show_progress));
+    return rcpp_result_gen;
+END_RCPP
+}
 // test_search_hook
 List test_search_hook();
 RcppExport SEXP _seqtrie_test_search_hook() {
@@ -391,6 +411,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_seqtrie_RadixTree_single_gap_search", (DL_FUNC) &_seqtrie_RadixTree_single_gap_search, 6},
     {"_seqtrie_c_dist_matrix", (DL_FUNC) &_seqtrie_c_dist_matrix, 8},
     {"_seqtrie_c_dist_pairwise", (DL_FUNC) &_seqtrie_c_dist_pairwise, 8},
+    {"_seqtrie_c_split_search", (DL_FUNC) &_seqtrie_c_split_search, 11},
     {"_seqtrie_test_search_hook", (DL_FUNC) &_seqtrie_test_search_hook, 0},
     {NULL, NULL, 0}
 };

@@ -1,5 +1,4 @@
 // Header-only, basic O(N^2) pairwise alignment algorithms using dynamic programming
-// Uses boost matrix, but maybe use something else in the future
 // 
 // These functions should be compatibile with C++11
 // int hamming_distance_unary(query, target) // Mismatch = 1, NA if not same length
@@ -18,15 +17,35 @@
 #include <memory>
 #include <tuple>
 #include <unordered_map>
+#include <vector>
 #include <nonstd/span.hpp>
 #include "seqtrie/utility.h"
 #include <limits>
-#include <boost/numeric/ublas/matrix.hpp>
-// #include <boost/functional/hash.hpp>
 
 namespace pairwise {
-using IMatrix = boost::numeric::ublas::matrix<int>;
 using cspan = nonstd::span<const char>;
+
+class IMatrix {
+public:
+  IMatrix() = default;
+  IMatrix(size_t nrow, size_t ncol) : nrow_(nrow), ncol_(ncol), data_(nrow * ncol) {}
+
+  int & operator()(size_t i, size_t j) {
+    return data_[i * ncol_ + j];
+  }
+
+  int operator()(size_t i, size_t j) const {
+    return data_[i * ncol_ + j];
+  }
+
+  size_t size1() const { return nrow_; }
+  size_t size2() const { return ncol_; }
+
+private:
+  size_t nrow_ = 0;
+  size_t ncol_ = 0;
+  std::vector<int> data_;
+};
 
 constexpr int R_NA_INTEGER = std::numeric_limits<int>::min();
 

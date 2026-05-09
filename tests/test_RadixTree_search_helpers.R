@@ -1,25 +1,28 @@
 print("Running test_RadixTree_search_helpers.R")
 
-if (requireNamespace("seqtrie", quietly = TRUE) &&
-    requireNamespace("dplyr", quietly = TRUE)) {
+if (requireNamespace("seqtrie", quietly = TRUE)) {
   library(seqtrie)
-  library(dplyr)
+
+  arrange_result <- function(results) {
+    results <- as.data.frame(results, stringsAsFactors = FALSE)
+    if(nrow(results) > 0L) {
+      results <- results[order(results$query, results$target), , drop = FALSE]
+    }
+    rownames(results) <- NULL
+    results
+  }
 
   query <- c("ACGT", "ACGA", "TTTA")
   target <- c("ACGT", "ACGG", "ACGA", "TTTT", "GGGG")
 
   tree <- RadixTree$new(target)
-  direct_tree <- tree$search(query, max_distance = 1L, mode = "levenshtein", nthreads = 2L) %>%
-    arrange(query, target)
-  helper_tree <- dist_search(query, target, max_distance = 1L, mode = "levenshtein", tree_class = "RadixTree", nthreads = 2L) %>%
-    arrange(query, target)
+  direct_tree <- arrange_result(tree$search(query, max_distance = 1L, mode = "levenshtein", nthreads = 2L))
+  helper_tree <- arrange_result(dist_search(query, target, max_distance = 1L, mode = "levenshtein", tree_class = "RadixTree", nthreads = 2L))
   stopifnot(identical(helper_tree, direct_tree))
 
   forest <- RadixForest$new(target)
-  direct_forest <- forest$search(query, max_distance = 1L, mode = "levenshtein", nthreads = 2L) %>%
-    arrange(query, target)
-  helper_forest <- dist_search(query, target, max_distance = 1L, mode = "levenshtein", tree_class = "RadixForest", nthreads = 2L) %>%
-    arrange(query, target)
+  direct_forest <- arrange_result(forest$search(query, max_distance = 1L, mode = "levenshtein", nthreads = 2L))
+  helper_forest <- arrange_result(dist_search(query, target, max_distance = 1L, mode = "levenshtein", tree_class = "RadixForest", nthreads = 2L))
   stopifnot(identical(helper_forest, direct_forest))
 
   stopifnot(inherits(
@@ -27,7 +30,7 @@ if (requireNamespace("seqtrie", quietly = TRUE) &&
     "try-error"
   ))
 
-  split_result <- split_search(
+  split_result <- arrange_result(split_search(
     query = c("AGACCTAACCC", "GGGTGTAACCACCC"),
     target = c("AAGACCTAACC", "GGTGTAACCAC"),
     query_split = c(8L, 8L),
@@ -35,8 +38,7 @@ if (requireNamespace("seqtrie", quietly = TRUE) &&
     edge_trim = 0L,
     max_distance = 0L,
     nthreads = 2L
-  ) %>%
-    arrange(query, target)
+  ))
 
   expected_split <- data.frame(
     query = c("AGACCTAACCC", "GGGTGTAACCACCC"),

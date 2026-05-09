@@ -1,7 +1,6 @@
 importFrom(Rcpp,sourceCpp)
 importFrom(RcppParallel, RcppParallelLibs)
 importFrom(R6, R6Class)
-importFrom(rlang, .data)
 useDynLib(seqtrie, .registration=TRUE)
 export("RadixTree")
 export("RadixForest")

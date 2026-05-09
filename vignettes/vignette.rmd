@@ -15,6 +15,14 @@ GITHUB_README <- Sys.getenv("GITHUB_README") != ""
 CAN_IGRAPH_PLOT <- requireNamespace("igraph", quietly=TRUE) && requireNamespace("ggplot2", quietly=TRUE)
 knitr::opts_chunk$set(dpi=96,fig.width=6.5)
 library(seqtrie)
+arrange_result <- function(x) {
+  x <- as.data.frame(x, stringsAsFactors = FALSE)
+  if(nrow(x) > 0L) {
+    x <- x[order(x$query, x$target), , drop = FALSE]
+  }
+  rownames(x) <- NULL
+  x
+}
 ```
 
 ### Basic usage
@@ -125,7 +133,7 @@ results <- dist_search(covid_cdr3, covid_cdr3, max_distance=2)
 
 # The output is a data.frame mapping query (search sequences)
 # and target (sequences inserted into the tree).
-dplyr::filter(results, query != target)
+results[results$query != results$target, , drop = FALSE]
 ```
 
 ### Search parameters
@@ -225,7 +233,7 @@ results_affine <- tree$search(covid_cdr3, max_distance = 8,
                               gap_open_cost = 5,
                               nthreads = 2)
 
-dplyr::filter(results_linear, query != target)
+results_linear[results_linear$query != results_linear$target, , drop = FALSE]
 ```
 
 ### Radix Forest for faster Levenshtein searches
@@ -249,8 +257,8 @@ frst$insert(covid_cdr3)
 results_frst <- frst$search(covid_cdr3, max_distance=2, mode="levenshtein", nthreads=2)
 # The results are the same, but order is not guaranteed
 identical(
-  dplyr::arrange(results_tree, query, target),
-  dplyr::arrange(results_frst, query, target) )
+  arrange_result(results_tree),
+  arrange_result(results_frst) )
 ```
 
 ### Finding strings that start with a pattern

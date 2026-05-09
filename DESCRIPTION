@@ -16,11 +16,11 @@ Depends: R (>= 3.5.0)
 LazyData: true
 SystemRequirements: GNU make
 LinkingTo: 
-    Rcpp, RcppParallel, BH
+    Rcpp, RcppParallel
 Imports: 
-    Rcpp (>= 0.12.18.3), RcppParallel (>= 5.1.3), R6, rlang, dplyr, stringi
+    Rcpp (>= 0.12.18.3), RcppParallel (>= 5.1.3), R6
 Suggests:
-    knitr, rmarkdown, stringdist, pwalign, igraph, ggplot2
+    knitr, rmarkdown, pwalign, igraph, ggplot2
 VignetteBuilder: knitr
 RoxygenNote: 7.3.3
 Roxygen: list(markdown = TRUE)

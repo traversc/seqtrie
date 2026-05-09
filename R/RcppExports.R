@@ -121,6 +121,10 @@ c_dist_pairwise <- function(query, target, mode = "levenshtein", cost_matrix = N
     .Call(`_seqtrie_c_dist_pairwise`, query, target, mode, cost_matrix, gap_cost, gap_open_cost, nthreads, show_progress)
 }
 
+c_split_search <- function(query, target, query_split, target_split, edge_trim = 0L, max_distance = integer(), cost_matrix = NULL, gap_cost = NA_integer_, gap_open_cost = NA_integer_, nthreads = 1L, show_progress = FALSE) {
+    .Call(`_seqtrie_c_split_search`, query, target, query_split, target_split, edge_trim, max_distance, cost_matrix, gap_cost, gap_open_cost, nthreads, show_progress)
+}
+
 test_search_hook <- function() {
     .Call(`_seqtrie_test_search_hook`)
 }

@@ -1,6 +1,5 @@
 suppressPackageStartupMessages({
   library(seqtrie)
-  library(dplyr)
 })
 
 data(covid_cdr3, package = "seqtrie")
@@ -180,16 +179,20 @@ for (i in seq_len(nrow(grid))) {
   gc(full = TRUE)
 }
 
-summary <- grid %>%
-  group_by(method) %>%
-  summarize(
-    mean_time = mean(time),
-    median_time = median(time),
-    mean_matches = mean(matches),
-    median_matches = median(matches),
-    .groups = "drop"
-  ) %>%
-  arrange(method)
+summary <- aggregate(
+  cbind(time, matches) ~ method,
+  data = grid,
+  FUN = function(x) c(mean = mean(x), median = median(x))
+)
+summary <- data.frame(
+  method = summary$method,
+  mean_time = summary$time[, "mean"],
+  median_time = summary$time[, "median"],
+  mean_matches = summary$matches[, "mean"],
+  median_matches = summary$matches[, "median"],
+  stringsAsFactors = FALSE
+)
+summary <- summary[order(summary$method), , drop = FALSE]
 
 summary$mean_time <- round(summary$mean_time, 3L)
 summary$median_time <- round(summary$median_time, 3L)

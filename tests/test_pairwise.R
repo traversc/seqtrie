@@ -9,17 +9,11 @@
 # so only run if pwalign <= 1.2.0
 
 if(requireNamespace("seqtrie", quietly=TRUE) &&
-   requireNamespace("stringi", quietly=TRUE) &&
-   requireNamespace("stringdist", quietly=TRUE) &&
-   requireNamespace("dplyr", quietly=TRUE) && 
    requireNamespace("pwalign", quietly=TRUE) &&
    (packageVersion("pwalign") >= "1.4.0" || packageVersion("pwalign") <= "1.2.0")
 ) {
 library(seqtrie)
-library(stringi)
-library(stringdist)
 library(pwalign)
-library(dplyr)
 
 # Use 2 threads on github actions and CRAN, 4 threads locally
 IS_LOCAL  <- Sys.getenv("IS_LOCAL") != ""
@@ -30,14 +24,11 @@ MAXSEQLEN <- 200
 CHARSET   <- "ACGT"
 
 random_strings <- function(N, charset = "abcdefghijklmnopqrstuvwxyz") {
-  charset_stri <- paste0("[", charset, "]")
+  charset <- unlist(strsplit(charset, "", fixed = TRUE))
   len <- sample(0:MAXSEQLEN, N, replace=TRUE)
-  result <- lapply(0:MAXSEQLEN, function(x) {
-    nx <- sum(len == x)
-    if(nx == 0) return(character())
-    stringi::stri_rand_strings(nx, x, pattern = charset_stri)
-  })
-  sample(unlist(result))
+  vapply(len, function(n) {
+    paste0(sample(charset, n, replace = TRUE), collapse = "")
+  }, character(1))
 }
 
 mutate_strings <- function(x, prob = 0.025, indel_prob = 0.025, charset = "abcdefghijklmnopqrstuvwxyz") {
@@ -70,10 +61,11 @@ pairwiseAlignmentFix <- function(pattern, subject, ...) {
 
 biostrings_matrix_global <- function(query, target, cost_matrix, gap_cost, gap_open_cost = 0) {
   substitutionMatrix <- -cost_matrix
-  lapply(query, function(x) {
+  rows <- lapply(query, function(x) {
     query2 <- rep(x, length(target))
     -pairwiseAlignmentFix(pattern=query2, subject=target, substitutionMatrix = substitutionMatrix, gapOpening=gap_open_cost, gapExtension=gap_cost, scoreOnly=TRUE, type="global")
-  }) %>% do.call(rbind, .)
+  })
+  do.call(rbind, rows)
 }
 
 biostrings_pairwise_global <- function(query, target, cost_matrix, gap_cost, gap_open_cost = 0) {
@@ -83,11 +75,12 @@ biostrings_pairwise_global <- function(query, target, cost_matrix, gap_cost, gap
 
 biostrings_matrix_anchored <- function(query, target, query_size, target_size, cost_matrix, gap_cost, gap_open_cost = 0) {
   substitutionMatrix <- -cost_matrix
-  lapply(seq_along(query), function(i) {
+  rows <- lapply(seq_along(query), function(i) {
     query2 <- substring(query[i], 1, query_size[i,,drop=TRUE])
     target2 <- substring(target, 1, target_size[i,,drop=TRUE])
     -pairwiseAlignmentFix(pattern=query2, subject=target2, substitutionMatrix = substitutionMatrix, gapOpening=gap_open_cost, gapExtension=gap_cost, scoreOnly=TRUE, type="global")
-  }) %>% do.call(rbind, .)
+  })
+  do.call(rbind, rows)
 }
 
 biostrings_pairwise_anchored <- function(query, target, query_size, target_size, cost_matrix, gap_cost, gap_open_cost = 0) {
@@ -97,88 +90,101 @@ biostrings_pairwise_anchored <- function(query, target, query_size, target_size,
   -pairwiseAlignmentFix(pattern=query2, subject=target2, substitutionMatrix = substitutionMatrix, gapOpening=gap_open_cost, gapExtension=gap_cost, scoreOnly=TRUE, type="global")
 }
 
+hamming_pairwise <- function(query, target) {
+  vapply(seq_along(query), function(i) {
+    if(nchar(query[i]) != nchar(target[i])) return(Inf)
+    sum(strsplit(query[i], "", fixed = TRUE)[[1]] != strsplit(target[i], "", fixed = TRUE)[[1]])
+  }, numeric(1))
+}
+
+hamming_matrix <- function(query, target) {
+  rows <- lapply(query, function(q) hamming_pairwise(rep(q, length(target)), target))
+  do.call(rbind, rows)
+}
+
+unit_cost_matrix <- function(charset) {
+  chars <- unlist(strsplit(charset, "", fixed = TRUE))
+  cost_matrix <- matrix(1L, nrow = length(chars), ncol = length(chars), dimnames = list(chars, chars))
+  diag(cost_matrix) <- 0L
+  cost_matrix
+}
+
 for(. in 1:NITER) {
 
     print("Checking hamming search correctness")
     local({
-      # Note: seqtrie returns `NA_integer_` for hamming distance when the lengths are different
-      # whereas stringdist returns `Inf`
+      # Note: seqtrie returns `NA_integer_` for hamming distance when the lengths are different.
       # This is why we need to replace `NA_integer_` with `Inf` when comparing results
 
-      target <- c(random_strings(NSEQS, CHARSET),"") %>% unique
+      target <- unique(c(random_strings(NSEQS, CHARSET),""))
       query <- sample(c(sample(target, NSEQS/1000), random_strings(NSEQS/1000, CHARSET)))
-      query <- c(mutate_strings(query, indel_prob=0, charset = CHARSET), "") %>% unique
+      query <- unique(c(mutate_strings(query, indel_prob=0, charset = CHARSET), ""))
 
       # Check matrix results
       results_seqtrie <- dist_matrix(query, target, mode = "hamming", nthreads=NTHREADS)
       results_seqtrie[is.na(results_seqtrie)] <- Inf
-      results_stringdist <- stringdist::stringdistmatrix(query, target, method = "hamming", nthread=NTHREADS)
-      stopifnot(all(results_seqtrie == results_stringdist))
+      results_hamming <- hamming_matrix(query, target)
+      stopifnot(all(results_seqtrie == results_hamming))
 
       # Check pairwise results
       query_pairwise <- mutate_strings(target, prob=0.025, indel_prob=0.05, charset = CHARSET)
       results_seqtrie <- dist_pairwise(query_pairwise, target, mode = "hamming", nthreads=NTHREADS)
       results_seqtrie[is.na(results_seqtrie)] <- Inf
-      results_stringdist <- stringdist::stringdist(query_pairwise, target, method = "hamming", nthread=NTHREADS)
-      stopifnot(all(results_seqtrie == results_stringdist))
+      results_hamming <- hamming_pairwise(query_pairwise, target)
+      stopifnot(all(results_seqtrie == results_hamming))
     })
 
     print("Checking levenshtein search correctness")
     local({
-      target <- c(random_strings(NSEQS, CHARSET),"") %>% unique
+      target <- unique(c(random_strings(NSEQS, CHARSET),""))
       query <- sample(c(sample(target, NSEQS/1000), random_strings(NSEQS/1000, CHARSET)))
-      query <- c(mutate_strings(query, indel_prob=0, charset = CHARSET), "") %>% unique
+      query <- unique(c(mutate_strings(query, indel_prob=0, charset = CHARSET), ""))
 
       # Check matrix results
       results_seqtrie <- dist_matrix(query, target, mode = "levenshtein", nthreads=NTHREADS)
-      results_stringdist <- stringdist::stringdistmatrix(query, target, method = "lv", nthread=NTHREADS)
-      stopifnot(all(results_seqtrie == results_stringdist))
+      cost_matrix <- unit_cost_matrix(CHARSET)
+      results_pwalign <- biostrings_matrix_global(query, target, cost_matrix = cost_matrix, gap_cost = 1L)
+      stopifnot(all(results_seqtrie == results_pwalign))
 
       # Check pairwise results
       query_pairwise <- mutate_strings(target, prob=0.025, indel_prob=0.05, charset = CHARSET)
       results_seqtrie <- dist_pairwise(query_pairwise, target, mode = "levenshtein", nthreads=NTHREADS)
-      results_stringdist <- stringdist::stringdist(query_pairwise, target, method = "lv", nthread=NTHREADS)
-      stopifnot(all(results_seqtrie == results_stringdist))
+      results_pwalign <- biostrings_pairwise_global(query_pairwise, target, cost_matrix = cost_matrix, gap_cost = 1L)
+      stopifnot(all(results_seqtrie == results_pwalign))
     })
 
     print("Checking anchored search correctness")
     local({
-      # There is no anchored search in stringdist (or elsewhere). To get the same results, we substring the query and target sequences
-      # By the results of the seqtrie anchored search and then compare the results
+      # There is no anchored search in pwalign. To get the same results, we
+      # substring query and target by the seqtrie anchored endpoints and compare
+      # the resulting global alignments.
 
-      target <- c(random_strings(NSEQS, CHARSET),"") %>% unique
+      target <- unique(c(random_strings(NSEQS, CHARSET),""))
       query <- sample(c(sample(target, NSEQS/1000), random_strings(NSEQS/1000, CHARSET)))
-      query <- c(mutate_strings(query, indel_prob=0, charset = CHARSET), "") %>% unique
+      query <- unique(c(mutate_strings(query, indel_prob=0, charset = CHARSET), ""))
 
       # Check matrix results
       results_seqtrie <- dist_matrix(query, target, mode = "anchored", nthreads=NTHREADS)
       query_size <- attr(results_seqtrie, "query_size")
       target_size <- attr(results_seqtrie, "target_size")
-      results_stringdist <- lapply(seq_along(query), function(i) {
-        query_size2 <- query_size[i,,drop=TRUE]
-        target_size2 <- target_size[i,,drop=TRUE]
-        query2 <- substring(query[i], 1, query_size2) # query[i] is recycled
-        target2 <- substring(target, 1, target_size2)
-        stringdist::stringdist(query2, target2, method = "lv", nthread=NTHREADS)
-      }) %>% do.call(rbind, .)
-      stopifnot(all(results_seqtrie == results_stringdist))
+      cost_matrix <- unit_cost_matrix(CHARSET)
+      results_pwalign <- biostrings_matrix_anchored(query, target, query_size, target_size, cost_matrix = cost_matrix, gap_cost = 1L)
+      stopifnot(all(results_seqtrie == results_pwalign))
 
       # Check pairwise results
       query_pairwise <- mutate_strings(target, prob=0.025, indel_prob=0.05, charset = CHARSET)
       results_seqtrie <- dist_pairwise(query_pairwise, target, mode = "anchored", nthreads=NTHREADS)
       query_size <- attr(results_seqtrie, "query_size")
       target_size <- attr(results_seqtrie, "target_size")
-      query2 <- substring(query_pairwise, 1, query_size)
-      target2 <- substring(target, 1, target_size)
-      results_stringdist <- stringdist::stringdist(query2, target2, method = "lv", nthread=NTHREADS)
-      stopifnot(all(results_seqtrie == results_stringdist))
+      results_pwalign <- biostrings_pairwise_anchored(query_pairwise, target, query_size, target_size, cost_matrix = cost_matrix, gap_cost = 1L)
+      stopifnot(all(results_seqtrie == results_pwalign))
     })
 
     print("Checking global search with linear gap for correctness")
     local({
-      target <- c(random_strings(NSEQS, CHARSET),"") %>% unique
+      target <- unique(c(random_strings(NSEQS, CHARSET),""))
       query <- sample(c(sample(target, NSEQS/1000), random_strings(NSEQS/1000, CHARSET)))
-      query <- c(mutate_strings(query, indel_prob=0, charset = CHARSET), "") %>% unique
+      query <- unique(c(mutate_strings(query, indel_prob=0, charset = CHARSET), ""))
 
       # Check matrix results
       cost_matrix <- matrix(sample(1:3, size = nchar(CHARSET)^2, replace=TRUE), nrow=nchar(CHARSET))
@@ -198,9 +204,9 @@ for(. in 1:NITER) {
 
     print("Checking anchored search with linear gap for correctness")
     local({
-      target <- c(random_strings(NSEQS, CHARSET),"") %>% unique
+      target <- unique(c(random_strings(NSEQS, CHARSET),""))
       query <- sample(c(sample(target, NSEQS/1000), random_strings(NSEQS/1000, CHARSET)))
-      query <- c(mutate_strings(query, indel_prob=0, charset = CHARSET), "") %>% unique
+      query <- unique(c(mutate_strings(query, indel_prob=0, charset = CHARSET), ""))
 
       # Check matrix results
       cost_matrix <- matrix(sample(1:3, size = nchar(CHARSET)^2, replace=TRUE), nrow=nchar(CHARSET))
@@ -226,9 +232,9 @@ for(. in 1:NITER) {
 
     print("Checking global search with affine gap for correctness")
     local({
-      target <- c(random_strings(NSEQS, CHARSET),"") %>% unique
+      target <- unique(c(random_strings(NSEQS, CHARSET),""))
       query <- sample(c(sample(target, NSEQS/1000), random_strings(NSEQS/1000, CHARSET)))
-      query <- c(mutate_strings(query, indel_prob=0, charset = CHARSET), "") %>% unique
+      query <- unique(c(mutate_strings(query, indel_prob=0, charset = CHARSET), ""))
 
       # Check matrix results
       cost_matrix <- matrix(sample(1:3, size = nchar(CHARSET)^2, replace=TRUE), nrow=nchar(CHARSET))
@@ -249,9 +255,9 @@ for(. in 1:NITER) {
 
     print("Checking anchored search with affine gap for correctness")
     local({
-      target <- c(random_strings(NSEQS, CHARSET),"") %>% unique
+      target <- unique(c(random_strings(NSEQS, CHARSET),""))
       query <- sample(c(sample(target, NSEQS/1000), random_strings(NSEQS/1000, CHARSET)))
-      query <- c(mutate_strings(query, indel_prob=0, charset = CHARSET), "") %>% unique
+      query <- unique(c(mutate_strings(query, indel_prob=0, charset = CHARSET), ""))
 
       # Check matrix results
       cost_matrix <- matrix(sample(1:3, size = nchar(CHARSET)^2, replace=TRUE), nrow=nchar(CHARSET))

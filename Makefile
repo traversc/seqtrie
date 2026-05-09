@@ -79,6 +79,7 @@ test:
 	IS_LOCAL=Yes Rscript tests/test_RadixTree_search_edge_cases.R && unset IS_LOCAL
 	IS_LOCAL=Yes Rscript tests/test_RadixTree_search_helpers.R && unset IS_LOCAL
 	IS_LOCAL=Yes Rscript tests/test_single_gap_search.R && unset IS_LOCAL
+	IS_LOCAL=Yes Rscript tests/test_split_search.R && unset IS_LOCAL
 	IS_LOCAL=Yes Rscript tests/test_search_hook.R && unset IS_LOCAL
 test-trie:
 	IS_LOCAL=Yes Rscript tests/test_RadixTree.R && unset IS_LOCAL
@@ -91,13 +92,12 @@ bench-levenshtein:
 
 R_INCLUDE=$(shell R CMD config --cppflags)
 Rcpp_INCLUDE=$(shell Rscript -e 'cat(system.file("include", package = "Rcpp"))')
-BH_INCLUDE=$(shell Rscript -e 'cat(system.file("include", package = "BH"))')
 RcppParallel_INCLUDE=$(shell Rscript -e 'cat(system.file("include", package = "RcppParallel"))')
 SEQTRIE_SMALL_ARRAY_SIZE=$(shell Rscript -e 'cat(Sys.getenv("SEQTRIE_SMALL_ARRAY_SIZE",unset=32))')
 CLANG_TIDY_CPPFLAGS=-DRCPP_USE_UNWIND_PROTECT -DSEQTRIE_SMALL_ARRAY_SIZE=$(SEQTRIE_SMALL_ARRAY_SIZE)
 
 clang-tidy:
-	clang-tidy src/CharCounter.cpp -header-filter=inst/include/.* -checks=-*,clang-analyzer-*,clang-analyzer-cplusplus* -extra-arg=-std=gnu++17 -- $(R_INCLUDE) $(CLANG_TIDY_CPPFLAGS) -Iinst/include -I$(Rcpp_INCLUDE) -I$(BH_INCLUDE) -I$(RcppParallel_INCLUDE)
-	clang-tidy src/RadixForest.cpp -header-filter=inst/include/.* -checks=-*,clang-analyzer-*,clang-analyzer-cplusplus* -extra-arg=-std=gnu++17 -- $(R_INCLUDE) $(CLANG_TIDY_CPPFLAGS) -Iinst/include -I$(Rcpp_INCLUDE) -I$(BH_INCLUDE) -I$(RcppParallel_INCLUDE)
-	clang-tidy src/RadixTree.cpp -header-filter=inst/include/.* -checks=-*,clang-analyzer-*,clang-analyzer-cplusplus* -extra-arg=-std=gnu++17 -- $(R_INCLUDE) $(CLANG_TIDY_CPPFLAGS) -Iinst/include -I$(Rcpp_INCLUDE) -I$(BH_INCLUDE) -I$(RcppParallel_INCLUDE)
-	clang-tidy src/pairwise.cpp -header-filter=inst/include/.* -checks=-*,clang-analyzer-*,clang-analyzer-cplusplus* -extra-arg=-std=gnu++17 -- $(R_INCLUDE) $(CLANG_TIDY_CPPFLAGS) -Iinst/include -I$(Rcpp_INCLUDE) -I$(BH_INCLUDE) -I$(RcppParallel_INCLUDE)
+	clang-tidy src/CharCounter.cpp -header-filter=inst/include/.* -checks=-*,clang-analyzer-*,clang-analyzer-cplusplus* -extra-arg=-std=gnu++17 -- $(R_INCLUDE) $(CLANG_TIDY_CPPFLAGS) -Iinst/include -I$(Rcpp_INCLUDE) -I$(RcppParallel_INCLUDE)
+	clang-tidy src/RadixForest.cpp -header-filter=inst/include/.* -checks=-*,clang-analyzer-*,clang-analyzer-cplusplus* -extra-arg=-std=gnu++17 -- $(R_INCLUDE) $(CLANG_TIDY_CPPFLAGS) -Iinst/include -I$(Rcpp_INCLUDE) -I$(RcppParallel_INCLUDE)
+	clang-tidy src/RadixTree.cpp -header-filter=inst/include/.* -checks=-*,clang-analyzer-*,clang-analyzer-cplusplus* -extra-arg=-std=gnu++17 -- $(R_INCLUDE) $(CLANG_TIDY_CPPFLAGS) -Iinst/include -I$(Rcpp_INCLUDE) -I$(RcppParallel_INCLUDE)
+	clang-tidy src/pairwise.cpp -header-filter=inst/include/.* -checks=-*,clang-analyzer-*,clang-analyzer-cplusplus* -extra-arg=-std=gnu++17 -- $(R_INCLUDE) $(CLANG_TIDY_CPPFLAGS) -Iinst/include -I$(Rcpp_INCLUDE) -I$(RcppParallel_INCLUDE)

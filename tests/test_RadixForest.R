@@ -2,17 +2,10 @@
 # 1) That insertion and deletion produce the correct results with random strings
 # 2) That search (hamming, levenshtein and anchored) produce the same results as the internal `dist_matrix` and `dist_pairwise` functions
 
-if(requireNamespace("seqtrie", quietly=TRUE) &&
-   requireNamespace("stringi", quietly=TRUE) &&
-   requireNamespace("stringdist", quietly=TRUE) &&
-   requireNamespace("dplyr", quietly=TRUE)
-) {
+if(requireNamespace("seqtrie", quietly=TRUE)) {
 
 
 library(seqtrie)
-library(stringdist)
-library(stringi)
-library(dplyr)
 
 # Use 2 threads on github actions and CRAN, 4 threads locally
 IS_LOCAL  <- Sys.getenv("IS_LOCAL") != ""
@@ -33,14 +26,11 @@ forest_equal <- function(x, y) {
 }
 
 random_strings <- function(N, charset = "abcdefghijklmnopqrstuvwxyz") {
-  charset_stri <- paste0("[", charset, "]")
+  charset <- unlist(strsplit(charset, "", fixed = TRUE))
   len <- sample(0:MAXSEQLEN, N, replace=TRUE)
-  result <- lapply(0:MAXSEQLEN, function(x) {
-    nx <- sum(len == x)
-    if(nx == 0) return(character())
-    stringi::stri_rand_strings(nx, x, pattern = charset_stri)
-  })
-  sample(unlist(result))
+  vapply(len, function(n) {
+    paste0(sample(charset, n, replace = TRUE), collapse = "")
+  }, character(1))
 }
 
 
@@ -58,14 +48,26 @@ mutate_strings <- function(x, prob = 0.025, indel_prob = 0.025, charset = "abcde
   })
 }
 
-sd_search <- function(query, target, method = "lv") {
-  results <- stringdist::stringdistmatrix(query, target, method = method, nthread=NTHREADS)
+arrange_result <- function(results) {
+  if(is.null(results)) {
+    return(data.frame())
+  }
+  results <- as.data.frame(results, stringsAsFactors = FALSE)
+  if(nrow(results) > 0L) {
+    results <- results[order(results$query, results$target), , drop = FALSE]
+  }
+  rownames(results) <- NULL
+  results
+}
+
+dist_matrix_search <- function(query, target, mode = "levenshtein") {
+  results <- seqtrie::dist_matrix(query, target, mode = mode, nthreads=NTHREADS)
   results <- data.frame(query = rep(query, times=length(target)), 
                         target = rep(target, each=length(query)), 
                         distance = as.vector(results), stringsAsFactors = FALSE)
-  results <- dplyr::filter(results, is.finite(distance))
+  results <- results[is.finite(results$distance), , drop = FALSE]
   results$distance <- as.integer(results$distance)
-  dplyr::arrange(results, query, target)
+  arrange_result(results)
 }
 
 tt <- "RadixForest"
@@ -78,10 +80,10 @@ for(. in 1:NITER) {
     era <- c(sample(c(sample(ins, NSEQS/10), random_strings(NSEQS/10, CHARSET))),"")
     x$insert(ins)
     stopifnot(x$validate())
-    stopifnot(x$size() == n_distinct(ins))
+    stopifnot(x$size() == length(unique(ins)))
     x$erase(era)
     stopifnot(x$validate())
-    stopifnot(x$size() == n_distinct(ins[!ins %in% era]))
+    stopifnot(x$size() == length(unique(ins[!ins %in% era])))
     y$insert(ins[!ins %in% era])
     stopifnot(y$validate())
     stopifnot(forest_equal(x, y))
@@ -107,7 +109,7 @@ for(. in 1:NITER) {
     x <- RadixForest$new()
     ins <- c(random_strings(NSEQS, CHARSET),"")
     era <- c(sample(c(sample(ins, NSEQS/10), random_strings(NSEQS/10, CHARSET))))
-    fin <- c(sample(c(sample(ins, NSEQS/1000), random_strings(NSEQS/1000, CHARSET))),"") %>% substr(1,5)
+    fin <- substr(c(sample(c(sample(ins, NSEQS/1000), random_strings(NSEQS/1000, CHARSET))), ""), 1, 5)
     fin <- c(fin, paste0(fin, substr(fin,1,1)))
     ins2 <- setdiff(ins, era)
     expected <- lapply(fin, function(f) {
@@ -116,28 +118,28 @@ for(. in 1:NITER) {
       data.frame(query = f, target = ex, stringsAsFactors = F)
     })
     expected <- do.call(rbind, expected)
-    expected <- dplyr::arrange(expected, query, target)
+    expected <- arrange_result(expected)
     x$insert(ins)
     stopifnot(x$validate())
     x$erase(era)
     stopifnot(x$validate())
-    results <- x$prefix_search(fin) %>% dplyr::arrange(query, target)
+    results <- arrange_result(x$prefix_search(fin))
     stopifnot(identical(results, expected))
   })
 
   print(paste0("Checking multithreaded hamming search correctness for ", tt))
   local({
     x <- RadixForest$new()
-    target <- c(random_strings(NSEQS, CHARSET),"") %>% unique
+    target <- unique(c(random_strings(NSEQS, CHARSET),""))
     query <- sample(c(sample(target, NSEQS/1000), random_strings(NSEQS/1000, CHARSET)))
-    query <- c(mutate_strings(query, indel_prob=0, charset = CHARSET), "") %>% unique
+    query <- unique(c(mutate_strings(query, indel_prob=0, charset = CHARSET), ""))
     x$insert(target)
     stopifnot(x$validate())
-    results_dist <- x$search(query, max_distance = MAXDIST, mode = "hamming", nthreads=NTHREADS, show_progress=TRUE) %>% dplyr::arrange(query, target)
-    results_frac <- x$search(query, max_fraction = MAXFRAC, mode = "hamming", nthreads=NTHREADS, show_progress=TRUE) %>% dplyr::arrange(query, target)
-    sd_results <- sd_search(query, target, method = "hamming")
-    sd_dist <- dplyr::filter(sd_results, distance <= MAXDIST)
-    sd_frac <- dplyr::filter(sd_results, distance <= nchar(query) * MAXFRAC)
+    results_dist <- arrange_result(x$search(query, max_distance = MAXDIST, mode = "hamming", nthreads=NTHREADS, show_progress=TRUE))
+    results_frac <- arrange_result(x$search(query, max_fraction = MAXFRAC, mode = "hamming", nthreads=NTHREADS, show_progress=TRUE))
+    sd_results <- dist_matrix_search(query, target, mode = "hamming")
+    sd_dist <- arrange_result(sd_results[sd_results$distance <= MAXDIST, , drop = FALSE])
+    sd_frac <- arrange_result(sd_results[sd_results$distance <= nchar(sd_results$query) * MAXFRAC, , drop = FALSE])
     stopifnot(identical(results_dist, sd_dist))
     stopifnot(identical(results_frac, sd_frac))
   })
@@ -145,16 +147,16 @@ for(. in 1:NITER) {
     print(paste0("Checking multithreaded levenshtein search correctness for ", tt))
     local({
       x <- RadixForest$new()
-      target <- c(random_strings(NSEQS, CHARSET),"") %>% unique
+      target <- unique(c(random_strings(NSEQS, CHARSET),""))
       query <- sample(c(sample(target, NSEQS/1000), random_strings(NSEQS/1000, CHARSET)))
-      query <- c(mutate_strings(query, charset = CHARSET), "") %>% unique
+      query <- unique(c(mutate_strings(query, charset = CHARSET), ""))
       x$insert(target)
       stopifnot(x$validate())
-      results_dist <- x$search(query, max_distance = MAXDIST, mode = "levenshtein", nthreads=NTHREADS, show_progress=TRUE) %>% dplyr::arrange(query, target)
-      results_frac <- x$search(query, max_fraction = MAXFRAC, mode = "levenshtein", nthreads=NTHREADS, show_progress=TRUE) %>% dplyr::arrange(query, target)
-      sd_results <- sd_search(query, target, method = "lv")
-      sd_dist <- dplyr::filter(sd_results, distance <= MAXDIST)
-      sd_frac <- dplyr::filter(sd_results, distance <= nchar(query) * MAXFRAC)
+      results_dist <- arrange_result(x$search(query, max_distance = MAXDIST, mode = "levenshtein", nthreads=NTHREADS, show_progress=TRUE))
+      results_frac <- arrange_result(x$search(query, max_fraction = MAXFRAC, mode = "levenshtein", nthreads=NTHREADS, show_progress=TRUE))
+      sd_results <- dist_matrix_search(query, target, mode = "levenshtein")
+      sd_dist <- arrange_result(sd_results[sd_results$distance <= MAXDIST, , drop = FALSE])
+      sd_frac <- arrange_result(sd_results[sd_results$distance <= nchar(sd_results$query) * MAXFRAC, , drop = FALSE])
       stopifnot(identical(results_dist, sd_dist))
       stopifnot(identical(results_frac, sd_frac))
     })  
