@@ -58,12 +58,12 @@ StarTree <- R6::R6Class("StarTree", public = list(
       nthreads = nthreads,
       show_progress = show_progress
     )
-    self$tree_pointer <- private$s7_object@tree_pointer
-    self$max_distance <- private$s7_object@max_distance
-    self$mismatch_cost <- private$s7_object@mismatch_cost
-    self$gap_cost <- private$s7_object@gap_cost
-    self$nthreads <- private$s7_object@nthreads
-    self$show_progress <- private$s7_object@show_progress
+    self$tree_pointer <- S7::prop(private$s7_object, "tree_pointer")
+    self$max_distance <- S7::prop(private$s7_object, "max_distance")
+    self$mismatch_cost <- S7::prop(private$s7_object, "mismatch_cost")
+    self$gap_cost <- S7::prop(private$s7_object, "gap_cost")
+    self$nthreads <- S7::prop(private$s7_object, "nthreads")
+    self$show_progress <- S7::prop(private$s7_object, "show_progress")
   },
 
   #' @description Output all stored unique sequences as a character vector.

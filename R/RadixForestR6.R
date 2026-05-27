@@ -34,8 +34,8 @@ RadixForest <- R6::R6Class("RadixForest", public = list(
   #' @param sequences A character vector of sequences to insert into the forest.
   initialize = function(sequences = NULL) {
     private$s7_object <- radix_forest(sequences)
-    self$forest_pointer <- private$s7_object@forest_pointer
-    self$char_counter_pointer <- private$s7_object@char_counter_pointer
+    self$forest_pointer <- S7::prop(private$s7_object, "forest_pointer")
+    self$char_counter_pointer <- S7::prop(private$s7_object, "char_counter_pointer")
   },
 
   #' @description Print the forest to screen.

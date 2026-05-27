@@ -36,8 +36,8 @@ RadixTree <- R6::R6Class("RadixTree", public = list(
   #' @param sequences A character vector of sequences to insert into the tree.
   initialize = function(sequences = NULL) {
     private$s7_object <- radix_tree(sequences)
-    self$root_pointer <- private$s7_object@root_pointer
-    self$char_counter_pointer <- private$s7_object@char_counter_pointer
+    self$root_pointer <- S7::prop(private$s7_object, "root_pointer")
+    self$char_counter_pointer <- S7::prop(private$s7_object, "char_counter_pointer")
   },
 
   #' @description Print the tree to screen.

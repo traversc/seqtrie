@@ -53,7 +53,7 @@ seqtrie_check_startree_fixed_search <- function(x,
                                                 show_progress) {
   if (!is.null(max_distance)) {
     max_distance <- seqtrie_check_startree_integer(max_distance, "max_distance")
-    if (!identical(max_distance, x@max_distance)) {
+    if (!identical(max_distance, S7::prop(x, "max_distance"))) {
       stop("StarTree max_distance is fixed at construction")
     }
   }
@@ -66,7 +66,7 @@ seqtrie_check_startree_fixed_search <- function(x,
   }
   if (!is_missing_arg(gap_cost)) {
     gap_cost <- seqtrie_check_startree_integer(gap_cost, "gap_cost", positive = TRUE)
-    if (!identical(gap_cost, x@gap_cost)) {
+    if (!identical(gap_cost, S7::prop(x, "gap_cost"))) {
       stop("StarTree gap_cost is fixed at construction")
     }
   }
@@ -172,15 +172,15 @@ star_tree <- S7::new_class(
 )
 
 S7::method(result, star_tree) <- function(x) {
-  StarTree_result(x@tree_pointer)
+  StarTree_result(S7::prop(x, "tree_pointer"))
 }
 
 S7::method(to_vector, star_tree) <- function(x) {
-  StarTree_to_vector(x@tree_pointer)
+  StarTree_to_vector(S7::prop(x, "tree_pointer"))
 }
 
 S7::method(size, star_tree) <- function(x) {
-  StarTree_size(x@tree_pointer)
+  StarTree_size(S7::prop(x, "tree_pointer"))
 }
 
 S7::method(align_search, star_tree) <- function(x,
@@ -216,7 +216,7 @@ S7::method(align_search, star_tree) <- function(x,
   }
 
   StarTree_search(
-    x@tree_pointer,
+    S7::prop(x, "tree_pointer"),
     query[keep],
     opts$nthreads,
     opts$show_progress

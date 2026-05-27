@@ -304,8 +304,8 @@ S7::method(insert, radix_tree) <- function(x, sequences) {
   keep <- not_na_character(sequences)
   result <- rep(FALSE, length(sequences))
   if (any(keep)) {
-    result[keep] <- RadixTree_insert(x@root_pointer, sequences[keep])
-    CharCounter_add(x@char_counter_pointer, sequences[keep][result[keep]])
+    result[keep] <- RadixTree_insert(S7::prop(x, "root_pointer"), sequences[keep])
+    CharCounter_add(S7::prop(x, "char_counter_pointer"), sequences[keep][result[keep]])
   }
   invisible(result)
 }
@@ -315,8 +315,8 @@ S7::method(erase, radix_tree) <- function(x, sequences) {
   keep <- not_na_character(sequences)
   result <- rep(FALSE, length(sequences))
   if (any(keep)) {
-    result[keep] <- RadixTree_erase(x@root_pointer, sequences[keep])
-    CharCounter_subtract(x@char_counter_pointer, sequences[keep][result[keep]])
+    result[keep] <- RadixTree_erase(S7::prop(x, "root_pointer"), sequences[keep])
+    CharCounter_subtract(S7::prop(x, "char_counter_pointer"), sequences[keep][result[keep]])
   }
   invisible(result)
 }
@@ -326,7 +326,7 @@ S7::method(has_sequence, radix_tree) <- function(x, query) {
   keep <- not_na_character(query)
   result <- rep(FALSE, length(query))
   if (any(keep)) {
-    result[keep] <- RadixTree_find(x@root_pointer, query[keep])
+    result[keep] <- RadixTree_find(S7::prop(x, "root_pointer"), query[keep])
   }
   result
 }
@@ -337,7 +337,7 @@ S7::method(prefix_search, radix_tree) <- function(x, query) {
   if (!any(keep)) {
     return(seqtrie_empty_prefix_result())
   }
-  result <- RadixTree_prefix_search(x@root_pointer, query[keep])
+  result <- RadixTree_prefix_search(S7::prop(x, "root_pointer"), query[keep])
   if (is.null(result)) {
     seqtrie_empty_prefix_result()
   } else {
@@ -367,7 +367,7 @@ S7::method(align_search, radix_tree) <- function(x,
     gap_open_cost = gap_open_cost,
     lower_triangle = lower_triangle,
     match_mode = match_mode,
-    charset = CharCounter_keys(x@char_counter_pointer),
+    charset = CharCounter_keys(S7::prop(x, "char_counter_pointer")),
     allow_anchored = TRUE,
     nthreads = nthreads
   )
@@ -376,7 +376,7 @@ S7::method(align_search, radix_tree) <- function(x,
   }
 
   result <- RadixTree_search(
-    x@root_pointer,
+    S7::prop(x, "root_pointer"),
     args$query_search,
     args$max_distance[args$keep],
     args$mode,
@@ -420,27 +420,27 @@ S7::method(single_gap_search, radix_tree) <- function(x,
     return(seqtrie_empty_match_result())
   }
 
-  RadixTree_single_gap_search(x@root_pointer, query[keep], max_distance[keep], gap_cost, nthreads, show_progress)
+  RadixTree_single_gap_search(S7::prop(x, "root_pointer"), query[keep], max_distance[keep], gap_cost, nthreads, show_progress)
 }
 
 S7::method(to_vector, radix_tree) <- function(x) {
-  RadixTree_to_vector(x@root_pointer)
+  RadixTree_to_vector(S7::prop(x, "root_pointer"))
 }
 
 S7::method(to_string, radix_tree) <- function(x) {
-  RadixTree_print(x@root_pointer)
+  RadixTree_print(S7::prop(x, "root_pointer"))
 }
 
 S7::method(size, radix_tree) <- function(x) {
-  RadixTree_size(x@root_pointer)
+  RadixTree_size(S7::prop(x, "root_pointer"))
 }
 
 S7::method(plot_tree, radix_tree) <- function(x, depth = -1, root_label = "root", plot = TRUE) {
-  seqtrie_plot_graph(RadixTree_graph(x@root_pointer, depth), root_label, plot)
+  seqtrie_plot_graph(RadixTree_graph(S7::prop(x, "root_pointer"), depth), root_label, plot)
 }
 
 S7::method(is_valid, radix_tree) <- function(x) {
-  RadixTree_validate(x@root_pointer)
+  RadixTree_validate(S7::prop(x, "root_pointer"))
 }
 
 # Radix forest methods ----------------------------------------------------------
@@ -450,8 +450,8 @@ S7::method(insert, radix_forest) <- function(x, sequences) {
   keep <- not_na_character(sequences)
   result <- rep(FALSE, length(sequences))
   if (any(keep)) {
-    result[keep] <- RadixForest_insert(x@forest_pointer, sequences[keep])
-    CharCounter_add(x@char_counter_pointer, sequences[keep][result[keep]])
+    result[keep] <- RadixForest_insert(S7::prop(x, "forest_pointer"), sequences[keep])
+    CharCounter_add(S7::prop(x, "char_counter_pointer"), sequences[keep][result[keep]])
   }
   invisible(result)
 }
@@ -461,8 +461,8 @@ S7::method(erase, radix_forest) <- function(x, sequences) {
   keep <- not_na_character(sequences)
   result <- rep(FALSE, length(sequences))
   if (any(keep)) {
-    result[keep] <- RadixForest_erase(x@forest_pointer, sequences[keep])
-    CharCounter_subtract(x@char_counter_pointer, sequences[keep][result[keep]])
+    result[keep] <- RadixForest_erase(S7::prop(x, "forest_pointer"), sequences[keep])
+    CharCounter_subtract(S7::prop(x, "char_counter_pointer"), sequences[keep][result[keep]])
   }
   invisible(result)
 }
@@ -472,7 +472,7 @@ S7::method(has_sequence, radix_forest) <- function(x, query) {
   keep <- not_na_character(query)
   result <- rep(FALSE, length(query))
   if (any(keep)) {
-    result[keep] <- RadixForest_find(x@forest_pointer, query[keep])
+    result[keep] <- RadixForest_find(S7::prop(x, "forest_pointer"), query[keep])
   }
   result
 }
@@ -483,7 +483,7 @@ S7::method(prefix_search, radix_forest) <- function(x, query) {
   if (!any(keep)) {
     return(seqtrie_empty_prefix_result())
   }
-  result <- RadixForest_prefix_search(x@forest_pointer, query[keep])
+  result <- RadixForest_prefix_search(S7::prop(x, "forest_pointer"), query[keep])
   if (is.null(result)) {
     seqtrie_empty_prefix_result()
   } else {
@@ -513,7 +513,7 @@ S7::method(align_search, radix_forest) <- function(x,
     gap_open_cost = gap_open_cost,
     lower_triangle = lower_triangle,
     match_mode = match_mode,
-    charset = CharCounter_keys(x@char_counter_pointer),
+    charset = CharCounter_keys(S7::prop(x, "char_counter_pointer")),
     allow_anchored = FALSE,
     nthreads = nthreads
   )
@@ -522,7 +522,7 @@ S7::method(align_search, radix_forest) <- function(x,
   }
 
   RadixForest_search(
-    x@forest_pointer,
+    S7::prop(x, "forest_pointer"),
     args$query_search,
     args$max_distance[args$keep],
     args$mode,
@@ -538,21 +538,21 @@ S7::method(align_search, radix_forest) <- function(x,
 }
 
 S7::method(to_vector, radix_forest) <- function(x) {
-  RadixForest_to_vector(x@forest_pointer)
+  RadixForest_to_vector(S7::prop(x, "forest_pointer"))
 }
 
 S7::method(to_string, radix_forest) <- function(x) {
-  RadixForest_print(x@forest_pointer)
+  RadixForest_print(S7::prop(x, "forest_pointer"))
 }
 
 S7::method(size, radix_forest) <- function(x) {
-  RadixForest_size(x@forest_pointer)
+  RadixForest_size(S7::prop(x, "forest_pointer"))
 }
 
 S7::method(plot_tree, radix_forest) <- function(x, depth = -1, root_label = "root", plot = TRUE) {
-  seqtrie_plot_graph(RadixForest_graph(x@forest_pointer, depth), root_label, plot)
+  seqtrie_plot_graph(RadixForest_graph(S7::prop(x, "forest_pointer"), depth), root_label, plot)
 }
 
 S7::method(is_valid, radix_forest) <- function(x) {
-  RadixForest_validate(x@forest_pointer)
+  RadixForest_validate(S7::prop(x, "forest_pointer"))
 }
