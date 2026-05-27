@@ -61,8 +61,8 @@ RadixForest_create <- function() {
     .Call(`_seqtrie_RadixForest_create`)
 }
 
-RadixForest_search <- function(xp, query, max_distance, mode = "global", nthreads = 1L, show_progress = FALSE) {
-    .Call(`_seqtrie_RadixForest_search`, xp, query, max_distance, mode, nthreads, show_progress)
+RadixForest_search <- function(xp, query, max_distance, mode = "global", cost_matrix = NULL, gap_cost = NA_integer_, gap_open_cost = NA_integer_, lower_triangle = FALSE, match_mode = "all", query_index = integer(), nthreads = 1L, show_progress = FALSE) {
+    .Call(`_seqtrie_RadixForest_search`, xp, query, max_distance, mode, cost_matrix, gap_cost, gap_open_cost, lower_triangle, match_mode, query_index, nthreads, show_progress)
 }
 
 RadixTree_size <- function(xp) {
@@ -105,12 +105,36 @@ RadixTree_create <- function() {
     .Call(`_seqtrie_RadixTree_create`)
 }
 
-RadixTree_search <- function(xp, query, max_distance, mode = "global", cost_matrix = NULL, gap_cost = NA_integer_, gap_open_cost = NA_integer_, nthreads = 1L, show_progress = FALSE) {
-    .Call(`_seqtrie_RadixTree_search`, xp, query, max_distance, mode, cost_matrix, gap_cost, gap_open_cost, nthreads, show_progress)
+RadixTree_search <- function(xp, query, max_distance, mode = "global", cost_matrix = NULL, gap_cost = NA_integer_, gap_open_cost = NA_integer_, lower_triangle = FALSE, match_mode = "all", query_index = integer(), nthreads = 1L, show_progress = FALSE) {
+    .Call(`_seqtrie_RadixTree_search`, xp, query, max_distance, mode, cost_matrix, gap_cost, gap_open_cost, lower_triangle, match_mode, query_index, nthreads, show_progress)
 }
 
 RadixTree_single_gap_search <- function(xp, query, max_distance, gap_cost = 1L, nthreads = 1L, show_progress = FALSE) {
     .Call(`_seqtrie_RadixTree_single_gap_search`, xp, query, max_distance, gap_cost, nthreads, show_progress)
+}
+
+StarTree_create <- function(sequences, max_distance, mismatch_cost = 1L, gap_cost = 1L, nthreads = 1L, show_progress = FALSE) {
+    .Call(`_seqtrie_StarTree_create`, sequences, max_distance, mismatch_cost, gap_cost, nthreads, show_progress)
+}
+
+StarTree_self_search <- function(sequences, max_distance, mismatch_cost = 1L, gap_cost = 1L, nthreads = 1L, show_progress = FALSE) {
+    .Call(`_seqtrie_StarTree_self_search`, sequences, max_distance, mismatch_cost, gap_cost, nthreads, show_progress)
+}
+
+StarTree_size <- function(xp) {
+    .Call(`_seqtrie_StarTree_size`, xp)
+}
+
+StarTree_to_vector <- function(xp) {
+    .Call(`_seqtrie_StarTree_to_vector`, xp)
+}
+
+StarTree_result <- function(xp) {
+    .Call(`_seqtrie_StarTree_result`, xp)
+}
+
+StarTree_search <- function(xp, query, nthreads = 1L, show_progress = FALSE) {
+    .Call(`_seqtrie_StarTree_search`, xp, query, nthreads, show_progress)
 }
 
 c_dist_matrix <- function(query, target, mode = "global", cost_matrix = NULL, gap_cost = NA_integer_, gap_open_cost = NA_integer_, nthreads = 1L, show_progress = FALSE) {
@@ -123,9 +147,5 @@ c_dist_pairwise <- function(query, target, mode = "levenshtein", cost_matrix = N
 
 c_split_search <- function(query, target, query_split, target_split, edge_trim = 0L, max_distance = integer(), cost_matrix = NULL, gap_cost = NA_integer_, gap_open_cost = NA_integer_, nthreads = 1L, show_progress = FALSE) {
     .Call(`_seqtrie_c_split_search`, query, target, query_split, target_split, edge_trim, max_distance, cost_matrix, gap_cost, gap_open_cost, nthreads, show_progress)
-}
-
-test_search_hook <- function() {
-    .Call(`_seqtrie_test_search_hook`)
 }
 

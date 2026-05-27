@@ -3,7 +3,7 @@ PACKAGE := $(shell perl -aF: -ne 'print, exit if s/^Package:\s+//' DESCRIPTION)
 VERSION := $(shell perl -aF: -ne 'print, exit if s/^Version:\s+//' DESCRIPTION)
 BUILD   := $(PACKAGE)_$(VERSION).tar.gz
 
-.PHONY: doc build install test vignette bench bench-levenshtein $(BUILD)
+.PHONY: doc build install test vignette bench bench-levenshtein bench-startree $(BUILD)
 
 check: $(BUILD)
 	export _R_CHECK_FORCE_SUGGESTS_=false && R CMD check --as-cran $<
@@ -34,7 +34,6 @@ build:
 	# ./cleanup
 	Rscript -e "library(Rcpp); compileAttributes('.');"
 	Rscript -e "devtools::load_all(); roxygen2::roxygenise('.');"
-	Rscript inst/fix_rd_subsections.R
 	find . -iname "*.a" -exec rm {} \;
 	find . -iname "*.o" -exec rm {} \;
 	find . -iname "*.so" -exec rm {} \;
@@ -53,7 +52,6 @@ install:
 	find . -iname "*.so" -exec rm {} \;
 	Rscript -e "library(Rcpp); compileAttributes('.');"
 	Rscript -e "devtools::load_all(); roxygen2::roxygenise('.');"
-	Rscript inst/fix_rd_subsections.R
 	find . -iname "*.a" -exec rm {} \;
 	find . -iname "*.o" -exec rm {} \;
 	find . -iname "*.so" -exec rm {} \;
@@ -76,19 +74,17 @@ test:
 	IS_LOCAL=Yes Rscript tests/test_pairwise.R && unset IS_LOCAL
 	IS_LOCAL=Yes Rscript tests/test_RadixTree.R && unset IS_LOCAL
 	IS_LOCAL=Yes Rscript tests/test_RadixForest.R && unset IS_LOCAL
-	IS_LOCAL=Yes Rscript tests/test_RadixTree_search_edge_cases.R && unset IS_LOCAL
-	IS_LOCAL=Yes Rscript tests/test_RadixTree_search_helpers.R && unset IS_LOCAL
-	IS_LOCAL=Yes Rscript tests/test_single_gap_search.R && unset IS_LOCAL
-	IS_LOCAL=Yes Rscript tests/test_split_search.R && unset IS_LOCAL
-	IS_LOCAL=Yes Rscript tests/test_search_hook.R && unset IS_LOCAL
-test-trie:
-	IS_LOCAL=Yes Rscript tests/test_RadixTree.R && unset IS_LOCAL
+	IS_LOCAL=Yes Rscript tests/test_StarTree.R && unset IS_LOCAL
+	IS_LOCAL=Yes Rscript tests/test_utilities.R && unset IS_LOCAL
 
 bench:
-	Rscript inst/extra_tests/simple_benchmark.R
+	Rscript inst/extra_tests/full_benchmark.R
 
 bench-levenshtein:
 	Rscript inst/extra_tests/levenshtein_benchmark.R
+
+bench-startree:
+	bash inst/extra_tests/startree_header_benchmark.sh
 
 R_INCLUDE=$(shell R CMD config --cppflags)
 Rcpp_INCLUDE=$(shell Rscript -e 'cat(system.file("include", package = "Rcpp"))')
@@ -101,3 +97,5 @@ clang-tidy:
 	clang-tidy src/RadixForest.cpp -header-filter=inst/include/.* -checks=-*,clang-analyzer-*,clang-analyzer-cplusplus* -extra-arg=-std=gnu++17 -- $(R_INCLUDE) $(CLANG_TIDY_CPPFLAGS) -Iinst/include -I$(Rcpp_INCLUDE) -I$(RcppParallel_INCLUDE)
 	clang-tidy src/RadixTree.cpp -header-filter=inst/include/.* -checks=-*,clang-analyzer-*,clang-analyzer-cplusplus* -extra-arg=-std=gnu++17 -- $(R_INCLUDE) $(CLANG_TIDY_CPPFLAGS) -Iinst/include -I$(Rcpp_INCLUDE) -I$(RcppParallel_INCLUDE)
 	clang-tidy src/pairwise.cpp -header-filter=inst/include/.* -checks=-*,clang-analyzer-*,clang-analyzer-cplusplus* -extra-arg=-std=gnu++17 -- $(R_INCLUDE) $(CLANG_TIDY_CPPFLAGS) -Iinst/include -I$(Rcpp_INCLUDE) -I$(RcppParallel_INCLUDE)
+	clang-tidy src/split_search.cpp -header-filter=inst/include/.* -checks=-*,clang-analyzer-*,clang-analyzer-cplusplus* -extra-arg=-std=gnu++17 -- $(R_INCLUDE) $(CLANG_TIDY_CPPFLAGS) -Iinst/include -I$(Rcpp_INCLUDE) -I$(RcppParallel_INCLUDE)
+	clang-tidy src/StarTree.cpp -header-filter=inst/include/.* -checks=-*,clang-analyzer-*,clang-analyzer-cplusplus* -extra-arg=-std=gnu++17 -- $(R_INCLUDE) $(CLANG_TIDY_CPPFLAGS) -Iinst/include -I$(Rcpp_INCLUDE) -I$(RcppParallel_INCLUDE)

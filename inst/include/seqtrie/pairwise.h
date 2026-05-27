@@ -13,10 +13,8 @@
 #ifndef seqtrie_PAIRWISE_H
 #define seqtrie_PAIRWISE_H
 
-#include <set>
 #include <memory>
 #include <tuple>
-#include <unordered_map>
 #include <vector>
 #include <nonstd/span.hpp>
 #include "seqtrie/utility.h"
@@ -51,28 +49,15 @@ constexpr int R_NA_INTEGER = std::numeric_limits<int>::min();
 
 constexpr int NO_ALIGN = std::numeric_limits<int>::max() / 2; // used to represent impossible affine positions; use half INT_MAX so we dont overflow
 
+inline int checked_int_size(const size_t n) {
+  return n > static_cast<size_t>(std::numeric_limits<int>::max())
+           ? NO_ALIGN
+           : static_cast<int>(n);
+}
+
 // GAP_COST = GAP_OPEN_COST + GAP_EXTN_COST * (LENGTH - 1)
 
-// void print_matrix(IMatrix & mat) {
-//   for(size_t i=0; i<mat.size1(); ++i) {
-//     for(size_t j=0; j<mat.size2(); ++j) {
-//       if(mat(i,j) > 100000) {
-//         std::cout << "Z ";
-//       } else {
-//         std::cout << mat(i,j) << " ";
-//       }
-//     }
-//     std::cout << std::endl;
-//   }
-// }
-
-// void print_pairchar_map(pairchar_map_type & cost_map) {
-//   for(auto & kv : cost_map) {
-//     std::cout << static_cast<int>(kv.first.first) << " " << static_cast<int>(kv.first.second) << " " << kv.second << std::endl;
-//   }
-// }
-
-int hamming_distance(cspan query, cspan target) {
+inline int hamming_distance(cspan query, cspan target) {
   if(query.size() != target.size()) return R_NA_INTEGER;
   int distance = 0;
   for(size_t i=0; i<query.size(); ++i) {
@@ -109,7 +94,7 @@ inline IMatrix get_dprog_matrix_linear(cspan query, cspan target, const seqtrie:
   // fill it in
   for(size_t i=1; i<mat.size1(); ++i) {
     for(size_t j=1; j<mat.size2(); ++j) {
-      int match_cost   = mat(i-1, j-1) + cost_map.char_cost_map.at(std::make_pair(query[i-1], target[j-1]));
+      int match_cost   = mat(i-1, j-1) + cost_map.subst(query[i-1], target[j-1]);
       int gap_in_query = mat(i, j-1) + cost_map.gap_cost;
       int gap_in_target= mat(i-1, j) + cost_map.gap_cost;
       mat(i,j) = std::min({match_cost, gap_in_query, gap_in_target});
@@ -130,32 +115,32 @@ inline std::tuple<IMatrix, IMatrix, IMatrix> get_dprog_matrix_affine(cspan query
   Y(0,0) = NO_ALIGN;
   for(size_t j=1; j<size2; ++j) {
     M(0,j) = NO_ALIGN;
-    if(j == 1) X(0,j) = cost_map.gap_open_cost;
+    if(j == 1) X(0,j) = cost_map.gap_open_including_first_extension;
     else       X(0,j) = X(0,j-1) + cost_map.gap_cost;
     Y(0,j) = NO_ALIGN;
   }
   for(size_t i=1; i<size1; ++i) {
     M(i,0) = NO_ALIGN;
     X(i,0) = NO_ALIGN;
-    if(i == 1) Y(i,0) = cost_map.gap_open_cost;
+    if(i == 1) Y(i,0) = cost_map.gap_open_including_first_extension;
     else       Y(i,0) = Y(i-1,0) + cost_map.gap_cost;
   }
 
   // fill it in
   for(size_t i=1; i<size1; ++i) {
     for(size_t j=1; j<size2; ++j) {
-      M(i,j) = cost_map.char_cost_map.at(std::make_pair(query[i-1], target[j-1])) + std::min({
+      M(i,j) = cost_map.subst(query[i-1], target[j-1]) + std::min({
         M(i-1, j-1), 
         X(i-1, j-1), 
         Y(i-1, j-1)});
       X(i,j) = std::min({
-        cost_map.gap_open_cost + M(i, j-1),
+        cost_map.gap_open_including_first_extension + M(i, j-1),
         cost_map.gap_cost      + X(i, j-1),
-        cost_map.gap_open_cost + Y(i, j-1)
+        cost_map.gap_open_including_first_extension + Y(i, j-1)
       }); 
       Y(i,j) = std::min({
-        cost_map.gap_open_cost + M(i-1, j),
-        cost_map.gap_open_cost + X(i-1, j),
+        cost_map.gap_open_including_first_extension + M(i-1, j),
+        cost_map.gap_open_including_first_extension + X(i-1, j),
         cost_map.gap_cost      + Y(i-1, j)
       });
     }
@@ -167,7 +152,7 @@ inline int global_distance(cspan query, cspan target) {
   IMatrix mat = get_dprog_matrix(query, target, 1);
   return mat(mat.size1()-1, mat.size2()-1);
 }
-const auto& levenshtein_distance = global_distance; // alias
+inline const auto& levenshtein_distance = global_distance; // alias
 
 inline int global_distance_linear(cspan query, cspan target, const seqtrie::CostMap & cost_map) {
   IMatrix mat = get_dprog_matrix_linear(query, target, cost_map);
@@ -175,23 +160,16 @@ inline int global_distance_linear(cspan query, cspan target, const seqtrie::Cost
 }
 
 inline int global_distance_affine(cspan query, cspan target, const seqtrie::CostMap & cost_map) {
-  // print_pairchar_map(cost_map);
   auto mats = get_dprog_matrix_affine(query, target, cost_map);
   IMatrix & M = std::get<0>(mats);
   IMatrix & X = std::get<1>(mats);
   IMatrix & Y = std::get<2>(mats);
-  // std::cout << "M" << std::endl;
-  // print_matrix(M);
-  // std::cout << "X" << std::endl;
-  // print_matrix(X);
-  // std::cout << "Y" << std::endl;
-  // print_matrix(Y);
   size_t xlast = M.size1()-1;
   size_t ylast = M.size2()-1;
   return std::min({M(xlast, ylast), X(xlast, ylast), Y(xlast, ylast)});
 }
 
-std::tuple<int, int, int> anchored_distance(cspan query, cspan target) {
+inline std::tuple<int, int, int> anchored_distance(cspan query, cspan target) {
   IMatrix mat = get_dprog_matrix(query, target);
   int distance = NO_ALIGN;
   int query_size = 0;
@@ -200,16 +178,16 @@ std::tuple<int, int, int> anchored_distance(cspan query, cspan target) {
     int new_dist = mat(i, mat.size2()-1);
     if(new_dist < distance) {
       distance = new_dist;
-      query_size = i;
-      target_size = mat.size2()-1;
+      query_size = checked_int_size(i);
+      target_size = checked_int_size(mat.size2() - 1);
     }
   }
   for(size_t j=0; j<mat.size2(); ++j) {
     int new_dist = mat(mat.size1()-1, j);
     if(new_dist < distance) {
       distance = new_dist;
-      query_size = mat.size1()-1;
-      target_size = j;
+      query_size = checked_int_size(mat.size1() - 1);
+      target_size = checked_int_size(j);
     }
   }
   return std::tuple<int, int, int>(distance, query_size, target_size);
@@ -224,16 +202,16 @@ inline std::tuple<int, int, int> anchored_distance_linear(cspan query, cspan tar
     int new_dist = mat(i, mat.size2()-1);
     if(new_dist < distance) {
       distance = new_dist;
-      query_size = i;
-      target_size = mat.size2()-1;
+      query_size = checked_int_size(i);
+      target_size = checked_int_size(mat.size2() - 1);
     }
   }
   for(size_t j=0; j<mat.size2(); ++j) {
     int new_dist = mat(mat.size1()-1, j);
     if(new_dist < distance) {
       distance = new_dist;
-      query_size = mat.size1()-1;
-      target_size = j;
+      query_size = checked_int_size(mat.size1() - 1);
+      target_size = checked_int_size(j);
     }
   }
   return std::tuple<int, int, int>(distance, query_size, target_size);
@@ -253,16 +231,16 @@ inline std::tuple<int, int, int> anchored_distance_affine(cspan query, cspan tar
     int new_dist = std::min({M(i, ylast), X(i, ylast), Y(i, ylast)});
     if(new_dist < distance) {
       distance = new_dist;
-      query_size = i;
-      target_size = ylast;
+      query_size = checked_int_size(i);
+      target_size = checked_int_size(ylast);
     }
   }
   for(size_t j=0; j<=ylast; ++j) {
     int new_dist = std::min({M(xlast, j), X(xlast, j), Y(xlast, j)});
     if(new_dist < distance) {
       distance = new_dist;
-      query_size = xlast;
-      target_size = j;
+      query_size = checked_int_size(xlast);
+      target_size = checked_int_size(j);
     }
   }
   return std::tuple<int, int, int>(distance, query_size, target_size);

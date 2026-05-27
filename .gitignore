@@ -26,3 +26,7 @@ autom4te.cache/*
 .lintr
 Rplots.pdf
 context/
+
+.claude
+.codex
+.agents

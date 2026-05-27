@@ -14,7 +14,9 @@ IntegerMatrix c_dist_matrix(CharacterVector query, CharacterVector target,
   std::vector<cspan> target_span = strsxp_to_cspan(target);
 
   trqwe::simple_progress progress_bar(target_span.size(), show_progress);
-  IntegerMatrix output(query_span.size(), target_span.size());
+  const int n_query = checked_r_len(query_span.size());
+  const int n_target = checked_r_len(target_span.size());
+  IntegerMatrix output(n_query, n_target);
   int * output_ptr = INTEGER(output);
   auto algo = decide_alignment_algo(mode, cost_matrix, gap_cost, gap_open_cost);
   if(algo == AlignmentAlgo::Hamming) {
@@ -26,7 +28,7 @@ IntegerMatrix c_dist_matrix(CharacterVector query, CharacterVector target,
         progress_bar.increment();
       }
     }, 0, target_span.size(), 1, nthreads);
-  } else if(mode == "global" || mode == "gb" || mode == "lv" || mode == "levenshtein") {
+  } else if(is_global_algo(algo)) {
     if(algo == AlignmentAlgo::GlobalUnit) {
       do_parallel_for([&query_span, &target_span, &progress_bar, output_ptr](size_t begin, size_t end) {
         for(size_t j=begin; j<end; ++j) {
@@ -57,9 +59,9 @@ IntegerMatrix c_dist_matrix(CharacterVector query, CharacterVector target,
         }
       }, 0, target_span.size(), 1, nthreads);
     }
-  } else { // anchored
-    IntegerMatrix query_size(query_span.size(), target_span.size());
-    IntegerMatrix target_size(query_span.size(), target_span.size());
+  } else if(is_anchored_algo(algo)) { // anchored
+    IntegerMatrix query_size(n_query, n_target);
+    IntegerMatrix target_size(n_query, n_target);
     int * query_size_ptr = INTEGER(query_size);
     int * target_size_ptr = INTEGER(target_size);
     if(algo == AlignmentAlgo::AnchoredUnit) {
@@ -103,6 +105,8 @@ IntegerMatrix c_dist_matrix(CharacterVector query, CharacterVector target,
     }
     output.attr("query_size") = query_size;
     output.attr("target_size") = target_size;
+  } else {
+    throw std::runtime_error("Internal error: unsupported alignment algorithm");
   }
   return output;
 }
@@ -123,7 +127,8 @@ IntegerVector c_dist_pairwise(CharacterVector query, CharacterVector target,
   }
 
   trqwe::simple_progress progress_bar(nseqs, show_progress);
-  IntegerVector output(nseqs);
+  const int nseqs_int = checked_r_len(nseqs);
+  IntegerVector output(nseqs_int);
   int * output_ptr = INTEGER(output);
   auto algo = decide_alignment_algo(mode, cost_matrix, gap_cost, gap_open_cost);
   if(algo == AlignmentAlgo::Hamming) {
@@ -133,7 +138,7 @@ IntegerVector c_dist_pairwise(CharacterVector query, CharacterVector target,
         progress_bar.increment();
       }
     }, 0, nseqs, 1, nthreads);
-  } else if(mode == "global" || mode == "gb" || mode == "lv" || mode == "levenshtein") {
+  } else if(is_global_algo(algo)) {
     if(algo == AlignmentAlgo::GlobalUnit) {
       do_parallel_for([&query_span, &target_span, &progress_bar, output_ptr](size_t begin, size_t end) {
         for(size_t i=begin; i<end; ++i) {
@@ -158,9 +163,9 @@ IntegerVector c_dist_pairwise(CharacterVector query, CharacterVector target,
         }
       }, 0, nseqs, 1, nthreads);
     }
-  } else { // anchored
-    IntegerVector query_size(nseqs);
-    IntegerVector target_size(nseqs);
+  } else if(is_anchored_algo(algo)) { // anchored
+    IntegerVector query_size(nseqs_int);
+    IntegerVector target_size(nseqs_int);
     int * query_size_ptr = INTEGER(query_size);
     int * target_size_ptr = INTEGER(target_size);
     if(algo == AlignmentAlgo::AnchoredUnit) {
@@ -198,6 +203,8 @@ IntegerVector c_dist_pairwise(CharacterVector query, CharacterVector target,
     }
     output.attr("query_size") = query_size;
     output.attr("target_size") = target_size;
+  } else {
+    throw std::runtime_error("Internal error: unsupported alignment algorithm");
   }
   return output;
 }

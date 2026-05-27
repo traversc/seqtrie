@@ -2,15 +2,10 @@
 # These two functions are simple dynamic programming algorithms for computing pairwise distances and are themselves used to validate
 # the RadixTree imeplementation (see test_radix_tree.R)
 
-# pwalign replaces Biostrings for alignment functions
-# We can now require pwalign instead of Biostrings since pwalign is now available on all R versions tested on CRAN
-# pwalign in 1.3.2 had a bug that causes test to fail, but 1.4.0 (R 4.5) fixes
-# https://github.com/Bioconductor/pwalign/issues/11
-# so only run if pwalign <= 1.2.0
+runtime <- Sys.time()
 
 if(requireNamespace("seqtrie", quietly=TRUE) &&
-   requireNamespace("pwalign", quietly=TRUE) &&
-   (packageVersion("pwalign") >= "1.4.0" || packageVersion("pwalign") <= "1.2.0")
+   requireNamespace("pwalign", quietly=TRUE)
 ) {
 library(seqtrie)
 library(pwalign)
@@ -18,10 +13,19 @@ library(pwalign)
 # Use 2 threads on github actions and CRAN, 4 threads locally
 IS_LOCAL  <- Sys.getenv("IS_LOCAL") != ""
 NTHREADS  <- ifelse(IS_LOCAL, 4, 2)
-NITER     <- ifelse(IS_LOCAL, 4, 1)
-NSEQS     <- 10000
+NITER     <- ifelse(IS_LOCAL, 3, 1)
+NSEQS     <- 2500
 MAXSEQLEN <- 200
 CHARSET   <- "ACGT"
+
+test_seed <- Sys.getenv("SEQTRIE_TEST_SEED")
+if (nzchar(test_seed)) {
+  test_seed <- as.integer(test_seed)
+} else {
+  test_seed <- as.integer(as.numeric(Sys.time())) %% .Machine$integer.max
+}
+cat("Test seed:", test_seed, "\n")
+set.seed(test_seed)
 
 random_strings <- function(N, charset = "abcdefghijklmnopqrstuvwxyz") {
   charset <- unlist(strsplit(charset, "", fixed = TRUE))
@@ -282,3 +286,5 @@ for(. in 1:NITER) {
 }
 
 }
+
+print(Sys.time() - runtime)

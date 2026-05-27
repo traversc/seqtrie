@@ -3,7 +3,7 @@
 
 #include <memory>
 #include <string>
-#include <unordered_map>
+#include <tuple>
 
 namespace {
 
@@ -28,6 +28,29 @@ struct SplitMatch {
   int distance;
 };
 
+struct OutputRow {
+  size_t query_index;
+  size_t target_index;
+  int distance;
+};
+
+struct TargetDedupeKey {
+  std::string sequence;
+  int split;
+
+  bool operator==(const TargetDedupeKey & other) const {
+    return split == other.split && sequence == other.sequence;
+  }
+};
+
+struct TargetDedupeHash {
+  size_t operator()(const TargetDedupeKey & key) const {
+    size_t h1 = std::hash<std::string>{}(key.sequence);
+    size_t h2 = std::hash<int>{}(key.split);
+    return h1 ^ (h2 + 0x9e3779b97f4a7c15ULL + (h1 << 6) + (h1 >> 2));
+  }
+};
+
 inline cspan string_span(const std::string & x) {
   return cspan(x.data(), x.size());
 }
@@ -48,17 +71,17 @@ SplitParts split_sequence(SEXP sequence, int split, int edge_trim) {
   return out;
 }
 
-SeqTrie::search_context anchored_search_dispatch(const SeqTrie::RadixTreeR & tree,
+SeqTrie::search_result anchored_search_dispatch(const SeqTrie::RadixTreeR & tree,
                                                  const cspan query,
                                                  const int max_distance,
                                                  const AlignmentAlgo algo,
                                                  const CostMap & cost_map) {
   if(algo == AlignmentAlgo::AnchoredUnit) {
-    return tree.anchored_search(query, max_distance);
+    return tree.root.anchored_search(query, max_distance).release_result();
   } else if(algo == AlignmentAlgo::AnchoredLinear) {
-    return tree.anchored_search_linear(query, max_distance, cost_map);
+    return tree.root.anchored_search_linear(query, max_distance, cost_map);
   } else if(algo == AlignmentAlgo::AnchoredAffine) {
-    return tree.anchored_search_affine(query, max_distance, cost_map);
+    return tree.root.anchored_search_affine(query, max_distance, cost_map);
   }
   throw std::runtime_error("Internal error: split_search only supports anchored alignment");
 }
@@ -70,7 +93,7 @@ void insert_target(SplitIndex & index,
   const std::string & secondary = index.primary_is_left ? parts.right : parts.left;
 
   const size_t next_primary_id = index.secondary_indices.size();
-  SeqTrie::path primary_path = index.primary_tree.insert_get_path(string_span(primary), next_primary_id);
+  SeqTrie::path primary_path = index.primary_tree.root.insert_get_path(string_span(primary), next_primary_id, index.primary_tree.node_pool);
   const size_t primary_id = primary_path->get_terminal_idx();
 
   if(primary_id == next_primary_id) {
@@ -79,7 +102,7 @@ void insert_target(SplitIndex & index,
 
   SecondaryIndex & secondary_index = *index.secondary_indices[primary_id];
   const size_t next_secondary_id = secondary_index.target_indices.size();
-  SeqTrie::path secondary_path = secondary_index.tree.insert_get_path(string_span(secondary), next_secondary_id);
+  SeqTrie::path secondary_path = secondary_index.tree.root.insert_get_path(string_span(secondary), next_secondary_id, secondary_index.tree.node_pool);
   const size_t secondary_id = secondary_path->get_terminal_idx();
 
   if(secondary_id == next_secondary_id) {
@@ -97,7 +120,7 @@ std::vector<SplitMatch> search_query(const SplitIndex & index,
   const std::string & secondary = index.primary_is_left ? parts.right : parts.left;
   std::vector<SplitMatch> out;
 
-  SeqTrie::search_context primary_matches = anchored_search_dispatch(
+  SeqTrie::search_result primary_matches = anchored_search_dispatch(
     index.primary_tree,
     string_span(primary),
     max_distance,
@@ -116,7 +139,7 @@ std::vector<SplitMatch> search_query(const SplitIndex & index,
     }
 
     const SecondaryIndex & secondary_index = *index.secondary_indices[primary_id];
-    SeqTrie::search_context secondary_matches = anchored_search_dispatch(
+    SeqTrie::search_result secondary_matches = anchored_search_dispatch(
       secondary_index.tree,
       string_span(secondary),
       remaining_distance,
@@ -152,8 +175,8 @@ DataFrame c_split_search(CharacterVector query,
                          int gap_open_cost = NA_INTEGER,
                          const int nthreads = 1,
                          const bool show_progress = false) {
-  const size_t nquery = Rf_xlength(query);
-  const size_t ntarget = Rf_xlength(target);
+  const size_t nquery = checked_size_from_r_xlen(Rf_xlength(query));
+  const size_t ntarget = checked_size_from_r_xlen(Rf_xlength(target));
 
   if(nquery == 0 || ntarget == 0) {
     return DataFrame::create(_["query"] = CharacterVector(),
@@ -174,7 +197,7 @@ DataFrame c_split_search(CharacterVector query,
   const int * target_split_ptr = INTEGER(target_split);
   const int * max_distance_ptr = INTEGER(max_distance);
 
-  std::unordered_map<std::string, size_t> unique_target_map;
+  ankerl::unordered_dense::map<TargetDedupeKey, size_t, TargetDedupeHash> unique_target_map;
   std::vector<size_t> unique_target_indices;
   std::vector<SplitParts> target_parts;
   size_t total_left_size = 0;
@@ -183,11 +206,14 @@ DataFrame c_split_search(CharacterVector query,
   unique_target_indices.reserve(ntarget);
   target_parts.reserve(ntarget);
   for(size_t i = 0; i < ntarget; ++i) {
-    std::string target_string(CHAR(target_ptr[i]), static_cast<size_t>(Rf_xlength(target_ptr[i])));
-    if(unique_target_map.find(target_string) != unique_target_map.end()) continue;
+    TargetDedupeKey key{
+      std::string(CHAR(target_ptr[i]), static_cast<size_t>(Rf_xlength(target_ptr[i]))),
+      target_split_ptr[i]
+    };
+    if(unique_target_map.find(key) != unique_target_map.end()) continue;
 
     const size_t target_index = unique_target_indices.size();
-    unique_target_map.emplace(std::move(target_string), target_index);
+    unique_target_map.emplace(std::move(key), target_index);
     unique_target_indices.push_back(i);
     target_parts.push_back(split_sequence(target_ptr[i], target_split_ptr[i], edge_trim));
     total_left_size += target_parts.back().left.size();
@@ -206,6 +232,10 @@ DataFrame c_split_search(CharacterVector query,
   for(size_t i = 0; i < target_parts.size(); ++i) {
     insert_target(index, target_parts[i], i);
   }
+  index.primary_tree.compact();
+  for(auto & secondary_index : index.secondary_indices) {
+    secondary_index->tree.compact();
+  }
 
   std::vector<SplitParts> query_parts;
   query_parts.reserve(nquery);
@@ -222,22 +252,31 @@ DataFrame c_split_search(CharacterVector query,
     }
   }, 0, nquery, 1, nthreads);
 
-  size_t nresults = 0;
-  for(const auto & matches : output) nresults += matches.size();
+  std::vector<OutputRow> rows;
+  for(size_t i = 0; i < output.size(); ++i) {
+    ankerl::unordered_dense::set<std::string> emitted;
+    emitted.reserve(output[i].size());
+    for(const SplitMatch & match : output[i]) {
+      const size_t original_target_index = unique_target_indices[match.target_index];
+      SEXP target_string = STRING_ELT(target, checked_r_xlen(original_target_index));
+      std::string key(CHAR(target_string), static_cast<size_t>(Rf_xlength(target_string)));
+      key.push_back('\0');
+      key.append(reinterpret_cast<const char *>(&match.distance), sizeof(match.distance));
+      if(emitted.insert(std::move(key)).second) {
+        rows.push_back({i, original_target_index, match.distance});
+      }
+    }
+  }
 
-  CharacterVector query_results(nresults);
-  CharacterVector target_results(nresults);
-  IntegerVector distance_results(nresults);
+  CharacterVector query_results(rows.size());
+  CharacterVector target_results(rows.size());
+  IntegerVector distance_results(rows.size());
   int * distance_ptr = INTEGER(distance_results);
 
-  size_t k = 0;
-  for(size_t i = 0; i < output.size(); ++i) {
-    for(const SplitMatch & match : output[i]) {
-      SET_STRING_ELT(query_results, k, STRING_ELT(query, i));
-      SET_STRING_ELT(target_results, k, STRING_ELT(target, unique_target_indices[match.target_index]));
-      distance_ptr[k] = match.distance;
-      ++k;
-    }
+  for(size_t k = 0; k < rows.size(); ++k) {
+    SET_STRING_ELT(query_results, checked_r_xlen(k), STRING_ELT(query, checked_r_xlen(rows[k].query_index)));
+    SET_STRING_ELT(target_results, checked_r_xlen(k), STRING_ELT(target, checked_r_xlen(rows[k].target_index)));
+    distance_ptr[checked_r_xlen(k)] = rows[k].distance;
   }
 
   return DataFrame::create(_["query"] = query_results,

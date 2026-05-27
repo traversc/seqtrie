@@ -17,7 +17,7 @@ private:
   const bool show_progress;
   static constexpr double max_ticks = 51;
 public:
-  simple_progress(const size_t max, const bool show_progress) : max(max), counter(0), current_ticks(0), main_thread(std::this_thread::get_id()), show_progress(show_progress) {
+  simple_progress(const size_t max_value, const bool show_progress_value) : max(max_value), counter(0), current_ticks(0), main_thread(std::this_thread::get_id()), show_progress(show_progress_value) {
     if(show_progress) {
       REprintf("|----|----|----|----|----|----|----|----|----|----|\n");
       R_FlushConsole();

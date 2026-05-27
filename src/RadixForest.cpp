@@ -7,76 +7,76 @@
 
 // [[Rcpp::export(rng = false)]]
 double RadixForest_size(RadixForestRXPtr xp) {
-  auto & forest = *xp;
+  auto & forest = xp->tree_map;
   size_t size = 0;
-  for(auto & x : forest) {
-    size += x.second.size();
+  for(const auto & x : forest) {
+    size += x.second->root.size();
   }
   return static_cast<double>(size);
 }
 
 // [[Rcpp::export(rng = false)]]
 LogicalVector RadixForest_insert(RadixForestRXPtr xp, CharacterVector sequences) {
-  auto & forest = *xp;
+  auto & forest_obj = *xp;
+  auto & forest = forest_obj.tree_map;
   const SEXP * sequence_ptr = STRING_PTR_RO(sequences);
-  size_t nseqs = Rf_xlength(sequences);
+  size_t nseqs = checked_size_from_r_xlen(Rf_xlength(sequences));
   LogicalVector result(nseqs);
   int * result_ptr = LOGICAL(result);
+  std::vector<SeqTrie::RadixTreeR *> touched;
+  touched.reserve(nseqs);
+
   for(size_t i=0; i<nseqs; ++i) {
     cspan sequence = charsxp_to_cspan(sequence_ptr[i]);
     auto it = forest.find(sequence.size());
     if(it == forest.end()) {
-      // the insert has to happen after initialization (emplace)
-      // otherwise the address of the root will change and the tree will be invalid because a child will point to the old root
-      forest.emplace(sequence.size(), SeqTrie::RadixTreeR());
-      SeqTrie::path p = forest[sequence.size()].insert(sequence, SeqTrie::posidx);
-      size_t idx = p.m ? p->get_terminal_idx() : SeqTrie::nullidx;
-      result_ptr[i] = (idx == SeqTrie::nullidx) ? 1 : 0; // TRUE if newly inserted
-    } else {
-      SeqTrie::path p = it->second.insert(sequence, SeqTrie::posidx);
-      size_t idx = p.m ? p->get_terminal_idx() : SeqTrie::nullidx;
-      result_ptr[i] = (idx == SeqTrie::nullidx) ? 1 : 0; // TRUE if newly inserted
+      it = forest.emplace(sequence.size(), std::make_unique<SeqTrie::RadixTreeR>()).first;
     }
+    SeqTrie::RadixTreeR * tree = it->second.get();
+    if(std::find(touched.begin(), touched.end(), tree) == touched.end()) {
+      touched.push_back(tree);
+    }
+    const auto terminal_idx = forest_obj.next_terminal_idx++;
+    SeqTrie::path p = tree->insert(sequence, terminal_idx);
+    const bool inserted = !p.m;
+    result_ptr[i] = inserted ? 1 : 0;
   }
+
+  for(auto * tree : touched) {
+    tree->compact();
+  }
+
   return result;
 }
 
 // [[Rcpp::export(rng = false)]]
 LogicalVector RadixForest_erase(RadixForestRXPtr xp, CharacterVector sequences) {
-  auto & forest = *xp;
+  auto & forest_obj = *xp;
   const SEXP * sequence_ptr = STRING_PTR_RO(sequences);
-  size_t nseqs = Rf_xlength(sequences);
+  size_t nseqs = checked_size_from_r_xlen(Rf_xlength(sequences));
   LogicalVector result(nseqs);
   int * result_ptr = LOGICAL(result);
   for(size_t i=0; i<nseqs; ++i) {
     cspan sequence = charsxp_to_cspan(sequence_ptr[i]);
-    auto it = forest.find(sequence.size());
-    if(it != forest.end()) {
-      size_t idx = it->second.erase(sequence);
-      result_ptr[i] = idx == SeqTrie::nullidx ? 0 : 1; // nullidx means sequence did not exist, erase was not succesful
-      // erase a tree if it is empty
-      if(it->second.get_child_nodes().size() == 0) {
-        forest.erase(it);
-      }
-    } else {
-      result_ptr[i] = 0;
-    }
+    size_t idx = forest_obj.erase(sequence);
+    result_ptr[i] = idx == SeqTrie::nullidx ? 0 : 1; // nullidx means sequence did not exist, erase was not succesful
   }
+  forest_obj.compact();
   return result;
 }
 
 // [[Rcpp::export(rng = false)]]
 LogicalVector RadixForest_find(RadixForestRXPtr xp, CharacterVector sequences) {
-  auto & forest = *xp;
+  auto & forest = xp->tree_map;
   const SEXP * sequence_ptr = STRING_PTR_RO(sequences);
-  size_t nseqs = Rf_xlength(sequences);
+  size_t nseqs = checked_size_from_r_xlen(Rf_xlength(sequences));
   LogicalVector result(nseqs);
   int * result_ptr = LOGICAL(result);
   for(size_t i=0; i<nseqs; ++i) {
     cspan sequence = charsxp_to_cspan(sequence_ptr[i]);
     auto it = forest.find(sequence.size());
     if(it != forest.end()) {
-      SeqTrie::path p = it->second.find(sequence);
+      SeqTrie::path p = it->second->root.find(sequence);
       size_t idx = p.m ? p->get_terminal_idx() : SeqTrie::nullidx;
       result_ptr[i] = idx == SeqTrie::nullidx ? 0 : 1; // nullidx means sequence was not found
     } else {
@@ -88,16 +88,16 @@ LogicalVector RadixForest_find(RadixForestRXPtr xp, CharacterVector sequences) {
 
 // [[Rcpp::export(rng = false)]]
 DataFrame RadixForest_prefix_search(RadixForestRXPtr xp, CharacterVector sequences) {
-  auto & forest = *xp;
+  auto & forest = xp->tree_map;
   const SEXP * sequence_ptr = STRING_PTR_RO(sequences);
-  size_t nseqs = Rf_xlength(sequences);
+  size_t nseqs = checked_size_from_r_xlen(Rf_xlength(sequences));
 
   std::vector<size_t> queries;
   std::vector<std::vector<SeqTrie::path>> output;  
   for(size_t i=0; i<nseqs; ++i) {
     cspan sequence = charsxp_to_cspan(sequence_ptr[i]);
     for(auto & x : forest) {
-      auto res = x.second.prefix_search(sequence);
+      auto res = x.second->root.prefix_search(sequence);
       if(res.size() > 0) {
         queries.push_back(i);
         output.push_back(res);
@@ -113,9 +113,9 @@ DataFrame RadixForest_prefix_search(RadixForestRXPtr xp, CharacterVector sequenc
   for(size_t i=0; i<output.size(); ++i) {
     auto & targets = output[i];
     for(size_t j=0; j<targets.size(); ++j) {
-      SET_STRING_ELT(query_results, q, STRING_ELT(sequences, queries[i]));
+      SET_STRING_ELT(query_results, checked_r_xlen(q), STRING_ELT(sequences, checked_r_xlen(queries[i])));
       auto s = targets[j]->template sequence<SeqTrie::array_r<char>>();
-      SET_STRING_ELT(target_results, q, to_charsxp(s));
+      SET_STRING_ELT(target_results, checked_r_xlen(q), to_charsxp(s));
       q++;
     }
   }
@@ -124,23 +124,23 @@ DataFrame RadixForest_prefix_search(RadixForestRXPtr xp, CharacterVector sequenc
 
 // [[Rcpp::export(rng = false)]]
 std::vector<std::string> RadixForest_print(RadixForestRXPtr xp) {
-  auto & forest = *xp;
+  auto & forest = xp->tree_map;
   std::vector<std::string> output;
   for(auto & x : forest) {
-    output.push_back(x.second.print());
+    output.push_back(x.second->root.print());
   }
   return output;
 }
 
 // [[Rcpp::export(rng = false)]]
 DataFrame RadixForest_graph(RadixForestRXPtr xp, const double max_depth) {
-  auto & forest = *xp;
+  auto & forest = xp->tree_map;
 
   size_t depth2;
   if(max_depth < 0) {
-    depth2 = -1;
+    depth2 = std::numeric_limits<size_t>::max();
   } else if(max_depth >= static_cast<double>(std::numeric_limits<size_t>::max())) {
-    depth2 = -1;
+    depth2 = std::numeric_limits<size_t>::max();
   } else {
     depth2 = static_cast<size_t>(max_depth);
   }
@@ -148,40 +148,40 @@ DataFrame RadixForest_graph(RadixForestRXPtr xp, const double max_depth) {
   std::vector<SeqTrie::path> parent_vec;
   std::vector<SeqTrie::path> child_vec;
   for(auto & x : forest) {
-    auto seqs = x.second.graph(depth2);
+    auto seqs = x.second->root.graph(depth2);
     parent_vec.insert(parent_vec.end(), seqs.first.begin(), seqs.first.end());
     child_vec.insert(child_vec.end(), seqs.second.begin(), seqs.second.end());
   }
   CharacterVector parent(parent_vec.size());
   CharacterVector child(child_vec.size());
   for(size_t i=0; i<parent_vec.size(); ++i) {
-    SET_STRING_ELT(parent, i, to_charsxp(parent_vec[i]->get_branch()));
-    SET_STRING_ELT(child, i, to_charsxp(child_vec[i]->get_branch()));
+    SET_STRING_ELT(parent, checked_r_xlen(i), to_charsxp(parent_vec[i]->get_branch()));
+    SET_STRING_ELT(child, checked_r_xlen(i), to_charsxp(child_vec[i]->get_branch()));
   }
   return DataFrame::create(_["parent"] = parent, _["child"] = child, _["stringsAsFactors"] = false);
 }
 
 // [[Rcpp::export(rng = false)]]
 CharacterVector RadixForest_to_vector(RadixForestRXPtr xp) {
-  auto & forest = *xp;
+  auto & forest = xp->tree_map;
   std::vector<SeqTrie::path> seqs;
   for(auto & x : forest) {
-    auto s = x.second.all();
+    auto s = x.second->root.all();
     seqs.insert(seqs.end(), s.begin(), s.end());
   }
   CharacterVector sequence(seqs.size());
   for(size_t i=0; i<seqs.size(); ++i) {
     auto s = seqs[i]->template sequence<SeqTrie::array_r<char>>();
-    SET_STRING_ELT(sequence, i, to_charsxp(s));
+    SET_STRING_ELT(sequence, checked_r_xlen(i), to_charsxp(s));
   }
   return sequence;
 }
 
 // [[Rcpp::export(rng = false)]]
 bool RadixForest_validate(RadixForestRXPtr xp) {
-  auto & forest = *xp;
+  auto & forest = xp->tree_map;
   for(auto & x : forest) {
-    if(!x.second.validate()) {
+    if(!x.second->root.validate()) {
       return false;
     }
   }
@@ -190,64 +190,105 @@ bool RadixForest_validate(RadixForestRXPtr xp) {
 
 // [[Rcpp::export(rng = false)]]
 RadixForestRXPtr RadixForest_create() {
-  return RadixForestRXPtr(new SeqTrie::RadixForestR, true);
+  auto ptr = std::make_unique<SeqTrie::RadixForestR>();
+  ptr->compact();
+  return RadixForestRXPtr(ptr.release(), true);
 }
 
 // All input parameters should be checked in R, so any error thrown here is an internal error
 // [[Rcpp::export(rng = false)]]
 DataFrame RadixForest_search(RadixForestRXPtr xp,
-                           CharacterVector query,
-                           IntegerVector max_distance,
-                           const std::string mode = "global", // global or hamming
-                           const int nthreads = 1, const bool show_progress = false) {
+                             CharacterVector query,
+                             IntegerVector max_distance,
+                             const std::string mode = "global", // global or hamming
+                             Rcpp::Nullable<IntegerMatrix> cost_matrix = R_NilValue,
+                             int gap_cost = NA_INTEGER,
+                             int gap_open_cost = NA_INTEGER,
+                             const bool lower_triangle = false,
+                             const std::string match_mode = "all",
+                             IntegerVector query_index = IntegerVector(),
+                             const int nthreads = 1,
+                             const bool show_progress = false) {
 
-  auto & forest = *xp;
-  size_t nseqs = Rf_xlength(query);
+  auto & forest_obj = *xp;
+  const size_t nseqs = checked_size_from_r_xlen(Rf_xlength(query));
+  const SearchFilterOptions search_options = make_search_filter_options(lower_triangle, match_mode);
+  if(checked_size_from_r_xlen(Rf_xlength(query_index)) == 0) {
+    query_index = IntegerVector(checked_r_xlen(nseqs));
+    for(size_t i = 0; i < nseqs; ++i) {
+      query_index[checked_r_xlen(i)] = checked_r_len(SeqTrie::posidx + i);
+    }
+  } else if(checked_size_from_r_xlen(Rf_xlength(query_index)) != nseqs) {
+    throw std::runtime_error("Internal error: query_index length must match query length");
+  }
+  int * query_index_ptr = INTEGER(query_index);
   int * max_distance_ptr = INTEGER(max_distance);
-  std::vector<cspan> query_span =  strsxp_to_cspan(query);
-  std::vector<SeqTrie::search_context> output(nseqs);
+  std::vector<cspan> query_span = strsxp_to_cspan(query);
+  std::vector<SeqTrie::search_result> output(nseqs);
   trqwe::simple_progress progress_bar(nseqs, show_progress);
 
   if(nseqs == 0) {
-    return DataFrame::create(_["query"] = CharacterVector(), _["target"] = CharacterVector(), _["distance"] = IntegerVector(), _["stringsAsFactors"] = false);
+    return DataFrame::create(_["query"] = CharacterVector(),
+                             _["target"] = CharacterVector(),
+                             _["distance"] = IntegerVector(),
+                             _["stringsAsFactors"] = false);
   }
 
-  if(mode == "hamming") {
-    do_parallel_for([&forest, &query_span, max_distance_ptr, &output, &progress_bar](size_t begin, size_t end) {
-      for(size_t i=begin; i<end; ++i) {
-        size_t len = query_span[i].size();
-        auto it = forest.find(len);
-        if(it != forest.end()) {
-          output[i] = it->second.hamming_search(query_span[i], max_distance_ptr[i]);
-        }
+  AlignmentAlgo algo = decide_alignment_algo(mode, cost_matrix, gap_cost, gap_open_cost);
+
+  if(algo == AlignmentAlgo::Hamming) {
+    do_parallel_for([&forest_obj, &query_span, max_distance_ptr, query_index_ptr, &output, &progress_bar, &search_options](size_t begin, size_t end) {
+      for(size_t i = begin; i < end; ++i) {
+        output[i] = run_search_with_optional_hook(
+          search_options,
+          query_index_ptr[i],
+          [&]() { return forest_obj.hamming_search(query_span[i], max_distance_ptr[i]); },
+          [&](SearchResultFilterHook & hook) { return forest_obj.hamming_search(query_span[i], max_distance_ptr[i], hook); }
+        );
         progress_bar.increment();
       }
     }, 0, nseqs, 1, nthreads);
-  } else if(mode == "global") {
-    do_parallel_for([&forest, &query_span, max_distance_ptr, &output, &progress_bar](size_t begin, size_t end) {
-      SeqTrie::RadixTreeR::UnitWorkspace workspace;
-      for(size_t i=begin; i<end; ++i) {
-        const cspan query_i = query_span[i];
-        const int max_distance_i = max_distance_ptr[i];
-        const size_t max_distance_size = max_distance_i > 0 ? static_cast<size_t>(max_distance_i) : 0;
-        const size_t len = query_i.size();
-        const size_t min_search_len = len > max_distance_size ? len - max_distance_size : 0;
-        const size_t max_search_len = len + max_distance_size;
-
-        SeqTrie::search_context ctx(query_i, max_distance_i);
-        workspace.reset_global(query_i.size(), max_search_len + 1);
-
-        for(size_t j=min_search_len; j<=max_search_len; ++j) {
-          auto it = forest.find(j);
-          if(it != forest.end()) {
-            it->second.global_search_into_prepared(ctx, workspace);
-          }
-        }
-
-        output[i] = std::move(ctx);
+  } else if(algo == AlignmentAlgo::GlobalUnit) {
+    do_parallel_for([&forest_obj, &query_span, max_distance_ptr, query_index_ptr, &output, &progress_bar, &search_options](size_t begin, size_t end) {
+      for(size_t i = begin; i < end; ++i) {
+        output[i] = run_search_with_optional_hook(
+          search_options,
+          query_index_ptr[i],
+          [&]() { return forest_obj.global_search(query_span[i], max_distance_ptr[i]); },
+          [&](SearchResultFilterHook & hook) { return forest_obj.global_search(query_span[i], max_distance_ptr[i], hook); }
+        );
         progress_bar.increment();
       }
     }, 0, nseqs, 1, nthreads);
+  } else if(algo == AlignmentAlgo::GlobalLinear) {
+    CostMap cost_map = convert_cost_matrix(cost_matrix.get(), gap_cost, gap_open_cost);
+    do_parallel_for([&forest_obj, &query_span, max_distance_ptr, query_index_ptr, &output, &cost_map, &progress_bar, &search_options](size_t begin, size_t end) {
+      for(size_t i = begin; i < end; ++i) {
+        output[i] = run_search_with_optional_hook(
+          search_options,
+          query_index_ptr[i],
+          [&]() { return forest_obj.global_search_linear(query_span[i], max_distance_ptr[i], cost_map); },
+          [&](SearchResultFilterHook & hook) { return forest_obj.global_search_linear(query_span[i], max_distance_ptr[i], cost_map, hook); }
+        );
+        progress_bar.increment();
+      }
+    }, 0, nseqs, 1, nthreads);
+  } else if(algo == AlignmentAlgo::GlobalAffine) {
+    CostMap cost_map = convert_cost_matrix(cost_matrix.get(), gap_cost, gap_open_cost);
+    do_parallel_for([&forest_obj, &query_span, max_distance_ptr, query_index_ptr, &output, &cost_map, &progress_bar, &search_options](size_t begin, size_t end) {
+      for(size_t i = begin; i < end; ++i) {
+        output[i] = run_search_with_optional_hook(
+          search_options,
+          query_index_ptr[i],
+          [&]() { return forest_obj.global_search_affine(query_span[i], max_distance_ptr[i], cost_map); },
+          [&](SearchResultFilterHook & hook) { return forest_obj.global_search_affine(query_span[i], max_distance_ptr[i], cost_map, hook); }
+        );
+        progress_bar.increment();
+      }
+    }, 0, nseqs, 1, nthreads);
+  } else {
+    throw std::runtime_error("Internal error: RadixForest only supports hamming and global alignment");
   }
+
   return seqtrie_results_to_dataframe(query, output);
 }

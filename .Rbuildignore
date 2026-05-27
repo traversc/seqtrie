@@ -3,6 +3,10 @@
 .travis.yml
 rebuild.sh
 .*\.tar\.gz
+^.*\.Rcheck$
+src/.*\.o$
+src/.*\.so$
+src/.*\.dll$
 ^local
 ^benchmark_results
 rticle
@@ -15,3 +19,6 @@ Makefile
 ^inst/extra_tests
 Rplots.pdf
 ^context$
+^\.claude$
+^\.codex$
+^\.agents$

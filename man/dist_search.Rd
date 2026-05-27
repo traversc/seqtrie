@@ -6,7 +6,7 @@
 \usage{
 dist_search(
   query,
-  target,
+  target = NULL,
   max_distance = NULL,
   max_fraction = NULL,
   mode = "levenshtein",
@@ -15,17 +15,18 @@ dist_search(
   gap_open_cost = NA_integer_,
   tree_class = "RadixTree",
   nthreads = 1,
-  show_progress = FALSE
+  show_progress = FALSE,
+  mismatch_cost = 1L
 )
 }
 \arguments{
 \item{query}{A character vector of query sequences.}
 
-\item{target}{A character vector of target sequences.}
+\item{target}{A character vector of target sequences. If \code{NULL}, \code{query} is searched against itself and only pairs where the query index is strictly greater than the target terminal index are returned.}
 
-\item{max_distance}{how far to search in units of absolute distance. Can be a single value or a vector. Mutually exclusive with max_fraction.}
+\item{max_distance}{How far to search in units of absolute distance. Can be a single value or a vector. Mutually exclusive with max_fraction.}
 
-\item{max_fraction}{how far to search in units of relative distance to each query sequence length. Can be a single value or a vector. Mutually exclusive with max_distance.}
+\item{max_fraction}{How far to search in units of relative distance to each query sequence length. Can be a single value or a vector. Mutually exclusive with max_distance.}
 
 \item{mode}{The distance metric to use. One of hamming (hm), global (gb) or anchored (an).}
 
@@ -35,14 +36,16 @@ dist_search(
 
 \item{gap_open_cost}{The cost of a gap opening. See details.}
 
-\item{tree_class}{Which R6 class to use. Either RadixTree or RadixForest (default: RadixTree)}
+\item{tree_class}{Which tree implementation to use. One of RadixTree, RadixForest, StarTree, radix_tree, radix_forest, or star_tree (default: RadixTree)}
 
 \item{nthreads}{The number of threads to use for parallel computation.}
 
 \item{show_progress}{Whether to show a progress bar.}
+
+\item{mismatch_cost}{A single positive integer mismatch cost for \code{tree_class = "StarTree"} or \code{"star_tree"}.}
 }
 \value{
-The output is a data.frame of all matches with columns "query" and "target".
+The output is a data frame of all matches with columns "query", "target", and "distance".
 For anchored searches, the output also includes attributes "query_size" and "target_size"
 which are vectors containing the portion of the query and target sequences that are aligned.
 }
@@ -51,17 +54,18 @@ Find similar sequences within a distance threshold
 }
 \details{
 This function finds all sequences in \emph{target} that are within a distance threshold of any sequence in \emph{query}.
-This function uses either a RadixTree or RadixForest to store \emph{target} sequences. See the R6 class documentation for additional details.
+If \code{target = NULL}, the tree is built from \code{query} and each query is searched against that tree while requiring the query index to be strictly greater than the target terminal index. This returns lower-triangle self-pairs. Duplicate query strings are not given special handling; because the underlying tree stores one terminal index per unique sequence, duplicates naturally collapse to the first inserted occurrence.
+This function uses a radix_tree/RadixTree, radix_forest/RadixForest, or fixed star_tree/StarTree to store \emph{target} sequences.
 
-Three types of distance metrics are supported, based on the form of alignment performed. These are: Hamming, Global (Levenshtein) and Anchored.
+Three distance metrics are supported, based on the form of alignment performed: Hamming, global (Levenshtein), and anchored.
 
 An anchored alignment is a form of semi-global alignment, where the query sequence is "anchored" (global) to the beginning of both the query and target sequences,
-but is semi-global in that the end of the either the query sequence or target sequence (but not both) can be unaligned. This type of alignment is sometimes called an "extension" alignment in literature.
+but is semi-global in that the end of either the query sequence or the target sequence (but not both) can be unaligned. This type of alignment is sometimes called an "extension" alignment in the literature.
 
 In contrast a global alignment must align the entire query and target sequences. When mismatch and indel costs are equal to 1, this is also known as the Levenshtein distance.
 
 By default, if mode == "global" or "anchored", all mismatches and indels are given a cost of 1. However, you can define your own distance metric by setting the substitution cost_matrix and separate gap parameters.
-The cost_matrix is a strictly positive square integer matrix of substitution costs and should include all characters in query and target as column- and rownames. Any rows/columns named "gap" or "gap_open" are ignored.
+The cost_matrix is a non-negative square integer matrix of substitution costs and should include all characters in query and target as column- and rownames. Diagonal entries are usually zero, but positive diagonal entries are allowed. Any rows/columns named "gap" or "gap_open" are ignored.
 To set the cost of a gap (insertion or deletion), use the gap_cost parameter (a single positive integer). To enable affine gaps, provide the gap_open_cost parameter (a single positive integer) in addition to gap_cost.
 If affine alignment is used, the total cost of a gap of length L is defined as:
 TOTAL_GAP_COST = gap_open_cost + (gap_cost * gap_length).

@@ -1,12 +1,12 @@
 #' Adaptive COVID TCRB CDR3 data
 #'
-#' Unique TCRB CDR3 sequences from the Nolan et al. 2020. CDR3s were extracted via IgBLAST. The license for this data is Creative Commons Attribution 4.0 International License.
+#' Unique TCRB CDR3 sequences from Nolan et al. (2020). CDR3s were extracted via IgBLAST. The data are licensed under the Creative Commons Attribution 4.0 International License.
 #'
 #' @docType data
 #'
 #' @usage data(covid_cdr3)
 #'
-#' @format A character vector of length 133,034.
+#' @format A character vector of length 133,033.
 #'
 #' @keywords datasets
 #'

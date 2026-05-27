@@ -8,8 +8,8 @@
 #' @param gap_open_cost `r rdoc("gap_open_cost")`
 #' @param nthreads `r rdoc("nthreads")`
 #' @param show_progress `r rdoc("show_progress")`
-#' @details This function calculates all combinations of pairwise distances based on Hamming, Levenshtein or Anchored algorithms.
-#' The output is a NxM matrix where N = length(query) and M = length(target).
+#' @details This function calculates all combinations of pairwise distances based on Hamming, Levenshtein, or anchored algorithms.
+#' The output is an N by M matrix where N = length(query) and M = length(target).
 #' Note: this can take a _really_ long time; be careful with input size.
 #' 
 #' `r rdoc("details")`
@@ -39,7 +39,7 @@ dist_matrix <- function(query, target, mode, cost_matrix = NULL, gap_cost = NA_i
 #' @param nthreads `r rdoc("nthreads")`
 #' @param show_progress `r rdoc("show_progress")`
 #' @details
-#' This function calculates pairwise distances based on Hamming, Levenshtein or Anchored algorithms. _query_ and _target_ must be the same length.
+#' This function calculates pairwise distances based on Hamming, Levenshtein, or anchored algorithms. _query_ and _target_ must be the same length.
 #' 
 #' `r rdoc("details")`
 #'

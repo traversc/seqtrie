@@ -40,17 +40,17 @@ The output of this function is a vector of distances. If mode == "anchored" then
 Compute the pairwise distance between two sets of sequences
 }
 \details{
-This function calculates pairwise distances based on Hamming, Levenshtein or Anchored algorithms. \emph{query} and \emph{target} must be the same length.
+This function calculates pairwise distances based on Hamming, Levenshtein, or anchored algorithms. \emph{query} and \emph{target} must be the same length.
 
-Three types of distance metrics are supported, based on the form of alignment performed. These are: Hamming, Global (Levenshtein) and Anchored.
+Three distance metrics are supported, based on the form of alignment performed: Hamming, global (Levenshtein), and anchored.
 
 An anchored alignment is a form of semi-global alignment, where the query sequence is "anchored" (global) to the beginning of both the query and target sequences,
-but is semi-global in that the end of the either the query sequence or target sequence (but not both) can be unaligned. This type of alignment is sometimes called an "extension" alignment in literature.
+but is semi-global in that the end of either the query sequence or the target sequence (but not both) can be unaligned. This type of alignment is sometimes called an "extension" alignment in the literature.
 
 In contrast a global alignment must align the entire query and target sequences. When mismatch and indel costs are equal to 1, this is also known as the Levenshtein distance.
 
 By default, if mode == "global" or "anchored", all mismatches and indels are given a cost of 1. However, you can define your own distance metric by setting the substitution cost_matrix and separate gap parameters.
-The cost_matrix is a strictly positive square integer matrix of substitution costs and should include all characters in query and target as column- and rownames. Any rows/columns named "gap" or "gap_open" are ignored.
+The cost_matrix is a non-negative square integer matrix of substitution costs and should include all characters in query and target as column- and rownames. Diagonal entries are usually zero, but positive diagonal entries are allowed. Any rows/columns named "gap" or "gap_open" are ignored.
 To set the cost of a gap (insertion or deletion), use the gap_cost parameter (a single positive integer). To enable affine gaps, provide the gap_open_cost parameter (a single positive integer) in addition to gap_cost.
 If affine alignment is used, the total cost of a gap of length L is defined as:
 TOTAL_GAP_COST = gap_open_cost + (gap_cost * gap_length).

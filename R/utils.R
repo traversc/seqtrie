@@ -1,15 +1,15 @@
 # Internal function to print Roxygen documentation, since a lot of it is repeated between functions
 rdoc <- function(what) {
   if (what == "details") {
-    return('Three types of distance metrics are supported, based on the form of alignment performed. These are: Hamming, Global (Levenshtein) and Anchored.
+    return('Three distance metrics are supported, based on the form of alignment performed: Hamming, global (Levenshtein), and anchored.
 
 An anchored alignment is a form of semi-global alignment, where the query sequence is "anchored" (global) to the beginning of both the query and target sequences,
-but is semi-global in that the end of the either the query sequence or target sequence (but not both) can be unaligned. This type of alignment is sometimes called an "extension" alignment in literature.
+but is semi-global in that the end of either the query sequence or the target sequence (but not both) can be unaligned. This type of alignment is sometimes called an "extension" alignment in the literature.
 
 In contrast a global alignment must align the entire query and target sequences. When mismatch and indel costs are equal to 1, this is also known as the Levenshtein distance.
 
 By default, if mode == "global" or "anchored", all mismatches and indels are given a cost of 1. However, you can define your own distance metric by setting the substitution cost_matrix and separate gap parameters.
-The cost_matrix is a strictly positive square integer matrix of substitution costs and should include all characters in query and target as column- and rownames. Any rows/columns named "gap" or "gap_open" are ignored.
+The cost_matrix is a non-negative square integer matrix of substitution costs and should include all characters in query and target as column- and rownames. Diagonal entries are usually zero, but positive diagonal entries are allowed. Any rows/columns named "gap" or "gap_open" are ignored.
 To set the cost of a gap (insertion or deletion), use the gap_cost parameter (a single positive integer). To enable affine gaps, provide the gap_open_cost parameter (a single positive integer) in addition to gap_cost.
 If affine alignment is used, the total cost of a gap of length L is defined as:
 TOTAL_GAP_COST = gap_open_cost + (gap_cost * gap_length).
@@ -30,14 +30,18 @@ If mode == "hamming" all alignment parameters are ignored; mismatch is given a d
     return('The cost of a gap for use with the "global" or "anchored" distance metrics. See details.')
   } else if (what == "gap_open_cost") {
     return("The cost of a gap opening. See details.")
+  } else if (what == "lower_triangle") {
+    return("If TRUE, only return matches where the query index is greater than the target insertion index.")
+  } else if (what == "match_mode") {
+    return('Which matches to return for each query. "all" returns all matches within the distance threshold; "best" returns only matches tied for the lowest distance.')
   } else if (what == "nthreads") {
     return("The number of threads to use for parallel computation.")
   } else if (what == "show_progress") {
     return("Whether to show a progress bar.")
   } else if (what == "max_distance") {
-    return("how far to search in units of absolute distance. Can be a single value or a vector. Mutually exclusive with max_fraction.")
+    return("How far to search in units of absolute distance. Can be a single value or a vector. Mutually exclusive with max_fraction.")
   } else if (what == "max_fraction") {
-    return("how far to search in units of relative distance to each query sequence length. Can be a single value or a vector. Mutually exclusive with max_distance.")
+    return("How far to search in units of relative distance to each query sequence length. Can be a single value or a vector. Mutually exclusive with max_distance.")
   }
 }
 
@@ -64,6 +68,31 @@ is_missing_arg <- function(x) {
 
 recycle_arg <- function(recycle_vector, target_vector) {
   rep(recycle_vector, length.out = length(target_vector))
+}
+
+check_character_vector <- function(x, name) {
+  if (!is.character(x)) {
+    stop(name, " must be a character vector")
+  }
+  invisible(x)
+}
+
+not_na_character <- function(x) {
+  !is.na(x)
+}
+
+check_threads <- function(nthreads) {
+  if (!is_integerlike(nthreads) || length(nthreads) != 1L || is.na(nthreads) || nthreads < 1L) {
+    stop("nthreads must be a single positive integer")
+  }
+  as.integer(nthreads)
+}
+
+check_flag <- function(x, name) {
+  if (!is.logical(x) || length(x) != 1L || is.na(x)) {
+    stop(name, " must be TRUE or FALSE")
+  }
+  x
 }
 
 # A cost matrix must

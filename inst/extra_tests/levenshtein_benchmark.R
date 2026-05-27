@@ -5,79 +5,152 @@ suppressPackageStartupMessages({
 data(covid_cdr3, package = "seqtrie")
 
 bench_param <- function(name, default) {
-  as.integer(Sys.getenv(paste0("SEQTRIE_BENCH_", name), default))
+  value <- Sys.getenv(paste0("SEQTRIE_BENCH_", name), unset = "")
+  if (!nzchar(value)) {
+    return(default)
+  }
+  out <- suppressWarnings(as.integer(value))
+  if (is.na(out)) {
+    stop("SEQTRIE_BENCH_", name, " must be an integer")
+  }
+  out
 }
 
-NITER <- bench_param("NITER", 5L)
-NSEQS <- bench_param("NSEQS", 10000L)
+translate_cdr3_to_aa <- function(seqs) {
+  codon_table <- c(
+    TTT = "F", TTC = "F", TTA = "L", TTG = "L",
+    TCT = "S", TCC = "S", TCA = "S", TCG = "S",
+    TAT = "Y", TAC = "Y", TAA = "*", TAG = "*",
+    TGT = "C", TGC = "C", TGA = "*", TGG = "W",
+    CTT = "L", CTC = "L", CTA = "L", CTG = "L",
+    CCT = "P", CCC = "P", CCA = "P", CCG = "P",
+    CAT = "H", CAC = "H", CAA = "Q", CAG = "Q",
+    CGT = "R", CGC = "R", CGA = "R", CGG = "R",
+    ATT = "I", ATC = "I", ATA = "I", ATG = "M",
+    ACT = "T", ACC = "T", ACA = "T", ACG = "T",
+    AAT = "N", AAC = "N", AAA = "K", AAG = "K",
+    AGT = "S", AGC = "S", AGA = "R", AGG = "R",
+    GTT = "V", GTC = "V", GTA = "V", GTG = "V",
+    GCT = "A", GCC = "A", GCA = "A", GCG = "A",
+    GAT = "D", GAC = "D", GAA = "E", GAG = "E",
+    GGT = "G", GGC = "G", GGA = "G", GGG = "G"
+  )
+
+  seqs <- toupper(seqs)
+  keep <- !is.na(seqs) & nchar(seqs) > 0L & nchar(seqs) %% 3L == 0L & grepl("^[ACGT]*$", seqs)
+  seqs <- seqs[keep]
+
+  translate_one <- function(seq) {
+    starts <- seq.int(1L, nchar(seq), by = 3L)
+    codons <- substring(seq, starts, starts + 2L)
+    aa <- unname(codon_table[codons])
+    if (any(is.na(aa)) || any(aa == "*")) {
+      return(NA_character_)
+    }
+    paste0(aa, collapse = "")
+  }
+
+  aa <- vapply(seqs, translate_one, character(1))
+  unique(aa[!is.na(aa)])
+}
+
+sample_vec <- function(x, n) {
+  sample(x, n, replace = length(x) < n)
+}
+
+NITER <- bench_param("NITER", 3L)
+NTARGET <- bench_param("NTARGET", bench_param("NSEQS", 10000L))
+NQUERY <- bench_param("NQUERY", bench_param("NSEQS", 10000L))
 NTHREADS <- bench_param("NTHREADS", 4L)
 MAX_DISTANCE <- bench_param("MAX_DISTANCE", 3L)
+SEED <- bench_param("SEED", 314156L)
+VARIANT <- Sys.getenv("SEQTRIE_VARIANT", unset = "local")
 
-run_radixtree_levenshtein_search <- function(query, target) {
-  tree <- seqtrie::RadixTree$new(target)
-  tree$search(
-    query,
-    max_distance = MAX_DISTANCE,
-    mode = "levenshtein",
-    nthreads = NTHREADS,
-    show_progress = FALSE
-  )
-}
-
-run_radixforest_levenshtein_search <- function(query, target) {
-  forest <- seqtrie::RadixForest$new(target)
-  forest$search(
-    query,
-    max_distance = MAX_DISTANCE,
-    mode = "levenshtein",
-    nthreads = NTHREADS,
-    show_progress = FALSE
-  )
-}
+datasets <- list(
+  cdr3_nt = unique(covid_cdr3[!is.na(covid_cdr3) & nzchar(covid_cdr3)]),
+  cdr3_aa = translate_cdr3_to_aa(covid_cdr3)
+)
 
 methods <- list(
-  "RadixTree$search levenshtein" = run_radixtree_levenshtein_search,
-  "RadixForest$search levenshtein" = run_radixforest_levenshtein_search
+  RadixTree_search_global_unit = function(query, tree, forest) {
+    tree$search(query, max_distance = MAX_DISTANCE, mode = "levenshtein",
+                nthreads = NTHREADS, show_progress = FALSE)
+  },
+  RadixForest_search_global_unit = function(query, tree, forest) {
+    forest$search(query, max_distance = MAX_DISTANCE, mode = "levenshtein",
+                  nthreads = NTHREADS, show_progress = FALSE)
+  }
 )
 
 grid <- expand.grid(
   iter = seq_len(NITER),
+  dataset = names(datasets),
   method = names(methods),
   stringsAsFactors = FALSE
 )
+set.seed(SEED)
 grid <- grid[sample.int(nrow(grid)), ]
-grid$time <- NA_real_
+grid$variant <- VARIANT
+grid$n_target <- NTARGET
+grid$n_query <- NQUERY
+grid$nthreads <- NTHREADS
+grid$max_distance <- MAX_DISTANCE
+grid$build_time <- NA_real_
+grid$elapsed <- NA_real_
 grid$matches <- NA_integer_
+grid$distance_sum <- NA_real_
 
 for (i in seq_len(nrow(grid))) {
   row <- grid[i, ]
+  set.seed(SEED + row$iter * 1000L + match(row$dataset, names(datasets)) * 100L)
 
-  set.seed(row$iter)
-  x <- sample(covid_cdr3, size = NSEQS)
+  pool <- datasets[[row$dataset]]
+  target <- sample_vec(pool, NTARGET)
+  query <- sample_vec(pool, NQUERY)
 
-  elapsed <- system.time({
-    result <- methods[[row$method]](x, x)
+  build_time <- system.time({
+    tree <- seqtrie::RadixTree$new(target)
+    forest <- seqtrie::RadixForest$new(target)
   })[["elapsed"]]
 
-  grid$time[i] <- elapsed
-  grid$matches[i] <- nrow(result)
+  elapsed <- system.time({
+    result <- methods[[row$method]](query, tree, forest)
+  })[["elapsed"]]
 
-  rm(x, result)
+  grid$build_time[i] <- build_time
+  grid$elapsed[i] <- elapsed
+  grid$matches[i] <- nrow(result)
+  grid$distance_sum[i] <- if (nrow(result)) sum(result$distance) else 0L
+
+  cat(sprintf("%s %s %s iter=%d elapsed=%.3f matches=%d\n",
+              VARIANT, row$dataset, row$method, row$iter, elapsed, nrow(result)))
+  flush.console()
+
+  rm(target, query, tree, forest, result)
   gc(full = TRUE)
 }
 
-summary <- do.call(rbind, lapply(unique(grid$method), function(method) {
-  rows <- grid[grid$method == method, ]
-  data.frame(
-    method = method,
-    mean_time = round(mean(rows$time), 3L),
-    median_time = round(median(rows$time), 3L),
-    mean_matches = round(mean(rows$matches), 1L),
-    median_matches = round(median(rows$matches), 1L),
-    stringsAsFactors = FALSE
-  )
-}))
-summary <- summary[order(summary$method), ]
+summary <- aggregate(
+  cbind(elapsed, matches) ~ dataset + method,
+  data = grid,
+  FUN = function(x) c(mean = mean(x), median = median(x))
+)
+summary <- data.frame(
+  dataset = summary$dataset,
+  method = summary$method,
+  mean_time = round(summary$elapsed[, "mean"], 3L),
+  median_time = round(summary$elapsed[, "median"], 3L),
+  mean_matches = round(summary$matches[, "mean"], 1L),
+  median_matches = round(summary$matches[, "median"], 1L),
+  stringsAsFactors = FALSE
+)
+summary <- summary[order(summary$dataset, summary$method), , drop = FALSE]
+
+outfile <- Sys.getenv("SEQTRIE_BENCH_OUT", unset = "")
+if (nzchar(outfile)) {
+  write.table(grid, file = outfile, sep = ",", row.names = FALSE,
+              col.names = !file.exists(outfile), append = file.exists(outfile))
+}
 
 old_width <- getOption("width")
 options(width = max(old_width, 200L))
