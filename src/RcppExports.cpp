@@ -11,79 +11,6 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
-// AnchoredStarTree_create
-AnchoredStarTreeRXPtr AnchoredStarTree_create(CharacterVector sequences, const int max_distance, const int mismatch_cost, const int gap_cost, const int nthreads, const bool show_progress);
-RcppExport SEXP _seqtrie_AnchoredStarTree_create(SEXP sequencesSEXP, SEXP max_distanceSEXP, SEXP mismatch_costSEXP, SEXP gap_costSEXP, SEXP nthreadsSEXP, SEXP show_progressSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::traits::input_parameter< CharacterVector >::type sequences(sequencesSEXP);
-    Rcpp::traits::input_parameter< const int >::type max_distance(max_distanceSEXP);
-    Rcpp::traits::input_parameter< const int >::type mismatch_cost(mismatch_costSEXP);
-    Rcpp::traits::input_parameter< const int >::type gap_cost(gap_costSEXP);
-    Rcpp::traits::input_parameter< const int >::type nthreads(nthreadsSEXP);
-    Rcpp::traits::input_parameter< const bool >::type show_progress(show_progressSEXP);
-    rcpp_result_gen = Rcpp::wrap(AnchoredStarTree_create(sequences, max_distance, mismatch_cost, gap_cost, nthreads, show_progress));
-    return rcpp_result_gen;
-END_RCPP
-}
-// AnchoredStarTree_self_search
-DataFrame AnchoredStarTree_self_search(CharacterVector sequences, const int max_distance, const int mismatch_cost, const int gap_cost, const int nthreads, const bool show_progress);
-RcppExport SEXP _seqtrie_AnchoredStarTree_self_search(SEXP sequencesSEXP, SEXP max_distanceSEXP, SEXP mismatch_costSEXP, SEXP gap_costSEXP, SEXP nthreadsSEXP, SEXP show_progressSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::traits::input_parameter< CharacterVector >::type sequences(sequencesSEXP);
-    Rcpp::traits::input_parameter< const int >::type max_distance(max_distanceSEXP);
-    Rcpp::traits::input_parameter< const int >::type mismatch_cost(mismatch_costSEXP);
-    Rcpp::traits::input_parameter< const int >::type gap_cost(gap_costSEXP);
-    Rcpp::traits::input_parameter< const int >::type nthreads(nthreadsSEXP);
-    Rcpp::traits::input_parameter< const bool >::type show_progress(show_progressSEXP);
-    rcpp_result_gen = Rcpp::wrap(AnchoredStarTree_self_search(sequences, max_distance, mismatch_cost, gap_cost, nthreads, show_progress));
-    return rcpp_result_gen;
-END_RCPP
-}
-// AnchoredStarTree_size
-double AnchoredStarTree_size(AnchoredStarTreeRXPtr xp);
-RcppExport SEXP _seqtrie_AnchoredStarTree_size(SEXP xpSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::traits::input_parameter< AnchoredStarTreeRXPtr >::type xp(xpSEXP);
-    rcpp_result_gen = Rcpp::wrap(AnchoredStarTree_size(xp));
-    return rcpp_result_gen;
-END_RCPP
-}
-// AnchoredStarTree_to_vector
-CharacterVector AnchoredStarTree_to_vector(AnchoredStarTreeRXPtr xp);
-RcppExport SEXP _seqtrie_AnchoredStarTree_to_vector(SEXP xpSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::traits::input_parameter< AnchoredStarTreeRXPtr >::type xp(xpSEXP);
-    rcpp_result_gen = Rcpp::wrap(AnchoredStarTree_to_vector(xp));
-    return rcpp_result_gen;
-END_RCPP
-}
-// AnchoredStarTree_result
-DataFrame AnchoredStarTree_result(AnchoredStarTreeRXPtr xp);
-RcppExport SEXP _seqtrie_AnchoredStarTree_result(SEXP xpSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::traits::input_parameter< AnchoredStarTreeRXPtr >::type xp(xpSEXP);
-    rcpp_result_gen = Rcpp::wrap(AnchoredStarTree_result(xp));
-    return rcpp_result_gen;
-END_RCPP
-}
-// AnchoredStarTree_search
-DataFrame AnchoredStarTree_search(AnchoredStarTreeRXPtr xp, CharacterVector query, const int nthreads, const bool show_progress);
-RcppExport SEXP _seqtrie_AnchoredStarTree_search(SEXP xpSEXP, SEXP querySEXP, SEXP nthreadsSEXP, SEXP show_progressSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::traits::input_parameter< AnchoredStarTreeRXPtr >::type xp(xpSEXP);
-    Rcpp::traits::input_parameter< CharacterVector >::type query(querySEXP);
-    Rcpp::traits::input_parameter< const int >::type nthreads(nthreadsSEXP);
-    Rcpp::traits::input_parameter< const bool >::type show_progress(show_progressSEXP);
-    rcpp_result_gen = Rcpp::wrap(AnchoredStarTree_search(xp, query, nthreads, show_progress));
-    return rcpp_result_gen;
-END_RCPP
-}
 // CharCounter_create
 CharCounterXPtr CharCounter_create();
 RcppExport SEXP _seqtrie_CharCounter_create() {
@@ -473,6 +400,79 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// AnchoredStarTree_create
+AnchoredStarTreeRXPtr AnchoredStarTree_create(CharacterVector sequences, const int max_distance, const int mismatch_cost, const int gap_cost, const int nthreads, const bool show_progress);
+RcppExport SEXP _seqtrie_AnchoredStarTree_create(SEXP sequencesSEXP, SEXP max_distanceSEXP, SEXP mismatch_costSEXP, SEXP gap_costSEXP, SEXP nthreadsSEXP, SEXP show_progressSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< CharacterVector >::type sequences(sequencesSEXP);
+    Rcpp::traits::input_parameter< const int >::type max_distance(max_distanceSEXP);
+    Rcpp::traits::input_parameter< const int >::type mismatch_cost(mismatch_costSEXP);
+    Rcpp::traits::input_parameter< const int >::type gap_cost(gap_costSEXP);
+    Rcpp::traits::input_parameter< const int >::type nthreads(nthreadsSEXP);
+    Rcpp::traits::input_parameter< const bool >::type show_progress(show_progressSEXP);
+    rcpp_result_gen = Rcpp::wrap(AnchoredStarTree_create(sequences, max_distance, mismatch_cost, gap_cost, nthreads, show_progress));
+    return rcpp_result_gen;
+END_RCPP
+}
+// AnchoredStarTree_self_search
+DataFrame AnchoredStarTree_self_search(CharacterVector sequences, const int max_distance, const int mismatch_cost, const int gap_cost, const int nthreads, const bool show_progress);
+RcppExport SEXP _seqtrie_AnchoredStarTree_self_search(SEXP sequencesSEXP, SEXP max_distanceSEXP, SEXP mismatch_costSEXP, SEXP gap_costSEXP, SEXP nthreadsSEXP, SEXP show_progressSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< CharacterVector >::type sequences(sequencesSEXP);
+    Rcpp::traits::input_parameter< const int >::type max_distance(max_distanceSEXP);
+    Rcpp::traits::input_parameter< const int >::type mismatch_cost(mismatch_costSEXP);
+    Rcpp::traits::input_parameter< const int >::type gap_cost(gap_costSEXP);
+    Rcpp::traits::input_parameter< const int >::type nthreads(nthreadsSEXP);
+    Rcpp::traits::input_parameter< const bool >::type show_progress(show_progressSEXP);
+    rcpp_result_gen = Rcpp::wrap(AnchoredStarTree_self_search(sequences, max_distance, mismatch_cost, gap_cost, nthreads, show_progress));
+    return rcpp_result_gen;
+END_RCPP
+}
+// AnchoredStarTree_size
+double AnchoredStarTree_size(AnchoredStarTreeRXPtr xp);
+RcppExport SEXP _seqtrie_AnchoredStarTree_size(SEXP xpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< AnchoredStarTreeRXPtr >::type xp(xpSEXP);
+    rcpp_result_gen = Rcpp::wrap(AnchoredStarTree_size(xp));
+    return rcpp_result_gen;
+END_RCPP
+}
+// AnchoredStarTree_to_vector
+CharacterVector AnchoredStarTree_to_vector(AnchoredStarTreeRXPtr xp);
+RcppExport SEXP _seqtrie_AnchoredStarTree_to_vector(SEXP xpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< AnchoredStarTreeRXPtr >::type xp(xpSEXP);
+    rcpp_result_gen = Rcpp::wrap(AnchoredStarTree_to_vector(xp));
+    return rcpp_result_gen;
+END_RCPP
+}
+// AnchoredStarTree_result
+DataFrame AnchoredStarTree_result(AnchoredStarTreeRXPtr xp);
+RcppExport SEXP _seqtrie_AnchoredStarTree_result(SEXP xpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< AnchoredStarTreeRXPtr >::type xp(xpSEXP);
+    rcpp_result_gen = Rcpp::wrap(AnchoredStarTree_result(xp));
+    return rcpp_result_gen;
+END_RCPP
+}
+// AnchoredStarTree_search
+DataFrame AnchoredStarTree_search(AnchoredStarTreeRXPtr xp, CharacterVector query, const int nthreads, const bool show_progress);
+RcppExport SEXP _seqtrie_AnchoredStarTree_search(SEXP xpSEXP, SEXP querySEXP, SEXP nthreadsSEXP, SEXP show_progressSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< AnchoredStarTreeRXPtr >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< CharacterVector >::type query(querySEXP);
+    Rcpp::traits::input_parameter< const int >::type nthreads(nthreadsSEXP);
+    Rcpp::traits::input_parameter< const bool >::type show_progress(show_progressSEXP);
+    rcpp_result_gen = Rcpp::wrap(AnchoredStarTree_search(xp, query, nthreads, show_progress));
+    return rcpp_result_gen;
+END_RCPP
+}
 // c_dist_matrix
 IntegerMatrix c_dist_matrix(CharacterVector query, CharacterVector target, const std::string mode, Rcpp::Nullable<IntegerMatrix> cost_matrix, int gap_cost, int gap_open_cost, const int nthreads, const bool show_progress);
 RcppExport SEXP _seqtrie_c_dist_matrix(SEXP querySEXP, SEXP targetSEXP, SEXP modeSEXP, SEXP cost_matrixSEXP, SEXP gap_costSEXP, SEXP gap_open_costSEXP, SEXP nthreadsSEXP, SEXP show_progressSEXP) {
@@ -529,12 +529,6 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_seqtrie_AnchoredStarTree_create", (DL_FUNC) &_seqtrie_AnchoredStarTree_create, 6},
-    {"_seqtrie_AnchoredStarTree_self_search", (DL_FUNC) &_seqtrie_AnchoredStarTree_self_search, 6},
-    {"_seqtrie_AnchoredStarTree_size", (DL_FUNC) &_seqtrie_AnchoredStarTree_size, 1},
-    {"_seqtrie_AnchoredStarTree_to_vector", (DL_FUNC) &_seqtrie_AnchoredStarTree_to_vector, 1},
-    {"_seqtrie_AnchoredStarTree_result", (DL_FUNC) &_seqtrie_AnchoredStarTree_result, 1},
-    {"_seqtrie_AnchoredStarTree_search", (DL_FUNC) &_seqtrie_AnchoredStarTree_search, 4},
     {"_seqtrie_CharCounter_create", (DL_FUNC) &_seqtrie_CharCounter_create, 0},
     {"_seqtrie_CharCounter_add", (DL_FUNC) &_seqtrie_CharCounter_add, 2},
     {"_seqtrie_CharCounter_subtract", (DL_FUNC) &_seqtrie_CharCounter_subtract, 2},
@@ -569,6 +563,12 @@ static const R_CallMethodDef CallEntries[] = {
     {"_seqtrie_StarTree_to_vector", (DL_FUNC) &_seqtrie_StarTree_to_vector, 1},
     {"_seqtrie_StarTree_result", (DL_FUNC) &_seqtrie_StarTree_result, 1},
     {"_seqtrie_StarTree_search", (DL_FUNC) &_seqtrie_StarTree_search, 4},
+    {"_seqtrie_AnchoredStarTree_create", (DL_FUNC) &_seqtrie_AnchoredStarTree_create, 6},
+    {"_seqtrie_AnchoredStarTree_self_search", (DL_FUNC) &_seqtrie_AnchoredStarTree_self_search, 6},
+    {"_seqtrie_AnchoredStarTree_size", (DL_FUNC) &_seqtrie_AnchoredStarTree_size, 1},
+    {"_seqtrie_AnchoredStarTree_to_vector", (DL_FUNC) &_seqtrie_AnchoredStarTree_to_vector, 1},
+    {"_seqtrie_AnchoredStarTree_result", (DL_FUNC) &_seqtrie_AnchoredStarTree_result, 1},
+    {"_seqtrie_AnchoredStarTree_search", (DL_FUNC) &_seqtrie_AnchoredStarTree_search, 4},
     {"_seqtrie_c_dist_matrix", (DL_FUNC) &_seqtrie_c_dist_matrix, 8},
     {"_seqtrie_c_dist_pairwise", (DL_FUNC) &_seqtrie_c_dist_pairwise, 8},
     {"_seqtrie_c_split_search", (DL_FUNC) &_seqtrie_c_split_search, 11},

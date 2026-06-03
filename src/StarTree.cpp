@@ -1,9 +1,10 @@
 #include "seqtrie_types.h"
 
+#include <algorithm>
 #include <memory>
 
 ////////////////////////////////////////////////////////////////////////////////
-// StarTree R functions
+// StarTree R functions (global/Levenshtein, Hamming, and anchored modes)
 
 namespace {
 
@@ -36,9 +37,10 @@ void validate_star_sequence(const std::string& seq) {
   }
 }
 
-void validate_star_sequences(const std::vector<std::string>& sequences) {
+void validate_star_sequences(const std::vector<std::string>& sequences,
+                             const char* label = "sequences") {
   if(sequences.empty()) {
-    throw std::runtime_error("sequences must contain at least one sequence");
+    throw std::runtime_error(std::string(label) + " must contain at least one sequence");
   }
   if(sequences.size() >= static_cast<size_t>(std::numeric_limits<uint32_t>::max())) {
     throw std::runtime_error("too many sequences for StarTree");
@@ -101,9 +103,10 @@ DataFrame startree_empty_match_result() {
                            _["stringsAsFactors"] = false);
 }
 
+template <typename InputDataT>
 DataFrame startree_pairs_to_dataframe(const std::vector<startree::PairRecord>& pairs,
-                                      const startree::InputData& target_data,
-                                      const startree::InputData& query_data) {
+                                      const InputDataT& target_data,
+                                      const InputDataT& query_data) {
   if(pairs.empty()) {
     return startree_empty_match_result();
   }
@@ -217,6 +220,83 @@ std::vector<startree::PairRecord> run_query_search(const startree::InputData& ta
   return flatten_pair_chunks(per_block);
 }
 
+// ---- anchored mode (semi-global) helpers ----
+
+std::vector<std::pair<size_t, size_t>> make_lcp_blocks(const size_t n,
+                                                       const int nthreads) {
+  const size_t workers = static_cast<size_t>(std::max(1, nthreads));
+  const size_t target_block =
+    std::max<size_t>(256, n / (workers * 8 + 1));
+  std::vector<std::pair<size_t, size_t>> blocks;
+  for(size_t begin = 0; begin < n; begin += target_block) {
+    blocks.emplace_back(begin, std::min(n, begin + target_block));
+  }
+  return blocks;
+}
+
+template <int MaxBand, typename TrieType, typename WorkspaceType>
+std::vector<startree::PairRecord> run_anchored_lcp_search_impl(
+    const startree::AnchoredInputData& target_data,
+    const startree::AnchoredInputData& query_data,
+    const startree::SearchParams& params,
+    const int nthreads,
+    const bool lower_triangle) {
+  const TrieType trie =
+    startree::anchored::build_trie<TrieType>(target_data.target_codes);
+  const auto blocks = make_lcp_blocks(query_data.query_codes.size(), nthreads);
+  std::vector<std::vector<startree::PairRecord>> per_block(blocks.size());
+
+  do_parallel_for([&](std::size_t begin, std::size_t end) {
+    for(std::size_t block_id = begin; block_id < end; ++block_id) {
+      WorkspaceType ws;
+      trie.search_batch_lcp(query_data.query_codes,
+                            params,
+                            blocks[block_id].first,
+                            blocks[block_id].second,
+                            &per_block[block_id],
+                            &ws,
+                            lower_triangle);
+    }
+  }, 0, blocks.size(), 1, nthreads);
+
+  return flatten_pair_chunks(per_block);
+}
+
+template <int MaxBand>
+std::vector<startree::PairRecord> run_anchored_lcp_search_scored(
+    const startree::AnchoredInputData& target_data,
+    const startree::AnchoredInputData& query_data,
+    const startree::SearchParams& params,
+    const int nthreads,
+    const bool lower_triangle) {
+  if(params.custom_cost) {
+    return run_anchored_lcp_search_impl<
+      MaxBand,
+      startree::radix::AnchoredCustomTrie<MaxBand>,
+      startree::radix::AnchoredCustomWorkspace<MaxBand>
+    >(target_data, query_data, params, nthreads, lower_triangle);
+  }
+
+  return run_anchored_lcp_search_impl<
+    MaxBand,
+    startree::radix::AnchoredStandardTrie<MaxBand>,
+    startree::radix::AnchoredStandardWorkspace<MaxBand>
+  >(target_data, query_data, params, nthreads, lower_triangle);
+}
+
+std::vector<startree::PairRecord> run_anchored_lcp_search(
+    const startree::AnchoredInputData& target_data,
+    const startree::AnchoredInputData& query_data,
+    const startree::SearchParams& params,
+    const int nthreads,
+    const bool lower_triangle) {
+  return startree::anchored::dispatch_band(params, [&](auto band) {
+    return run_anchored_lcp_search_scored<decltype(band)::value>(
+      target_data, query_data, params, nthreads, lower_triangle
+    );
+  });
+}
+
 } // namespace
 
 // [[Rcpp::export(rng = false)]]
@@ -328,4 +408,106 @@ DataFrame StarTree_search(StarTreeRXPtr xp,
   params.include_zero = true;
   const auto pairs = run_query_search(target_data, query_data, params, nthreads, xp->hamming);
   return startree_pairs_to_dataframe(pairs, target_data, query_data);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// AnchoredStarTree R functions (star_tree mode == "anchored")
+
+// [[Rcpp::export(rng = false)]]
+AnchoredStarTreeRXPtr AnchoredStarTree_create(CharacterVector sequences,
+                                              const int max_distance,
+                                              const int mismatch_cost = 1,
+                                              const int gap_cost = 1,
+                                              const int nthreads = 1,
+                                              const bool show_progress = false) {
+  if(show_progress) {
+    Rcpp::warning("show_progress is not currently implemented for StarTree anchored mode");
+  }
+  if(nthreads < 1) {
+    throw std::runtime_error("nthreads must be a single positive integer");
+  }
+
+  auto raw_sequences = character_vector_to_strings(sequences);
+  validate_star_sequences(raw_sequences, "sequences");
+  validate_star_params(max_distance, mismatch_cost, gap_cost);
+  auto ptr = std::make_unique<AnchoredStarTreeR>();
+  ptr->data = startree::make_anchored_input_data(std::move(raw_sequences), true);
+  ptr->sequences.reserve(ptr->data.seqs.size());
+  for(const auto& seq : ptr->data.seqs) {
+    ptr->sequences.push_back(seq.seq);
+  }
+  ptr->params = startree::make_search_params(max_distance, mismatch_cost, gap_cost, false);
+  ptr->nthreads = nthreads;
+  ptr->self_pairs =
+    run_anchored_lcp_search(ptr->data, ptr->data, ptr->params, nthreads, true);
+  return AnchoredStarTreeRXPtr(ptr.release(), true);
+}
+
+// [[Rcpp::export(rng = false)]]
+DataFrame AnchoredStarTree_self_search(CharacterVector sequences,
+                                       const int max_distance,
+                                       const int mismatch_cost = 1,
+                                       const int gap_cost = 1,
+                                       const int nthreads = 1,
+                                       const bool show_progress = false) {
+  if(show_progress) {
+    Rcpp::warning("show_progress is not currently implemented for StarTree anchored mode");
+  }
+  if(nthreads < 1) {
+    throw std::runtime_error("nthreads must be a single positive integer");
+  }
+
+  auto raw_sequences = character_vector_to_strings(sequences);
+  validate_star_sequences(raw_sequences, "sequences");
+  validate_star_params(max_distance, mismatch_cost, gap_cost);
+  const startree::AnchoredInputData data =
+    startree::make_anchored_input_data(std::move(raw_sequences), true);
+  const startree::SearchParams params =
+    startree::make_search_params(max_distance, mismatch_cost, gap_cost, false);
+  const auto pairs = run_anchored_lcp_search(data, data, params, nthreads, true);
+  return startree_pairs_to_dataframe(pairs, data, data);
+}
+
+// [[Rcpp::export(rng = false)]]
+double AnchoredStarTree_size(AnchoredStarTreeRXPtr xp) {
+  return static_cast<double>(xp->data.seqs.size());
+}
+
+// [[Rcpp::export(rng = false)]]
+CharacterVector AnchoredStarTree_to_vector(AnchoredStarTreeRXPtr xp) {
+  CharacterVector out(xp->data.seqs.size());
+  for(size_t i = 0; i < xp->data.seqs.size(); ++i) {
+    SET_STRING_ELT(out, checked_r_xlen(i),
+                   string_to_charsxp(xp->data.seqs[i].seq));
+  }
+  return out;
+}
+
+// [[Rcpp::export(rng = false)]]
+DataFrame AnchoredStarTree_result(AnchoredStarTreeRXPtr xp) {
+  return startree_pairs_to_dataframe(xp->self_pairs, xp->data, xp->data);
+}
+
+// [[Rcpp::export(rng = false)]]
+DataFrame AnchoredStarTree_search(AnchoredStarTreeRXPtr xp,
+                                  CharacterVector query,
+                                  const int nthreads = 1,
+                                  const bool show_progress = false) {
+  if(show_progress) {
+    Rcpp::warning("show_progress is not currently implemented for StarTree anchored mode");
+  }
+  if(nthreads < 1) {
+    throw std::runtime_error("nthreads must be a single positive integer");
+  }
+  if(Rf_xlength(query) == 0) {
+    return startree_empty_match_result();
+  }
+
+  auto raw_query = character_vector_to_strings(query);
+  validate_star_sequences(raw_query, "query");
+  const startree::AnchoredInputData query_data =
+    startree::make_anchored_input_data(std::move(raw_query), false, true);
+  const auto pairs =
+    run_anchored_lcp_search(xp->data, query_data, xp->params, nthreads, false);
+  return startree_pairs_to_dataframe(pairs, xp->data, query_data);
 }
