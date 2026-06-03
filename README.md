@@ -46,9 +46,11 @@ checking every sequence against every other sequence.
 - **StarTree** (`star_tree()`): a specialized DNA similarity join class.
   It is a modified version of the Starcode all-pairs search algorithm
   from Zorita, Cuscó, and Filion (2015), adapted to operate over a radix
-  trie rather than being a direct reimplementation. For small
-  edit-distance DNA self-joins it typically outperforms the other two
-  classes (see the benchmark below).
+  trie rather than being a direct reimplementation. It supports fixed
+  global/Levenshtein joins, fixed anchored joins (`mode = "anchored"`),
+  and fixed Hamming joins (`mode = "hamming"`). For small edit-distance
+  DNA self-joins it typically outperforms the other two classes (see the
+  benchmark below).
 
 `dist_search()` is a convenience wrapper around these classes. It can
 search for similarity between `query` and `target`, or within `query`
@@ -297,10 +299,111 @@ dist_search(c("ACGT", "ACGA", "AAAA", "AAAT"),
     ## 1  AAAT   AAAA        1
     ## 2  ACGT   ACGA        1
 
-StarTree only supports global/Levenshtein-style DNA alignment with `A`,
-`C`, `G`, `T`, and `N`. It does not support custom substitution
-matrices, affine gaps, Hamming search, anchored search, or per-query
-distance thresholds.
+StarTree supports global/Levenshtein-style, anchored, and Hamming DNA
+alignment with `A`, `C`, `G`, `T`, and `N`. It does not support custom
+substitution matrices, affine gaps, or per-query distance thresholds.
+Alignment parameters are fixed when the tree is built; `align_search()`
+only accepts `query`, `nthreads`, and `show_progress` for `star_tree`
+objects.
+
+### StarTree anchored mode for fixed anchored self-joins
+
+`star_tree(..., mode = "anchored")` is the fixed-tree equivalent for
+anchored alignment. It is intended for DNA sets where every sequence
+starts at the same biological position but may end at different
+positions. The construction-time self-join returns each unordered pair
+once, and additional query sets can be searched against the same fixed
+targets.
+
+``` r
+ast <- star_tree(c("ACGT", "ACG", "AAAA", "AA"),
+                 max_distance = 1,
+                 mode = "anchored",
+                 mismatch_cost = 1,
+                 gap_cost = 1,
+                 nthreads = 2)
+result(ast)
+```
+
+    ##   query target distance query_size target_size
+    ## 1  AAAA     AA        0          2           2
+    ## 2   ACG     AA        1          1           2
+    ## 3  ACGT     AA        1          1           2
+    ## 4  ACGT    ACG        0          3           3
+
+``` r
+align_search(ast, c("ACGT", "AA"))
+```
+
+    ##   query target distance query_size target_size
+    ## 1    AA     AA        0          2           2
+    ## 2    AA   AAAA        0          2           2
+    ## 3    AA    ACG        1          2           1
+    ## 4    AA   ACGT        1          2           1
+    ## 5  ACGT     AA        1          1           2
+    ## 6  ACGT    ACG        0          3           3
+    ## 7  ACGT   ACGT        0          4           4
+
+``` r
+dist_search(c("ACGT", "ACG", "AAAA", "AA"),
+            max_distance = 1,
+            mode = "anchored",
+            tree_class = "StarTree")
+```
+
+    ##   query target distance query_size target_size
+    ## 1  AAAA     AA        0          2           2
+    ## 2   ACG     AA        1          1           2
+    ## 3  ACGT     AA        1          1           2
+    ## 4  ACGT    ACG        0          3           3
+
+Anchored StarTree mode supports scalar mismatch and linear gap costs
+through `mismatch_cost` and `gap_cost`. It does not support custom
+substitution matrices, affine gaps, or per-query distance thresholds.
+
+### StarTree Hamming mode for fixed same-length joins
+
+`star_tree(..., mode = "hamming")` is a substitution-only fixed join:
+only sequences of the same length can match, and `max_distance` is the
+maximum number of mismatched positions. Because no insertions or
+deletions are considered, `mismatch_cost` and `gap_cost` do not apply,
+and it is typically much faster than global mode on the same data.
+
+``` r
+hst <- star_tree(c("ACGT", "ACGA", "TCGT", "ACG"),
+                 max_distance = 1,
+                 mode = "hamming",
+                 nthreads = 2)
+result(hst)
+```
+
+    ##   query target distance
+    ## 1  ACGT   ACGA        1
+    ## 2  TCGT   ACGT        1
+
+``` r
+align_search(hst, c("ACGT", "TTGT"))
+```
+
+    ##   query target distance
+    ## 1  ACGT   ACGA        1
+    ## 2  ACGT   ACGT        0
+    ## 3  ACGT   TCGT        1
+    ## 4  TTGT   TCGT        1
+
+``` r
+dist_search(c("ACGT", "ACGA", "TCGT", "ACG"),
+            max_distance = 1,
+            mode = "hamming",
+            tree_class = "StarTree")
+```
+
+    ##   query target distance
+    ## 1  ACGT   ACGA        1
+    ## 2  TCGT   ACGT        1
+
+`N` is treated as a regular base that mismatches every base, including
+another `N`, so two aligned `N` positions still count as a mismatch.
 
 ### References
 

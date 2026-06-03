@@ -5,7 +5,10 @@
 // described by Eduard Zorita, Pol Cusco, and Guillaume J. Filion (2015), doi:10.1093/bioinformatics/btv053, adapted to operate over a radix trie. The algorithm is credited to the Starcode authors; this package provides a separate, modified implementation.
 
 #include "startree/common.h"
+#include "startree/anchored_custom_trie.h"
+#include "startree/anchored_standard_trie.h"
 #include "startree/custom_trie.h"
+#include "startree/hamming_trie.h"
 #include "startree/prefilter.h"
 #include "startree/standard_trie.h"
 
@@ -390,6 +393,35 @@ inline void process_target_block_query(const std::vector<Sequence>& target_seqs,
       return;
   }
 }
+
+namespace anchored {
+
+template <typename TrieType>
+inline TrieType build_trie(const std::vector<std::string>& target_codes) {
+  TrieType trie;
+  trie.reserve_nodes(1 + 2 * target_codes.size());
+  for(size_t i = 0; i < target_codes.size(); ++i) {
+    trie.insert_path(target_codes[i], static_cast<uint32_t>(i));
+  }
+  trie.compact_search_order();
+  return trie;
+}
+
+template <typename Fn>
+decltype(auto) dispatch_band(const SearchParams& params, Fn&& fn) {
+  switch(std::max(1, params.band_radius)) {
+    case 1: return fn(std::integral_constant<int, 1>{});
+    case 2: return fn(std::integral_constant<int, 2>{});
+    case 3: return fn(std::integral_constant<int, 3>{});
+    case 4: return fn(std::integral_constant<int, 4>{});
+    case 5: return fn(std::integral_constant<int, 5>{});
+    case 6: return fn(std::integral_constant<int, 6>{});
+    case 7: return fn(std::integral_constant<int, 7>{});
+    default: return fn(std::integral_constant<int, kMaxTau>{});
+  }
+}
+
+}  // namespace anchored
 
 }  // namespace startree
 

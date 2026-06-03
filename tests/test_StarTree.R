@@ -5,11 +5,25 @@ if(requireNamespace("seqtrie", quietly = TRUE)) {
   library(seqtrie)
 
   IS_LOCAL <- Sys.getenv("IS_LOCAL") != ""
-  NTHREADS <- ifelse(IS_LOCAL, 4L, 2L)
+  NTHREADS <- 2L
+
+  # CRAN runs at 2 threads. Locally, vary the thread count per fuzz iteration to
+  # surface any thread-count-dependent behaviour in the parallel self-join.
+  fuzz_nthreads <- function() if(IS_LOCAL) sample(2:6, 1L) else 2L
 
   sort_result <- function(x) {
     x <- as.data.frame(x, stringsAsFactors = FALSE)
     x <- x[, c("query", "target", "distance"), drop = FALSE]
+    if(nrow(x) > 0L) {
+      x <- x[do.call(order, x), , drop = FALSE]
+    }
+    rownames(x) <- NULL
+    x
+  }
+
+  sort_anchored_result <- function(x) {
+    x <- as.data.frame(x, stringsAsFactors = FALSE)
+    x <- x[, c("query", "target", "distance", "query_size", "target_size"), drop = FALSE]
     if(nrow(x) > 0L) {
       x <- x[do.call(order, x), , drop = FALSE]
     }
@@ -167,7 +181,8 @@ if(requireNamespace("seqtrie", quietly = TRUE)) {
                               max_distance,
                               compare_class,
                               mismatch_cost = 1L,
-                              gap_cost = 1L) {
+                              gap_cost = 1L,
+                              nthreads = NTHREADS) {
     sequences <- normalize_unique(sequences)
     query <- toupper(query)
     cost_matrix <- startree_cost_matrix(sequences, query, mismatch_cost)
@@ -177,7 +192,7 @@ if(requireNamespace("seqtrie", quietly = TRUE)) {
       max_distance = max_distance,
       mismatch_cost = mismatch_cost,
       gap_cost = gap_cost,
-      nthreads = NTHREADS
+      nthreads = nthreads
     )
 
     expected_self <- dist_search(
@@ -218,7 +233,7 @@ if(requireNamespace("seqtrie", quietly = TRUE)) {
       nthreads = NTHREADS,
       show_progress = FALSE
     )
-    actual_query <- sort_result(align_search(st, query))
+    actual_query <- sort_result(align_search(st, query, nthreads = nthreads))
     expected_query <- sort_result(expected_query)
     if(!identical(actual_query, expected_query)) {
       print(list(
@@ -237,6 +252,163 @@ if(requireNamespace("seqtrie", quietly = TRUE)) {
       dput(sequences)
       dput(query)
       stop("StarTree query-search fuzz mismatch")
+    }
+  }
+
+  check_anchored_fuzz_case <- function(sequences,
+                                       query,
+                                       max_distance,
+                                       compare_class,
+                                       mismatch_cost = 1L,
+                                       gap_cost = 1L,
+                                       nthreads = NTHREADS) {
+    sequences <- normalize_unique(sequences)
+    query <- toupper(query)
+    cost_matrix <- startree_cost_matrix(sequences, query, mismatch_cost)
+
+    st <- star_tree(
+      sequences,
+      max_distance = max_distance,
+      mode = "anchored",
+      mismatch_cost = mismatch_cost,
+      gap_cost = gap_cost,
+      nthreads = nthreads
+    )
+
+    expected_self <- dist_search(
+      sequences,
+      max_distance = max_distance,
+      mode = "anchored",
+      cost_matrix = cost_matrix,
+      gap_cost = gap_cost,
+      tree_class = compare_class,
+      nthreads = NTHREADS,
+      show_progress = FALSE
+    )
+    actual_self <- canon_pairs(result(st))
+    expected_self <- canon_pairs(expected_self)
+    if(!identical(actual_self, expected_self)) {
+      print(list(
+        comparison = "anchored self",
+        compare_class = compare_class,
+        max_distance = max_distance,
+        mismatch_cost = mismatch_cost,
+        gap_cost = gap_cost,
+        n_sequences = length(sequences)
+      ))
+      print(head(setdiff(actual_self, expected_self), 20L))
+      print(head(setdiff(expected_self, actual_self), 20L))
+      dput(sequences)
+      stop("anchored StarTree self-search fuzz mismatch")
+    }
+
+    expected_query <- dist_search(
+      query,
+      sequences,
+      max_distance = max_distance,
+      mode = "anchored",
+      cost_matrix = cost_matrix,
+      gap_cost = gap_cost,
+      tree_class = compare_class,
+      nthreads = NTHREADS,
+      show_progress = FALSE
+    )
+    actual_query <- sort_anchored_result(align_search(st, query, nthreads = nthreads))
+    expected_query <- sort_anchored_result(expected_query)
+    if(!identical(actual_query, expected_query)) {
+      print(list(
+        comparison = "anchored query",
+        compare_class = compare_class,
+        max_distance = max_distance,
+        mismatch_cost = mismatch_cost,
+        gap_cost = gap_cost,
+        n_sequences = length(sequences),
+        n_query = length(query)
+      ))
+      actual_key <- do.call(paste, c(actual_query, sep = "\t"))
+      expected_key <- do.call(paste, c(expected_query, sep = "\t"))
+      print(head(setdiff(actual_key, expected_key), 20L))
+      print(head(setdiff(expected_key, actual_key), 20L))
+      dput(sequences)
+      dput(query)
+      stop("anchored StarTree query-search fuzz mismatch")
+    }
+  }
+
+  # Hamming oracle: Levenshtein with an N-always-mismatch cost matrix and a gap
+  # so costly that no indel can fit within max_distance. For equal-length pairs
+  # this is exactly substitution-only Hamming with N mismatching even itself;
+  # unequal-length pairs need >= 1 gap and are therefore excluded.
+  check_hamming_fuzz_case <- function(sequences,
+                                      query,
+                                      max_distance,
+                                      compare_class,
+                                      nthreads = NTHREADS) {
+    sequences <- normalize_unique(sequences)
+    query <- toupper(query)
+    cost_matrix <- startree_cost_matrix(sequences, query, 1L)
+    big_gap <- max_distance + 1L
+
+    st <- star_tree(
+      sequences,
+      max_distance = max_distance,
+      mode = "hamming",
+      nthreads = nthreads
+    )
+
+    expected_self <- dist_search(
+      sequences,
+      max_distance = max_distance,
+      mode = "levenshtein",
+      cost_matrix = cost_matrix,
+      gap_cost = big_gap,
+      tree_class = compare_class,
+      nthreads = NTHREADS,
+      show_progress = FALSE
+    )
+    actual_self <- canon_pairs(result(st))
+    expected_self <- canon_pairs(expected_self)
+    if(!identical(actual_self, expected_self)) {
+      print(list(
+        comparison = "hamming self",
+        compare_class = compare_class,
+        max_distance = max_distance,
+        n_sequences = length(sequences)
+      ))
+      print(head(setdiff(actual_self, expected_self), 20L))
+      print(head(setdiff(expected_self, actual_self), 20L))
+      dput(sequences)
+      stop("hamming StarTree self-search fuzz mismatch")
+    }
+
+    expected_query <- dist_search(
+      query,
+      sequences,
+      max_distance = max_distance,
+      mode = "levenshtein",
+      cost_matrix = cost_matrix,
+      gap_cost = big_gap,
+      tree_class = compare_class,
+      nthreads = NTHREADS,
+      show_progress = FALSE
+    )
+    actual_query <- sort_result(align_search(st, query, nthreads = nthreads))
+    expected_query <- sort_result(expected_query)
+    if(!identical(actual_query, expected_query)) {
+      print(list(
+        comparison = "hamming query",
+        compare_class = compare_class,
+        max_distance = max_distance,
+        n_sequences = length(sequences),
+        n_query = length(query)
+      ))
+      actual_key <- do.call(paste, c(actual_query, sep = "\t"))
+      expected_key <- do.call(paste, c(expected_query, sep = "\t"))
+      print(head(setdiff(actual_key, expected_key), 20L))
+      print(head(setdiff(expected_key, actual_key), 20L))
+      dput(sequences)
+      dput(query)
+      stop("hamming StarTree query-search fuzz mismatch")
     }
   }
 
@@ -314,7 +486,14 @@ if(requireNamespace("seqtrie", quietly = TRUE)) {
   stopifnot(tree_r6$size() == size(tree))
   stopifnot(identical(tree_r6$to_vector(), to_vector(tree)))
   stopifnot(identical(canon_pairs(tree_r6$result()), canon_pairs(result(tree))))
-  stopifnot(identical(sort_result(tree_r6$search(query)), expected_search(query, target, 2L)))
+  stopifnot(identical(
+    sort_result(tree_r6$search(query, nthreads = NTHREADS, show_progress = FALSE)),
+    expected_search(query, target, 2L)
+  ))
+  stopifnot(identical(
+    sort_result(tree_r6$align_search(query, nthreads = NTHREADS, show_progress = FALSE)),
+    expected_search(query, target, 2L)
+  ))
   stopifnot(is.null(tree_r6$insert))
   stopifnot(is.null(tree_r6$erase))
 
@@ -326,6 +505,211 @@ if(requireNamespace("seqtrie", quietly = TRUE)) {
   stopifnot(identical(
     sort_result(dist_search(query, target, max_distance = 2L, tree_class = "star_tree", nthreads = NTHREADS)),
     expected_search(query, target, 2L)
+  ))
+
+  print("Checking StarTree hamming-mode self and query searches")
+  hamming_target <- c("ACGT", "ACGA", "ACGG", "TTTT", "ACG", "ACGTT", "NNNN", "ACGN")
+  hamming_cost_matrix <- startree_cost_matrix(hamming_target, character(), 1L)
+  hamming_tree <- star_tree(
+    hamming_target,
+    max_distance = 2L,
+    mode = "hamming",
+    nthreads = NTHREADS
+  )
+  hamming_expected_self <- dist_search(
+    normalize_unique(hamming_target),
+    max_distance = 2L,
+    mode = "levenshtein",
+    cost_matrix = hamming_cost_matrix,
+    gap_cost = 3L,
+    tree_class = "RadixTree",
+    nthreads = NTHREADS
+  )
+  stopifnot(identical(S7::prop(hamming_tree, "mode"), "hamming"))
+  stopifnot(size(hamming_tree) == length(normalize_unique(hamming_target)))
+  stopifnot(identical(to_vector(hamming_tree), normalize_unique(hamming_target)))
+  stopifnot(identical(canon_pairs(result(hamming_tree)), canon_pairs(hamming_expected_self)))
+
+  hamming_query <- c("ACGT", "ACG", "ACGTT", "NNNN", "TCGA", NA_character_)
+  hamming_expected_query <- dist_search(
+    hamming_query,
+    normalize_unique(hamming_target),
+    max_distance = 2L,
+    mode = "levenshtein",
+    cost_matrix = hamming_cost_matrix,
+    gap_cost = 3L,
+    tree_class = "RadixTree",
+    nthreads = NTHREADS
+  )
+  stopifnot(identical(
+    sort_result(align_search(hamming_tree, hamming_query)),
+    sort_result(hamming_expected_query)
+  ))
+
+  print("Checking StarTree hamming-mode R6 wrapper and dist_search path")
+  hamming_tree_r6 <- StarTree$new(
+    hamming_target,
+    max_distance = 2L,
+    mode = "hamming",
+    nthreads = NTHREADS
+  )
+  stopifnot(identical(hamming_tree_r6$mode, "hamming"))
+  stopifnot(identical(canon_pairs(hamming_tree_r6$result()), canon_pairs(result(hamming_tree))))
+  stopifnot(identical(
+    sort_result(hamming_tree_r6$align_search(hamming_query, nthreads = NTHREADS, show_progress = FALSE)),
+    sort_result(hamming_expected_query)
+  ))
+  stopifnot(identical(
+    canon_pairs(dist_search(hamming_target, max_distance = 2L, mode = "hamming",
+                            tree_class = "StarTree", nthreads = NTHREADS)),
+    canon_pairs(hamming_expected_self)
+  ))
+
+  print("Checking StarTree hamming N-vs-N mismatch")
+  # N mismatches every base including another N. "NACG" and "NTCG" therefore
+  # differ at the shared N position and the A/T position: distance 2, not 1.
+  nvn_target <- c("NACG", "NTCG")
+  stopifnot(identical(
+    canon_pairs(result(star_tree(nvn_target, max_distance = 1L, mode = "hamming", nthreads = NTHREADS))),
+    character()
+  ))
+  stopifnot(identical(
+    canon_pairs(result(star_tree(nvn_target, max_distance = 2L, mode = "hamming", nthreads = NTHREADS))),
+    "NACG\tNTCG\t2"
+  ))
+
+  print("Checking StarTree hamming mode against RadixTree and RadixForest")
+  set.seed(40517)
+  for(i in seq_len(40L)) {
+    compare_class <- if(i %% 2L == 1L) "RadixTree" else "RadixForest"
+    sequences <- unique_random_dna(sample(20:120, 1L), max_len = sample(8:18, 1L))
+    query_fuzz <- random_dna(sample(10:40, 1L), max_len = sample(8:18, 1L))
+    check_hamming_fuzz_case(
+      sequences = sequences,
+      query = query_fuzz,
+      max_distance = sample(0:8, 1L),
+      compare_class = compare_class,
+      nthreads = fuzz_nthreads()
+    )
+  }
+
+  print("Checking StarTree anchored-mode unit-cost self and query searches")
+  anchored_target <- c("ACGT", "ACG", "ACGG", "AAAA", "AA", "acgt", "NNNN", "NNNA")
+  anchored_cost_matrix <- startree_cost_matrix(anchored_target, character(), 1L)
+  anchored_tree <- star_tree(
+    anchored_target,
+    max_distance = 2L,
+    mode = "anchored",
+    nthreads = NTHREADS
+  )
+  anchored_expected_self <- dist_search(
+    normalize_unique(anchored_target),
+    max_distance = 2L,
+    mode = "anchored",
+    cost_matrix = anchored_cost_matrix,
+    gap_cost = 1L,
+    tree_class = "RadixTree",
+    nthreads = NTHREADS
+  )
+  stopifnot(size(anchored_tree) == length(normalize_unique(anchored_target)))
+  stopifnot(identical(S7::prop(anchored_tree, "mode"), "anchored"))
+  stopifnot(identical(sort(to_vector(anchored_tree)), sort(normalize_unique(anchored_target))))
+  stopifnot(identical(canon_pairs(result(anchored_tree)), canon_pairs(anchored_expected_self)))
+
+  anchored_query <- c("ACGT", "AC", "AAAAA", "NNNN", NA_character_)
+  anchored_expected_query <- dist_search(
+    anchored_query,
+    normalize_unique(anchored_target),
+    max_distance = 2L,
+    mode = "anchored",
+    cost_matrix = anchored_cost_matrix,
+    gap_cost = 1L,
+    tree_class = "RadixTree",
+    nthreads = NTHREADS
+  )
+  stopifnot(identical(
+    sort_anchored_result(align_search(anchored_tree, anchored_query)),
+    sort_anchored_result(anchored_expected_query)
+  ))
+
+  print("Checking StarTree anchored-mode weighted mismatch and gap costs")
+  anchored_weighted_target <- c("ACGT", "ACG", "AGGT", "TTTT", "ACGTT", "ANNN")
+  anchored_weighted_cost_matrix <- startree_cost_matrix(anchored_weighted_target, character(), 2L)
+  anchored_weighted_tree <- star_tree(
+    anchored_weighted_target,
+    max_distance = 4L,
+    mode = "anchored",
+    mismatch_cost = 2L,
+    gap_cost = 2L,
+    nthreads = NTHREADS
+  )
+  anchored_weighted_expected_self <- dist_search(
+    normalize_unique(anchored_weighted_target),
+    max_distance = 4L,
+    mode = "anchored",
+    cost_matrix = anchored_weighted_cost_matrix,
+    gap_cost = 2L,
+    tree_class = "RadixTree",
+    nthreads = NTHREADS
+  )
+  stopifnot(identical(
+    canon_pairs(result(anchored_weighted_tree)),
+    canon_pairs(anchored_weighted_expected_self)
+  ))
+  anchored_weighted_expected_query <- dist_search(
+    c("ACGT", "ACGG", "AC", "AN"),
+    normalize_unique(anchored_weighted_target),
+    max_distance = 4L,
+    mode = "anchored",
+    cost_matrix = anchored_weighted_cost_matrix,
+    gap_cost = 2L,
+    tree_class = "RadixTree",
+    nthreads = NTHREADS
+  )
+  stopifnot(identical(
+    sort_anchored_result(align_search(anchored_weighted_tree, c("ACGT", "ACGG", "AC", "AN"))),
+    sort_anchored_result(anchored_weighted_expected_query)
+  ))
+
+  print("Checking StarTree anchored-mode R6 wrapper and dist_search path")
+  anchored_tree_r6 <- StarTree$new(
+    anchored_target,
+    max_distance = 2L,
+    mode = "anchored",
+    nthreads = NTHREADS
+  )
+  stopifnot(anchored_tree_r6$size() == size(anchored_tree))
+  stopifnot(identical(anchored_tree_r6$mode, "anchored"))
+  stopifnot(identical(sort(anchored_tree_r6$to_vector()), sort(to_vector(anchored_tree))))
+  stopifnot(identical(canon_pairs(anchored_tree_r6$result()), canon_pairs(result(anchored_tree))))
+  stopifnot(identical(
+    sort_anchored_result(anchored_tree_r6$search(
+      anchored_query,
+      nthreads = NTHREADS,
+      show_progress = FALSE
+    )),
+    sort_anchored_result(anchored_expected_query)
+  ))
+  stopifnot(identical(
+    sort_anchored_result(anchored_tree_r6$align_search(
+      anchored_query,
+      nthreads = NTHREADS,
+      show_progress = FALSE
+    )),
+    sort_anchored_result(anchored_expected_query)
+  ))
+  stopifnot(is.null(anchored_tree_r6$insert))
+  stopifnot(is.null(anchored_tree_r6$erase))
+  stopifnot(identical(
+    canon_pairs(dist_search(anchored_target, max_distance = 2L, mode = "anchored",
+                            tree_class = "StarTree", nthreads = NTHREADS)),
+    canon_pairs(anchored_expected_self)
+  ))
+  stopifnot(identical(
+    sort_anchored_result(dist_search(anchored_query, anchored_target, max_distance = 2L,
+                                     mode = "anchored", tree_class = "star_tree",
+                                     nthreads = NTHREADS)),
+    sort_anchored_result(anchored_expected_query)
   ))
 
   print("Checking StarTree against alternating RadixTree and RadixForest")
@@ -342,7 +726,8 @@ if(requireNamespace("seqtrie", quietly = TRUE)) {
       max_distance = sample(0:(8L * min(mismatch_cost, gap_cost)), 1L),
       compare_class = compare_class,
       mismatch_cost = mismatch_cost,
-      gap_cost = gap_cost
+      gap_cost = gap_cost,
+      nthreads = fuzz_nthreads()
     )
   }
 
@@ -365,9 +750,92 @@ if(requireNamespace("seqtrie", quietly = TRUE)) {
       max_distance = sample(1:(4L * min(mismatch_cost, gap_cost)), 1L),
       compare_class = compare_class,
       mismatch_cost = mismatch_cost,
-      gap_cost = gap_cost
+      gap_cost = gap_cost,
+      nthreads = fuzz_nthreads()
     )
   }
+
+  # RadixForest does not implement anchored mode, so anchored uses RadixTree as
+  # the only differential oracle.
+  print("Checking StarTree anchored mode against RadixTree")
+  set.seed(81227)
+  for(i in seq_len(40L)) {
+    mismatch_cost <- sample(1:4, 1L)
+    gap_cost <- sample(1:4, 1L)
+    sequences <- unique_random_dna(sample(20:100, 1L), max_len = sample(8:18, 1L))
+    query_fuzz <- random_dna(sample(10:40, 1L), max_len = sample(8:18, 1L))
+    check_anchored_fuzz_case(
+      sequences = sequences,
+      query = query_fuzz,
+      max_distance = sample(0:(8L * min(mismatch_cost, gap_cost)), 1L),
+      compare_class = "RadixTree",
+      mismatch_cost = mismatch_cost,
+      gap_cost = gap_cost,
+      nthreads = fuzz_nthreads()
+    )
+  }
+
+  print("Checking StarTree anchored mode at scale")
+  # Anchored has no prefilter, so segment length is irrelevant; what needs scale
+  # is the LCP-reuse and lower-triangle prune logic against clustered data with
+  # length-varied queries (the case anchored mode targets).
+  set.seed(60413)
+  for(i in seq_len(4L)) {
+    mismatch_cost <- sample(1:3, 1L)
+    gap_cost <- sample(1:3, 1L)
+    sequence_len <- sample(20:30, 1L)
+    sequences <- stress_dna(sample(2000:4000, 1L), len = sequence_len,
+                            cluster_count = sample(300:800, 1L))
+    query_fuzz <- c(
+      sample(sequences, 100L),
+      vapply(sample(sequences, 100L), mutate_dna, character(1L), edits = 1L),
+      random_dna(100L, min_len = sequence_len - 2L, max_len = sequence_len + 2L)
+    )
+    check_anchored_fuzz_case(
+      sequences = sequences,
+      query = query_fuzz,
+      max_distance = sample(1:(3L * min(mismatch_cost, gap_cost)), 1L),
+      compare_class = "RadixTree",
+      mismatch_cost = mismatch_cost,
+      gap_cost = gap_cost,
+      nthreads = fuzz_nthreads()
+    )
+  }
+
+  print("Checking StarTree prefilter with large segments (K > 14)")
+  # Long sequences with small tau give segments far longer than the old K=14
+  # bitmap cap (and many beyond 32), exercising the uncapped wyhash prefilter on
+  # both the unit-cost and weighted paths, plus the hamming trie.
+  set.seed(99001)
+  for(i in seq_len(10L)) {
+    compare_class <- if(i %% 2L == 1L) "RadixTree" else "RadixForest"
+    seq_length <- sample(64:90, 1L)
+    n_sequences <- sample(1500:2500, 1L)
+    cluster_count <- sample(150:400, 1L)
+    sequences <- stress_dna(n_sequences, len = seq_length, cluster_count = cluster_count)
+    query_fuzz <- c(
+      sample(sequences, 50L),
+      vapply(sample(sequences, 50L), mutate_dna, character(1L), edits = 2L),
+      random_dna(80L, min_len = seq_length, max_len = seq_length)
+    )
+    max_distance <- sample(1:3, 1L)
+    nthreads <- fuzz_nthreads()
+    check_fuzz_case(sequences, query_fuzz, max_distance, compare_class,
+                    nthreads = nthreads)
+    check_fuzz_case(sequences, query_fuzz, max_distance, compare_class,
+                    mismatch_cost = 2L, gap_cost = 3L, nthreads = nthreads)
+    check_hamming_fuzz_case(sequences, query_fuzz, max_distance, compare_class,
+                            nthreads = nthreads)
+  }
+
+  print("Checking StarTree at the tau = 8 boundary")
+  # tau = max_distance / min(mismatch_cost, gap_cost); 8 is the maximum allowed.
+  # Pin it deterministically for the global and anchored paths.
+  set.seed(8088)
+  boundary_seqs <- unique_random_dna(80L, min_len = 16L, max_len = 20L)
+  boundary_query <- random_dna(40L, min_len = 16L, max_len = 20L)
+  check_fuzz_case(boundary_seqs, boundary_query, max_distance = 8L, "RadixTree")
+  check_anchored_fuzz_case(boundary_seqs, boundary_query, max_distance = 8L, "RadixTree")
 
   print("Checking StarTree restrictions")
   expect_error_message(star_tree(c("ACGT", "AXGT"), max_distance = 1L), "DNA")
@@ -380,12 +848,36 @@ if(requireNamespace("seqtrie", quietly = TRUE)) {
     "max_distance"
   )
   expect_error_message(align_search(tree, paste(rep("A", 1024L), collapse = "")), "sequence length")
-  expect_error_message(align_search(tree, "ACGT", mode = "hamming"), "global")
+  expect_error_message(align_search(tree, "ACGT", mode = "hamming"), "mode")
+  expect_error_message(align_search(tree, "ACGT", max_distance = 2L), "max_distance")
   expect_error_message(align_search(tree, "ACGT", max_fraction = 0.1), "max_fraction")
-  expect_error_message(align_search(tree, "ACGT", gap_open_cost = 1L), "affine")
+  expect_error_message(align_search(tree, "ACGT", gap_cost = 1L), "gap_cost")
+  expect_error_message(align_search(tree, "ACGT", gap_open_cost = 1L), "gap_open_cost")
   expect_error_message(align_search(tree, "ACGT", lower_triangle = TRUE), "lower_triangle")
-  expect_error_message(align_search(tree, "ACGT", match_mode = "best"), "best")
+  expect_error_message(align_search(tree, "ACGT", match_mode = "best"), "match_mode")
   expect_error_message(dist_search(target, max_fraction = 0.1, tree_class = "StarTree"), "max_fraction")
+
+  print("Checking StarTree anchored-mode restrictions")
+  expect_error_message(star_tree(c("ACGT", "AXGT"), max_distance = 1L, mode = "anchored"), "DNA")
+  expect_error_message(star_tree(c("ACGT", ""), max_distance = 1L, mode = "anchored"), "empty")
+  expect_error_message(star_tree(c("ACGT", NA_character_), max_distance = 1L, mode = "anchored"), "missing")
+  expect_error_message(star_tree(c("ACGT", "ACGA"), max_distance = 9L, mode = "anchored"), "max_distance")
+  expect_error_message(
+    star_tree(c("ACGT", "ACGA"), max_distance = .Machine$integer.max,
+              mode = "anchored", mismatch_cost = .Machine$integer.max,
+              gap_cost = .Machine$integer.max),
+    "max_distance"
+  )
+  expect_error_message(align_search(anchored_tree, paste(rep("A", 1024L), collapse = "")), "sequence length")
+  expect_error_message(align_search(anchored_tree, "ACGT", mode = "global"), "mode")
+  expect_error_message(align_search(anchored_tree, "ACGT", max_distance = 2L), "max_distance")
+  expect_error_message(align_search(anchored_tree, "ACGT", max_fraction = 0.1), "max_fraction")
+  expect_error_message(align_search(anchored_tree, "ACGT", gap_cost = 1L), "gap_cost")
+  expect_error_message(align_search(anchored_tree, "ACGT", gap_open_cost = 1L), "gap_open_cost")
+  expect_error_message(align_search(anchored_tree, "ACGT", lower_triangle = TRUE), "lower_triangle")
+  expect_error_message(align_search(anchored_tree, "ACGT", match_mode = "best"), "match_mode")
+  expect_error_message(dist_search(anchored_target, max_fraction = 0.1,
+                                   mode = "anchored", tree_class = "StarTree"), "max_fraction")
 
   print(Sys.time() - runtime)
 }

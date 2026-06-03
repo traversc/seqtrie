@@ -19,8 +19,6 @@ constexpr int kNoMatch = 6;
 constexpr int kAlphabet = 6;
 constexpr int kMaxSeqLen = 1023;
 constexpr uint32_t kNoSequence = std::numeric_limits<uint32_t>::max();
-constexpr int kMaxLookupK = 14;
-constexpr size_t kMaxLookupBytes = 64ULL * 1024ULL * 1024ULL;
 constexpr int kAutoHeight = -1;
 
 struct Sequence {
@@ -34,6 +32,12 @@ struct InputData {
   std::vector<Sequence> seqs;
   int median_len = 0;
   int height = 0;
+};
+
+struct AnchoredInputData {
+  std::vector<Sequence> seqs;
+  std::vector<std::string> target_codes;
+  std::vector<std::string> query_codes;
 };
 
 struct Hit {
@@ -114,6 +118,32 @@ inline void normalize_sequence_in_place(std::string& seq) {
   for(char& ch : seq) {
     ch = upper_base(static_cast<unsigned char>(ch));
   }
+}
+
+inline std::string make_anchored_target_code(const std::string& seq) {
+  std::string out;
+  out.reserve(seq.size());
+  for(char ch : seq) {
+    out.push_back(static_cast<char>(
+      insert_code(static_cast<unsigned char>(ch))
+    ));
+  }
+  return out;
+}
+
+inline std::string make_anchored_query_code(const std::string& seq) {
+  std::string out;
+  out.reserve(seq.size());
+  for(char ch : seq) {
+    if(ch == 'N' || ch == 'n') {
+      out.push_back(static_cast<char>(kNoMatch));
+    } else {
+      out.push_back(static_cast<char>(
+        insert_code(static_cast<unsigned char>(ch))
+      ));
+    }
+  }
+  return out;
 }
 
 inline std::vector<Block> make_blocks(const std::vector<Sequence>& seqs,
@@ -282,6 +312,84 @@ inline InputData make_input_data(std::vector<std::string> seqs,
 
   return make_input_data_from_sequences(std::move(processed), deduplicate,
                                         height_override);
+}
+
+inline AnchoredInputData make_anchored_input_data_from_sequences(
+    std::vector<Sequence> processed,
+    const bool deduplicate,
+    const bool sort_by_query_code = false) {
+  struct Item {
+    Sequence seq;
+    std::string target_code;
+    std::string query_code;
+  };
+
+  std::vector<Item> items;
+  items.reserve(processed.size());
+  for(Sequence& seq : processed) {
+    normalize_sequence_in_place(seq.seq);
+    Item item;
+    item.target_code = make_anchored_target_code(seq.seq);
+    item.query_code = make_anchored_query_code(seq.seq);
+    item.seq = std::move(seq);
+    items.push_back(std::move(item));
+  }
+
+  std::sort(items.begin(), items.end(),
+            [sort_by_query_code](const Item& a, const Item& b) {
+    const std::string& a_key = sort_by_query_code ? a.query_code : a.target_code;
+    const std::string& b_key = sort_by_query_code ? b.query_code : b.target_code;
+    if(a_key != b_key) {
+      return a_key < b_key;
+    }
+    return a.seq.seq < b.seq.seq;
+  });
+
+  if(deduplicate) {
+    std::vector<Item> unique;
+    unique.reserve(items.size());
+    for(Item& item : items) {
+      if(!unique.empty() && unique.back().seq.seq == item.seq.seq) {
+        unique.back().seq.count += item.seq.count;
+        unique.back().seq.min_input_id =
+          std::min(unique.back().seq.min_input_id, item.seq.min_input_id);
+      } else {
+        unique.push_back(std::move(item));
+      }
+    }
+    items = std::move(unique);
+  }
+
+  AnchoredInputData data;
+  data.seqs.reserve(items.size());
+  data.target_codes.reserve(items.size());
+  data.query_codes.reserve(items.size());
+  for(Item& item : items) {
+    data.target_codes.push_back(std::move(item.target_code));
+    data.query_codes.push_back(std::move(item.query_code));
+    data.seqs.push_back(std::move(item.seq));
+  }
+  return data;
+}
+
+inline AnchoredInputData make_anchored_input_data(
+    std::vector<std::string> seqs,
+    const bool deduplicate,
+    const bool sort_by_query_code = false) {
+  std::vector<Sequence> processed;
+  processed.reserve(seqs.size());
+  uint32_t input_id = 0;
+
+  for(std::string& seq : seqs) {
+    Sequence item;
+    item.seq = std::move(seq);
+    item.min_input_id = ++input_id;
+    processed.push_back(std::move(item));
+  }
+
+  return make_anchored_input_data_from_sequences(
+    std::move(processed), deduplicate, sort_by_query_code
+  );
 }
 
 }  // namespace startree

@@ -196,8 +196,18 @@ struct StarTreeR {
   startree::SearchParams params;
   std::vector<startree::PairRecord> self_pairs;
   int nthreads = 1;
+  bool hamming = false;  // mode == "hamming": substitution-only, equal length
 };
 using StarTreeRXPtr = Rcpp::XPtr<StarTreeR>;
+
+struct AnchoredStarTreeR {
+  startree::AnchoredInputData data;
+  std::vector<std::string> sequences;
+  startree::SearchParams params;
+  std::vector<startree::PairRecord> self_pairs;
+  int nthreads = 1;
+};
+using AnchoredStarTreeRXPtr = Rcpp::XPtr<AnchoredStarTreeR>;
 
 inline int checked_r_len(const size_t n) {
   if(n > static_cast<size_t>(std::numeric_limits<int>::max())) {

@@ -1,8 +1,8 @@
-Version 0.4.0 (2026-05-26)
+Version 0.4.0 (2026-06-02)
    * Added `StarTree`, a fixed DNA-only all-pairs search implementation based on Starcode (Zorita, Cuscó, and Filion 2015)
    * Added `SearchHook` to allow for early stopping during recursive search/alignment (C++ API only)
    * Added S7 interfaces
-   * Various performance improvements
+   * Many performance improvements
 
 Version 0.3.5 (2025-10-19)
    * (Performance) Specialized fast `single_gap_search` algorithm, see `RadixTree$single_gap_search`

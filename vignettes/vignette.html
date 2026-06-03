@@ -381,8 +381,11 @@ and Levenshtein searches, especially when length is informative.</li>
 DNA similarity join class. It is a modified version of the Starcode
 all-pairs search algorithm from Zorita, Cuscó, and Filion (2015),
 adapted to operate over a radix trie rather than being a direct
-reimplementation. For small edit-distance DNA self-joins it typically
-outperforms the other two classes (see the benchmark below).</li>
+reimplementation. It supports fixed global/Levenshtein joins, fixed
+anchored joins (<code>mode = &quot;anchored&quot;</code>), and fixed Hamming joins
+(<code>mode = &quot;hamming&quot;</code>). For small edit-distance DNA self-joins
+it typically outperforms the other two classes (see the benchmark
+below).</li>
 </ul>
 <p><code>dist_search()</code> is a convenience wrapper around these
 classes. It can search for similarity between <code>query</code> and
@@ -605,11 +608,90 @@ object does not support later insertion or deletion.</p>
 <pre><code>##   query target distance
 ## 1  AAAT   AAAA        1
 ## 2  ACGT   ACGA        1</code></pre>
-<p>StarTree only supports global/Levenshtein-style DNA alignment with
-<code>A</code>, <code>C</code>, <code>G</code>, <code>T</code>, and
-<code>N</code>. It does not support custom substitution matrices, affine
-gaps, Hamming search, anchored search, or per-query distance
-thresholds.</p>
+<p>StarTree supports global/Levenshtein-style, anchored, and Hamming DNA
+alignment with <code>A</code>, <code>C</code>, <code>G</code>,
+<code>T</code>, and <code>N</code>. It does not support custom
+substitution matrices, affine gaps, or per-query distance thresholds.
+Alignment parameters are fixed when the tree is built;
+<code>align_search()</code> only accepts <code>query</code>,
+<code>nthreads</code>, and <code>show_progress</code> for
+<code>star_tree</code> objects.</p>
+</div>
+<div id="startree-anchored-mode-for-fixed-anchored-self-joins" class="section level3">
+<h3>StarTree anchored mode for fixed anchored self-joins</h3>
+<p><code>star_tree(..., mode = &quot;anchored&quot;)</code> is the fixed-tree
+equivalent for anchored alignment. It is intended for DNA sets where
+every sequence starts at the same biological position but may end at
+different positions. The construction-time self-join returns each
+unordered pair once, and additional query sets can be searched against
+the same fixed targets.</p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" tabindex="-1"></a>ast <span class="ot">&lt;-</span> <span class="fu">star_tree</span>(<span class="fu">c</span>(<span class="st">&quot;ACGT&quot;</span>, <span class="st">&quot;ACG&quot;</span>, <span class="st">&quot;AAAA&quot;</span>, <span class="st">&quot;AA&quot;</span>),</span>
+<span id="cb16-2"><a href="#cb16-2" tabindex="-1"></a>                 <span class="at">max_distance =</span> <span class="dv">1</span>,</span>
+<span id="cb16-3"><a href="#cb16-3" tabindex="-1"></a>                 <span class="at">mode =</span> <span class="st">&quot;anchored&quot;</span>,</span>
+<span id="cb16-4"><a href="#cb16-4" tabindex="-1"></a>                 <span class="at">mismatch_cost =</span> <span class="dv">1</span>,</span>
+<span id="cb16-5"><a href="#cb16-5" tabindex="-1"></a>                 <span class="at">gap_cost =</span> <span class="dv">1</span>,</span>
+<span id="cb16-6"><a href="#cb16-6" tabindex="-1"></a>                 <span class="at">nthreads =</span> <span class="dv">2</span>)</span>
+<span id="cb16-7"><a href="#cb16-7" tabindex="-1"></a><span class="fu">result</span>(ast)</span></code></pre></div>
+<pre><code>##   query target distance query_size target_size
+## 1  AAAA     AA        0          2           2
+## 2   ACG     AA        1          1           2
+## 3  ACGT     AA        1          1           2
+## 4  ACGT    ACG        0          3           3</code></pre>
+<div class="sourceCode" id="cb18"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" tabindex="-1"></a><span class="fu">align_search</span>(ast, <span class="fu">c</span>(<span class="st">&quot;ACGT&quot;</span>, <span class="st">&quot;AA&quot;</span>))</span></code></pre></div>
+<pre><code>##   query target distance query_size target_size
+## 1    AA     AA        0          2           2
+## 2    AA   AAAA        0          2           2
+## 3    AA    ACG        1          2           1
+## 4    AA   ACGT        1          2           1
+## 5  ACGT     AA        1          1           2
+## 6  ACGT    ACG        0          3           3
+## 7  ACGT   ACGT        0          4           4</code></pre>
+<div class="sourceCode" id="cb20"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" tabindex="-1"></a><span class="fu">dist_search</span>(<span class="fu">c</span>(<span class="st">&quot;ACGT&quot;</span>, <span class="st">&quot;ACG&quot;</span>, <span class="st">&quot;AAAA&quot;</span>, <span class="st">&quot;AA&quot;</span>),</span>
+<span id="cb20-2"><a href="#cb20-2" tabindex="-1"></a>            <span class="at">max_distance =</span> <span class="dv">1</span>,</span>
+<span id="cb20-3"><a href="#cb20-3" tabindex="-1"></a>            <span class="at">mode =</span> <span class="st">&quot;anchored&quot;</span>,</span>
+<span id="cb20-4"><a href="#cb20-4" tabindex="-1"></a>            <span class="at">tree_class =</span> <span class="st">&quot;StarTree&quot;</span>)</span></code></pre></div>
+<pre><code>##   query target distance query_size target_size
+## 1  AAAA     AA        0          2           2
+## 2   ACG     AA        1          1           2
+## 3  ACGT     AA        1          1           2
+## 4  ACGT    ACG        0          3           3</code></pre>
+<p>Anchored StarTree mode supports scalar mismatch and linear gap costs
+through <code>mismatch_cost</code> and <code>gap_cost</code>. It does
+not support custom substitution matrices, affine gaps, or per-query
+distance thresholds.</p>
+</div>
+<div id="startree-hamming-mode-for-fixed-same-length-joins" class="section level3">
+<h3>StarTree Hamming mode for fixed same-length joins</h3>
+<p><code>star_tree(..., mode = &quot;hamming&quot;)</code> is a substitution-only
+fixed join: only sequences of the same length can match, and
+<code>max_distance</code> is the maximum number of mismatched positions.
+Because no insertions or deletions are considered,
+<code>mismatch_cost</code> and <code>gap_cost</code> do not apply, and
+it is typically much faster than global mode on the same data.</p>
+<div class="sourceCode" id="cb22"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" tabindex="-1"></a>hst <span class="ot">&lt;-</span> <span class="fu">star_tree</span>(<span class="fu">c</span>(<span class="st">&quot;ACGT&quot;</span>, <span class="st">&quot;ACGA&quot;</span>, <span class="st">&quot;TCGT&quot;</span>, <span class="st">&quot;ACG&quot;</span>),</span>
+<span id="cb22-2"><a href="#cb22-2" tabindex="-1"></a>                 <span class="at">max_distance =</span> <span class="dv">1</span>,</span>
+<span id="cb22-3"><a href="#cb22-3" tabindex="-1"></a>                 <span class="at">mode =</span> <span class="st">&quot;hamming&quot;</span>,</span>
+<span id="cb22-4"><a href="#cb22-4" tabindex="-1"></a>                 <span class="at">nthreads =</span> <span class="dv">2</span>)</span>
+<span id="cb22-5"><a href="#cb22-5" tabindex="-1"></a><span class="fu">result</span>(hst)</span></code></pre></div>
+<pre><code>##   query target distance
+## 1  ACGT   ACGA        1
+## 2  TCGT   ACGT        1</code></pre>
+<div class="sourceCode" id="cb24"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" tabindex="-1"></a><span class="fu">align_search</span>(hst, <span class="fu">c</span>(<span class="st">&quot;ACGT&quot;</span>, <span class="st">&quot;TTGT&quot;</span>))</span></code></pre></div>
+<pre><code>##   query target distance
+## 1  ACGT   ACGA        1
+## 2  ACGT   ACGT        0
+## 3  ACGT   TCGT        1
+## 4  TTGT   TCGT        1</code></pre>
+<div class="sourceCode" id="cb26"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" tabindex="-1"></a><span class="fu">dist_search</span>(<span class="fu">c</span>(<span class="st">&quot;ACGT&quot;</span>, <span class="st">&quot;ACGA&quot;</span>, <span class="st">&quot;TCGT&quot;</span>, <span class="st">&quot;ACG&quot;</span>),</span>
+<span id="cb26-2"><a href="#cb26-2" tabindex="-1"></a>            <span class="at">max_distance =</span> <span class="dv">1</span>,</span>
+<span id="cb26-3"><a href="#cb26-3" tabindex="-1"></a>            <span class="at">mode =</span> <span class="st">&quot;hamming&quot;</span>,</span>
+<span id="cb26-4"><a href="#cb26-4" tabindex="-1"></a>            <span class="at">tree_class =</span> <span class="st">&quot;StarTree&quot;</span>)</span></code></pre></div>
+<pre><code>##   query target distance
+## 1  ACGT   ACGA        1
+## 2  TCGT   ACGT        1</code></pre>
+<p><code>N</code> is treated as a regular base that mismatches every
+base, including another <code>N</code>, so two aligned <code>N</code>
+positions still count as a mismatch.</p>
 </div>
 <div id="references" class="section level3">
 <h3>References</h3>

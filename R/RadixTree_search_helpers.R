@@ -11,23 +11,24 @@
 #' @param tree_class Which tree implementation to use. One of RadixTree, RadixForest, StarTree, radix_tree, radix_forest, or star_tree (default: RadixTree)
 #' @param nthreads `r rdoc("nthreads")`
 #' @param show_progress `r rdoc("show_progress")`
-#' @param mismatch_cost A single positive integer mismatch cost for `tree_class = "StarTree"` or `"star_tree"`.
+#' @param mismatch_cost A single positive integer mismatch cost for fixed StarTree classes.
 #' @details
 #' This function finds all sequences in _target_ that are within a distance threshold of any sequence in _query_.
 #' If `target = NULL`, the tree is built from `query` and each query is searched against that tree while requiring the query index to be strictly greater than the target terminal index. This returns lower-triangle self-pairs. Duplicate query strings are not given special handling; because the underlying tree stores one terminal index per unique sequence, duplicates naturally collapse to the first inserted occurrence.
-#' This function uses a radix_tree/RadixTree, radix_forest/RadixForest, or fixed star_tree/StarTree to store _target_ sequences.
+#' This function uses a radix_tree/RadixTree, radix_forest/RadixForest, or fixed star_tree/StarTree to store _target_ sequences. Use `tree_class = "StarTree"` with `mode = "anchored"` for fixed anchored DNA joins.
 #' 
 #' `r rdoc("details")`
 #' @return The output is a data frame of all matches with columns "query", "target", and "distance".
-#' For anchored searches, the output also includes attributes "query_size" and "target_size"
-#' which are vectors containing the portion of the query and target sequences that are aligned.
+#' For anchored searches, the output also includes columns "query_size" and "target_size"
+#' containing the portion of the query and target sequences that are aligned.
 #' @examples
 #' dist_search(c("ACGT", "AAAA"), c("ACG", "ACGT"), max_distance = 1, mode = "levenshtein")
 #' @name dist_search
 dist_search <- function(query, target = NULL, max_distance = NULL, max_fraction = NULL, mode = "levenshtein",
                         cost_matrix = NULL, gap_cost = NA_integer_, gap_open_cost = NA_integer_, tree_class = "RadixTree",
                         nthreads = 1, show_progress = FALSE, mismatch_cost = 1L) {
-  if (!tree_class %in% c("RadixTree", "RadixForest", "StarTree", "radix_tree", "radix_forest", "star_tree")) {
+  if (!tree_class %in% c("RadixTree", "RadixForest", "StarTree",
+                         "radix_tree", "radix_forest", "star_tree")) {
     stop("tree_class must be one of RadixTree, RadixForest, StarTree, radix_tree, radix_forest, or star_tree")
   }
   cpp_tree_class <- switch(
@@ -42,37 +43,52 @@ dist_search <- function(query, target = NULL, max_distance = NULL, max_fraction 
     nthreads <- check_threads(nthreads)
     show_progress <- check_flag(show_progress, "show_progress")
     if (!is.null(max_fraction)) {
-      stop("StarTree does not support max_fraction")
+      stop(cpp_tree_class, " does not support max_fraction")
     }
     star_gap_cost <- if (is_missing_arg(gap_cost)) 1L else gap_cost
+    star_mode <- seqtrie_check_startree_mode(mode)
     params <- seqtrie_check_startree_params(max_distance, mismatch_cost, star_gap_cost)
-    seqtrie_check_startree_mode(mode)
     if (!is.null(cost_matrix)) {
-      stop("StarTree does not support custom cost_matrix values; use mismatch_cost and gap_cost")
+      stop(cpp_tree_class, " does not support custom cost_matrix values; use mismatch_cost and gap_cost")
     }
     if (!is_missing_arg(gap_open_cost)) {
-      stop("StarTree does not support affine gap penalties")
+      stop(cpp_tree_class, " does not support affine gap penalties")
     }
     if (is.null(target)) {
       seqtrie_check_startree_sequences(query, "query")
+      if (star_mode == "anchored") {
+        result <- AnchoredStarTree_self_search(
+          query,
+          max_distance = params$max_distance,
+          mismatch_cost = params$mismatch_cost,
+          gap_cost = params$gap_cost,
+          nthreads = nthreads,
+          show_progress = show_progress
+        )
+        return(seqtrie_add_anchored_startree_sizes(
+          result, params$mismatch_cost, params$gap_cost, nthreads
+        ))
+      }
       return(StarTree_self_search(
         query,
         max_distance = params$max_distance,
         mismatch_cost = params$mismatch_cost,
         gap_cost = params$gap_cost,
         nthreads = nthreads,
-        show_progress = show_progress
+        show_progress = show_progress,
+        hamming = identical(star_mode, "hamming")
       ))
     }
     obj <- star_tree(
       target,
       max_distance = params$max_distance,
+      mode = star_mode,
       mismatch_cost = params$mismatch_cost,
       gap_cost = params$gap_cost,
       nthreads = nthreads,
       show_progress = show_progress
     )
-    return(align_search(obj, query = query))
+    return(align_search(obj, query = query, nthreads = nthreads, show_progress = show_progress))
   }
 
   if (is.null(target)) {

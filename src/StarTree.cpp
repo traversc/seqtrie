@@ -147,7 +147,8 @@ std::vector<startree::PairRecord> flatten_pair_chunks(
 
 std::vector<startree::PairRecord> run_self_similarity(const startree::InputData& data,
                                                       const startree::SearchParams& params,
-                                                      const int nthreads) {
+                                                      const int nthreads,
+                                                      const bool hamming = false) {
   const std::vector<startree::Block> blocks = startree::make_blocks(data.seqs, nthreads);
   std::vector<std::vector<startree::PairRecord>> per_block(blocks.size());
 
@@ -157,13 +158,22 @@ std::vector<startree::PairRecord> run_self_similarity(const startree::InputData&
   // slot, so no synchronization is needed; the slots are concatenated after.
   do_parallel_for([&](std::size_t begin, std::size_t end) {
     for(std::size_t block_id = begin; block_id < end; ++block_id) {
-      startree::process_target_block_self(data.seqs,
-                                          blocks,
-                                          block_id,
-                                          data.height,
-                                          data.median_len,
-                                          params,
-                                          &per_block[block_id]);
+      if(hamming) {
+        startree::hamming::process_target_block_self(data.seqs,
+                                                     blocks,
+                                                     block_id,
+                                                     data.height,
+                                                     params,
+                                                     &per_block[block_id]);
+      } else {
+        startree::process_target_block_self(data.seqs,
+                                            blocks,
+                                            block_id,
+                                            data.height,
+                                            data.median_len,
+                                            params,
+                                            &per_block[block_id]);
+      }
     }
   }, 0, blocks.size(), 1, nthreads);
 
@@ -173,7 +183,8 @@ std::vector<startree::PairRecord> run_self_similarity(const startree::InputData&
 std::vector<startree::PairRecord> run_query_search(const startree::InputData& target_data,
                                                    const startree::InputData& query_data,
                                                    const startree::SearchParams& params,
-                                                   const int nthreads) {
+                                                   const int nthreads,
+                                                   const bool hamming = false) {
   const std::vector<startree::Block> target_blocks = startree::make_blocks(target_data.seqs, nthreads);
   const std::vector<startree::Block> query_blocks = startree::make_blocks(query_data.seqs, nthreads);
   std::vector<std::vector<startree::PairRecord>> per_block(target_blocks.size());
@@ -182,14 +193,24 @@ std::vector<startree::PairRecord> run_query_search(const startree::InputData& ta
   // unit of work, each writing its own output slot, concatenated afterwards.
   do_parallel_for([&](std::size_t begin, std::size_t end) {
     for(std::size_t block_id = begin; block_id < end; ++block_id) {
-      startree::process_target_block_query(target_data.seqs,
-                                           query_data.seqs,
-                                           query_blocks,
-                                           target_blocks[block_id],
-                                           target_data.height,
-                                           target_data.median_len,
-                                           params,
-                                           &per_block[block_id]);
+      if(hamming) {
+        startree::hamming::process_target_block_query(target_data.seqs,
+                                                      query_data.seqs,
+                                                      query_blocks,
+                                                      target_blocks[block_id],
+                                                      target_data.height,
+                                                      params,
+                                                      &per_block[block_id]);
+      } else {
+        startree::process_target_block_query(target_data.seqs,
+                                             query_data.seqs,
+                                             query_blocks,
+                                             target_blocks[block_id],
+                                             target_data.height,
+                                             target_data.median_len,
+                                             params,
+                                             &per_block[block_id]);
+      }
     }
   }, 0, target_blocks.size(), 1, nthreads);
 
@@ -204,7 +225,8 @@ StarTreeRXPtr StarTree_create(CharacterVector sequences,
                               const int mismatch_cost = 1,
                               const int gap_cost = 1,
                               const int nthreads = 1,
-                              const bool show_progress = false) {
+                              const bool show_progress = false,
+                              const bool hamming = false) {
   if(show_progress) {
     Rcpp::warning("show_progress is not currently implemented for StarTree");
   }
@@ -223,7 +245,8 @@ StarTreeRXPtr StarTree_create(CharacterVector sequences,
   }
   ptr->params = startree::make_search_params(max_distance, mismatch_cost, gap_cost, false);
   ptr->nthreads = nthreads;
-  ptr->self_pairs = run_self_similarity(ptr->data, ptr->params, nthreads);
+  ptr->hamming = hamming;
+  ptr->self_pairs = run_self_similarity(ptr->data, ptr->params, nthreads, hamming);
   return StarTreeRXPtr(ptr.release(), true);
 }
 
@@ -233,7 +256,8 @@ DataFrame StarTree_self_search(CharacterVector sequences,
                                const int mismatch_cost = 1,
                                const int gap_cost = 1,
                                const int nthreads = 1,
-                               const bool show_progress = false) {
+                               const bool show_progress = false,
+                               const bool hamming = false) {
   if(show_progress) {
     Rcpp::warning("show_progress is not currently implemented for StarTree");
   }
@@ -247,7 +271,7 @@ DataFrame StarTree_self_search(CharacterVector sequences,
   const startree::InputData data = startree::make_input_data(std::move(raw_sequences), true);
   const startree::SearchParams params =
     startree::make_search_params(max_distance, mismatch_cost, gap_cost, false);
-  const auto pairs = run_self_similarity(data, params, nthreads);
+  const auto pairs = run_self_similarity(data, params, nthreads, hamming);
   return startree_pairs_to_dataframe(pairs, data, data);
 }
 
@@ -302,6 +326,6 @@ DataFrame StarTree_search(StarTreeRXPtr xp,
 
   startree::SearchParams params = xp->params;
   params.include_zero = true;
-  const auto pairs = run_query_search(target_data, query_data, params, nthreads);
+  const auto pairs = run_query_search(target_data, query_data, params, nthreads, xp->hamming);
   return startree_pairs_to_dataframe(pairs, target_data, query_data);
 }

@@ -11,6 +11,7 @@ result(x)
 }
 \value{
 A data frame with columns \code{query}, \code{target}, and \code{distance}.
+Anchored mode also includes \code{query_size} and \code{target_size}.
 }
 \description{
 Return a fixed-tree self-similarity result

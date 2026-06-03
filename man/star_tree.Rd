@@ -7,6 +7,7 @@
 star_tree(
   sequences,
   max_distance,
+  mode = "levenshtein",
   mismatch_cost = 1L,
   gap_cost = 1L,
   nthreads = 1L,
@@ -17,6 +18,8 @@ star_tree(
 \item{sequences}{A required character vector of DNA sequences.}
 
 \item{max_distance}{A single non-negative integer distance threshold.}
+
+\item{mode}{Alignment mode: global/Levenshtein, anchored, or hamming.}
 
 \item{mismatch_cost}{A single positive integer mismatch cost.}
 
@@ -31,19 +34,27 @@ A \code{star_tree} object.
 }
 \description{
 \code{star_tree()} constructs a fixed DNA-only tree using a modified version of
-the Starcode all-pairs search strategy, adapted to operate over a radix trie. The input
-sequences, \code{max_distance}, \code{mismatch_cost}, and \code{gap_cost} are fixed at
-construction, and the self-similarity join runs immediately. Use \code{result()}
-to retrieve that self-join, and
-\code{\link[=align_search]{align_search()}} to search additional query sequences against the fixed
-target set.
+the Starcode all-pairs search strategy, adapted to operate over a radix trie.
+The input sequences, alignment \code{mode}, \code{max_distance}, \code{mismatch_cost}, and
+\code{gap_cost} are fixed at construction, and the self-similarity join runs
+immediately. Use \code{result()} to retrieve that self-join, and \code{\link[=align_search]{align_search()}}
+to search additional query sequences against the fixed target set.
 }
 \details{
-StarTree supports global/Levenshtein-style DNA alignment only. It accepts
-\code{A}, \code{C}, \code{G}, \code{T}, and \code{N} in either case; sequences are stored and returned
-in uppercase. \code{N} is treated as a regular ambiguous base with mismatch cost,
-not as a wildcard. Custom substitution matrices, affine gaps, anchored
-search, Hamming search, insertion, and deletion are not supported.
+StarTree supports global/Levenshtein-style, anchored, and Hamming DNA
+alignment. It accepts \code{A}, \code{C}, \code{G}, \code{T}, and \code{N} in either case; sequences
+are stored and returned in uppercase. \code{N} is treated as a regular ambiguous
+base with mismatch cost, not as a wildcard. Custom substitution matrices,
+affine gaps, insertion, and deletion are not supported.
+
+Hamming mode (\code{mode = "hamming"}) is substitution-only: only equal-length
+sequences can match, and \code{max_distance} is the maximum number of mismatching
+positions (unit substitution cost; \code{mismatch_cost} and \code{gap_cost} do not
+apply). It is typically much faster than global mode for the same data.
+
+For \code{star_tree} objects, \code{\link[=align_search]{align_search()}} only accepts \code{query}, \code{nthreads},
+and \code{show_progress}; all alignment parameters are fixed here at construction.
+Anchored-mode results also include \code{query_size} and \code{target_size}.
 
 The algorithm is based on Starcode (Zorita, Cuscó, and Filion 2015)
 \doi{10.1093/bioinformatics/btv053}.
@@ -52,6 +63,14 @@ The algorithm is based on Starcode (Zorita, Cuscó, and Filion 2015)
 tree <- star_tree(c("ACGT", "ACGA", "AAAA"), max_distance = 1)
 result(tree)
 align_search(tree, c("ACGT", "AAAT"))
+
+anchored <- star_tree(c("ACGT", "ACG", "AAAA"), max_distance = 1,
+                      mode = "anchored")
+result(anchored)
+
+hamming <- star_tree(c("ACGT", "ACGA", "TCGT"), max_distance = 1,
+                     mode = "hamming")
+result(hamming)
 }
 \seealso{
 \code{\link[=align_search]{align_search()}}

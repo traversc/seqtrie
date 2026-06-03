@@ -66,6 +66,8 @@ jobs:
       - uses: r-lib/actions/check-r-package@v2
         env:
           _R_CHECK_FORCE_SUGGESTS_: false
+          # Exercise the random 2-6 thread fuzzing path (NTHREADS stays 2).
+          IS_LOCAL: "true"
         with:
           upload-snapshots: true
           
@@ -104,5 +106,6 @@ jobs:
       - uses: r-lib/actions/check-r-package@v2
         env:
           _R_CHECK_FORCE_SUGGESTS_: false
+          IS_LOCAL: "true"
         with:
           upload-snapshots: true

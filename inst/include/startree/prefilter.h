@@ -2,6 +2,7 @@
 #define STARTREE_PREFILTER_H
 
 #include "startree/common.h"
+#include "ankerl/unordered_dense.h"
 
 #include <algorithm>
 #include <cstddef>
@@ -11,6 +12,43 @@
 
 namespace startree {
 
+namespace prefilter_detail {
+
+// The segment key is a wyhash of the raw padded codes, so it is already
+// avalanching. Hand it to ankerl unchanged -- the passthrough hash prevents a
+// redundant second mix while still letting ankerl select buckets from the high
+// bits.
+struct PassthroughHash {
+  using is_avalanching = void;
+  uint64_t operator()(const uint64_t x) const noexcept { return x; }
+};
+
+using KeySet = ankerl::unordered_dense::set<uint64_t, PassthroughHash>;
+
+// Key for seq[start, start + len): wyhash over the full segment of raw padded
+// codes. Returns false when the window runs off the string. Padding (kPad) and
+// N are their own symbols -- no folding into ACGT is needed (that was only ever
+// a consequence of the old 2-bit bitmap slot). Correctness requires only that
+// insert and probe derive the same key from identical content, which holds
+// because both call this on the canonical padded sequence.
+inline bool segment_key(const std::string& seq, const int start, const int len,
+                        uint64_t* out) {
+  if(start < 0 || len < 0 ||
+     start + len > static_cast<int>(seq.size())) {
+    return false;
+  }
+  *out = ankerl::unordered_dense::detail::wyhash::hash(
+    seq.data() + static_cast<size_t>(start), static_cast<size_t>(len));
+  return true;
+}
+
+}  // namespace prefilter_detail
+
+// Pigeonhole k-mer prefilter for unit-cost (Levenshtein) search. The padded
+// sequence is split into tau + 1 contiguous segments; a target within tau of a
+// query must share at least one segment (allowing for indel drift, covered by
+// the shifted probes). Each segment is keyed by wyhash and stored in a hash set,
+// so it stays active for any segment length up to kMaxSeqLen.
 class UnitCostPrefilter {
  public:
   UnitCostPrefilter() = default;
@@ -20,7 +58,7 @@ class UnitCostPrefilter {
     padded_len_ = padded_len;
     kmers_ = tau + 1;
     klen_.assign(static_cast<size_t>(kmers_), 0);
-    bitmap_.clear();
+    sets_.clear();
 
     if(median_len < kmers_) {
       return;
@@ -28,24 +66,15 @@ class UnitCostPrefilter {
 
     const int k = median_len / kmers_;
     int rem = tau - median_len % kmers_;
-    size_t total_bytes = 0;
     for(int i = 0; i < kmers_; ++i) {
-      int len = k - (rem-- > 0 ? 1 : 0);
+      const int len = k - (rem-- > 0 ? 1 : 0);
       if(len <= 0) {
         return;
       }
-      len = std::min(len, kMaxLookupK);
       klen_[static_cast<size_t>(i)] = len;
-      total_bytes += bitmap_bytes(len);
-      if(total_bytes > kMaxLookupBytes) {
-        return;
-      }
     }
 
-    bitmap_.reserve(static_cast<size_t>(kmers_));
-    for(int len : klen_) {
-      bitmap_.push_back(std::vector<uint8_t>(bitmap_bytes(len), 0));
-    }
+    sets_.resize(static_cast<size_t>(kmers_));
     active_ = true;
   }
 
@@ -58,11 +87,9 @@ class UnitCostPrefilter {
     for(int i = kmers_ - 1; i >= 0; --i) {
       const int len = klen_[static_cast<size_t>(i)];
       offset -= len;
-      const int seqid = seq2id(padded_seq, offset, len);
-      if(seqid >= 0) {
-        std::vector<uint8_t>& bits = bitmap_[static_cast<size_t>(i)];
-        bits[static_cast<size_t>(seqid / 8)] |=
-          static_cast<uint8_t>(1U << (seqid % 8));
+      uint64_t id = 0;
+      if(prefilter_detail::segment_key(padded_seq, offset, len, &id)) {
+        sets_[static_cast<size_t>(i)].insert(id);
       }
     }
   }
@@ -77,13 +104,11 @@ class UnitCostPrefilter {
       const int len = klen_[static_cast<size_t>(i)];
       offset -= len;
       const int max_shift = kmers_ - 1 - i;
+      const prefilter_detail::KeySet& set = sets_[static_cast<size_t>(i)];
       for(int shift = -max_shift; shift <= max_shift; ++shift) {
-        const int seqid = seq2id(padded_query, offset + shift, len);
-        if(seqid < 0) {
-          continue;
-        }
-        const std::vector<uint8_t>& bits = bitmap_[static_cast<size_t>(i)];
-        if((bits[static_cast<size_t>(seqid / 8)] >> (seqid % 8)) & 1U) {
+        uint64_t id = 0;
+        if(prefilter_detail::segment_key(padded_query, offset + shift, len, &id) &&
+           set.find(id) != set.end()) {
           return true;
         }
       }
@@ -92,36 +117,16 @@ class UnitCostPrefilter {
   }
 
  private:
-  static size_t bitmap_bytes(const int kmer_len) {
-    const int shift = std::max(0, 2 * kmer_len - 3);
-    return size_t{1} << shift;
-  }
-
-  static int seq2id(const std::string& seq, const int start, const int len) {
-    if(start < 0 || len < 0 || start + len > static_cast<int>(seq.size())) {
-      return -2;
-    }
-
-    static constexpr int kCodeToLookup[6] = {1, 0, 1, 2, 3, 0};
-    int seqid = 0;
-    const int begin = start + std::max(0, len - 16);
-    for(int i = begin; i < start + len; ++i) {
-      const unsigned char c = static_cast<unsigned char>(seq[static_cast<size_t>(i)]);
-      seqid += kCodeToLookup[c];
-      if(i < start + len - 1) {
-        seqid <<= 2;
-      }
-    }
-    return seqid;
-  }
-
   bool active_ = false;
   int padded_len_ = 0;
   int kmers_ = 0;
   std::vector<int> klen_;
-  std::vector<std::vector<uint8_t>> bitmap_;
+  std::vector<prefilter_detail::KeySet> sets_;
 };
 
+// Pigeonhole prefilter for weighted (custom-cost) search. Same segment scheme,
+// but the number of segments and the per-segment probe shift are derived from
+// the lookup distance and the mismatch/gap costs rather than tau directly.
 class WeightedCostPrefilter {
  public:
   WeightedCostPrefilter() = default;
@@ -137,7 +142,7 @@ class WeightedCostPrefilter {
     kmers_ = lookup_distance + 1;
     klen_.assign(static_cast<size_t>(kmers_), 0);
     max_shift_.assign(static_cast<size_t>(kmers_), 0);
-    bitmap_.clear();
+    sets_.clear();
 
     if(median_len < kmers_) {
       return;
@@ -145,26 +150,17 @@ class WeightedCostPrefilter {
 
     const int k = median_len / kmers_;
     int rem = lookup_distance - median_len % kmers_;
-    size_t total_bytes = 0;
     for(int i = 0; i < kmers_; ++i) {
-      int len = k - (rem-- > 0 ? 1 : 0);
+      const int len = k - (rem-- > 0 ? 1 : 0);
       if(len <= 0) {
         return;
       }
-      len = std::min(len, kMaxLookupK);
       klen_[static_cast<size_t>(i)] = len;
       max_shift_[static_cast<size_t>(i)] =
         max_lookup_shift(kmers_ - 1 - i, max_distance, min_cost, gap_cost);
-      total_bytes += bitmap_bytes(len);
-      if(total_bytes > kMaxLookupBytes) {
-        return;
-      }
     }
 
-    bitmap_.reserve(static_cast<size_t>(kmers_));
-    for(int len : klen_) {
-      bitmap_.push_back(std::vector<uint8_t>(bitmap_bytes(len), 0));
-    }
+    sets_.resize(static_cast<size_t>(kmers_));
     active_ = true;
   }
 
@@ -177,11 +173,9 @@ class WeightedCostPrefilter {
     for(int i = kmers_ - 1; i >= 0; --i) {
       const int len = klen_[static_cast<size_t>(i)];
       offset -= len;
-      const int seqid = seq2id(padded_seq, offset, len);
-      if(seqid >= 0) {
-        std::vector<uint8_t>& bits = bitmap_[static_cast<size_t>(i)];
-        bits[static_cast<size_t>(seqid / 8)] |=
-          static_cast<uint8_t>(1U << (seqid % 8));
+      uint64_t id = 0;
+      if(prefilter_detail::segment_key(padded_seq, offset, len, &id)) {
+        sets_[static_cast<size_t>(i)].insert(id);
       }
     }
   }
@@ -196,13 +190,11 @@ class WeightedCostPrefilter {
       const int len = klen_[static_cast<size_t>(i)];
       offset -= len;
       const int max_shift = max_shift_[static_cast<size_t>(i)];
+      const prefilter_detail::KeySet& set = sets_[static_cast<size_t>(i)];
       for(int shift = -max_shift; shift <= max_shift; ++shift) {
-        const int seqid = seq2id(padded_query, offset + shift, len);
-        if(seqid < 0) {
-          continue;
-        }
-        const std::vector<uint8_t>& bits = bitmap_[static_cast<size_t>(i)];
-        if((bits[static_cast<size_t>(seqid / 8)] >> (seqid % 8)) & 1U) {
+        uint64_t id = 0;
+        if(prefilter_detail::segment_key(padded_query, offset + shift, len, &id) &&
+           set.find(id) != set.end()) {
           return true;
         }
       }
@@ -211,11 +203,6 @@ class WeightedCostPrefilter {
   }
 
  private:
-  static size_t bitmap_bytes(const int kmer_len) {
-    const int shift = std::max(0, 2 * kmer_len - 3);
-    return size_t{1} << shift;
-  }
-
   static int max_lookup_shift(const int chunks_to_right,
                               const int max_distance,
                               const int min_cost,
@@ -233,30 +220,12 @@ class WeightedCostPrefilter {
     return max_shift;
   }
 
-  static int seq2id(const std::string& seq, const int start, const int len) {
-    if(start < 0 || len < 0 || start + len > static_cast<int>(seq.size())) {
-      return -2;
-    }
-
-    static constexpr int kCodeToLookup[6] = {1, 0, 1, 2, 3, 0};
-    int seqid = 0;
-    const int begin = start + std::max(0, len - 16);
-    for(int i = begin; i < start + len; ++i) {
-      const unsigned char c = static_cast<unsigned char>(seq[static_cast<size_t>(i)]);
-      seqid += kCodeToLookup[c];
-      if(i < start + len - 1) {
-        seqid <<= 2;
-      }
-    }
-    return seqid;
-  }
-
   bool active_ = false;
   int padded_len_ = 0;
   int kmers_ = 0;
   std::vector<int> klen_;
   std::vector<int> max_shift_;
-  std::vector<std::vector<uint8_t>> bitmap_;
+  std::vector<prefilter_detail::KeySet> sets_;
 };
 
 }  // namespace startree

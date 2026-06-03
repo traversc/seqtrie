@@ -3,7 +3,7 @@ PACKAGE := $(shell perl -aF: -ne 'print, exit if s/^Package:\s+//' DESCRIPTION)
 VERSION := $(shell perl -aF: -ne 'print, exit if s/^Version:\s+//' DESCRIPTION)
 BUILD   := $(PACKAGE)_$(VERSION).tar.gz
 
-.PHONY: doc build install test vignette bench bench-levenshtein bench-startree $(BUILD)
+.PHONY: doc build install test asan vignette bench bench-levenshtein bench-startree $(BUILD)
 
 check: $(BUILD)
 	export _R_CHECK_FORCE_SUGGESTS_=false && R CMD check --as-cran $<
@@ -76,6 +76,20 @@ test:
 	IS_LOCAL=Yes Rscript tests/test_RadixForest.R && unset IS_LOCAL
 	IS_LOCAL=Yes Rscript tests/test_StarTree.R && unset IS_LOCAL
 	IS_LOCAL=Yes Rscript tests/test_utilities.R && unset IS_LOCAL
+
+ASAN_DIR   := /tmp/seqtrie-asan
+ASAN_FLAGS := -g -O1 -fno-omit-frame-pointer -fsanitize=address,undefined
+ASAN_RUN   := LD_PRELOAD="$(shell gcc -print-file-name=libasan.so)" ASAN_OPTIONS=detect_leaks=0:abort_on_error=1 UBSAN_OPTIONS=print_stacktrace=1 R_LIBS="$(ASAN_DIR)/lib"
+
+asan:
+	mkdir -p "$(ASAN_DIR)/lib"
+	printf 'CFLAGS = %s\nCXXFLAGS = %s\nCXX17FLAGS = %s\nLDFLAGS = -fsanitize=address,undefined\n' '$(ASAN_FLAGS)' '$(ASAN_FLAGS)' '$(ASAN_FLAGS)' > "$(ASAN_DIR)/Makevars"
+	R_MAKEVARS_USER="$(ASAN_DIR)/Makevars" R CMD INSTALL --no-docs --no-test-load --library="$(ASAN_DIR)/lib" .
+	$(ASAN_RUN) Rscript tests/test_StarTree.R
+	$(ASAN_RUN) Rscript tests/test_RadixTree.R
+	$(ASAN_RUN) Rscript tests/test_RadixForest.R
+	$(ASAN_RUN) Rscript tests/test_pairwise.R
+	$(ASAN_RUN) Rscript tests/test_utilities.R
 
 bench:
 	Rscript inst/extra_tests/full_benchmark.R

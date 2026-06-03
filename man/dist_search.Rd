@@ -42,12 +42,12 @@ dist_search(
 
 \item{show_progress}{Whether to show a progress bar.}
 
-\item{mismatch_cost}{A single positive integer mismatch cost for \code{tree_class = "StarTree"} or \code{"star_tree"}.}
+\item{mismatch_cost}{A single positive integer mismatch cost for fixed StarTree classes.}
 }
 \value{
 The output is a data frame of all matches with columns "query", "target", and "distance".
-For anchored searches, the output also includes attributes "query_size" and "target_size"
-which are vectors containing the portion of the query and target sequences that are aligned.
+For anchored searches, the output also includes columns "query_size" and "target_size"
+containing the portion of the query and target sequences that are aligned.
 }
 \description{
 Find similar sequences within a distance threshold
@@ -55,7 +55,7 @@ Find similar sequences within a distance threshold
 \details{
 This function finds all sequences in \emph{target} that are within a distance threshold of any sequence in \emph{query}.
 If \code{target = NULL}, the tree is built from \code{query} and each query is searched against that tree while requiring the query index to be strictly greater than the target terminal index. This returns lower-triangle self-pairs. Duplicate query strings are not given special handling; because the underlying tree stores one terminal index per unique sequence, duplicates naturally collapse to the first inserted occurrence.
-This function uses a radix_tree/RadixTree, radix_forest/RadixForest, or fixed star_tree/StarTree to store \emph{target} sequences.
+This function uses a radix_tree/RadixTree, radix_forest/RadixForest, or fixed star_tree/StarTree to store \emph{target} sequences. Use \code{tree_class = "StarTree"} with \code{mode = "anchored"} for fixed anchored DNA joins.
 
 Three distance metrics are supported, based on the form of alignment performed: Hamming, global (Levenshtein), and anchored.
 

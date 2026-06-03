@@ -9,15 +9,16 @@ R6 compatibility wrapper for \code{star_tree}
 \details{
 \code{StarTree} is a fixed DNA-only tree using a modified version of the Starcode
 all-pairs search strategy, adapted to operate over a radix trie rather than
-being a direct reimplementation. Unlike \link{RadixTree}, all sequences and
-alignment parameters are supplied at construction time and the self-similarity
-join runs immediately. The tree does not support insertion or deletion after
+being a direct reimplementation. It supports global/Levenshtein, anchored,
+and Hamming alignment modes. Unlike \link{RadixTree}, all sequences and alignment parameters
+are supplied at construction time and the self-similarity join runs
+immediately. The tree does not support insertion or deletion after
 construction.
 
 Use \verb{$result()} to retrieve the construction-time self-similarity join, and
 \verb{$align_search()} or \verb{$search()} to search additional query sequences against
-the fixed target set using the same \code{max_distance}, \code{mismatch_cost}, and
-\code{gap_cost}.
+the fixed target set using the same \code{mode}, \code{max_distance}, \code{mismatch_cost},
+and \code{gap_cost}.
 
 The algorithm is based on Starcode (Zorita, Cuscó, and Filion 2015)
 \doi{10.1093/bioinformatics/btv053}.
@@ -26,6 +27,10 @@ The algorithm is based on Starcode (Zorita, Cuscó, and Filion 2015)
 tree <- StarTree$new(c("ACGT", "ACGA", "AAAA"), max_distance = 1)
 tree$result()
 tree$search(c("ACGT", "AAAT"))
+
+anchored <- StarTree$new(c("ACGT", "ACG", "AAAA"), max_distance = 1,
+                         mode = "anchored")
+anchored$result()
 }
 \seealso{
 \code{\link[=align_search]{align_search()}}
@@ -33,7 +38,9 @@ tree$search(c("ACGT", "AAAT"))
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}
 \describe{
-\item{\code{tree_pointer}}{External pointer to the StarTree C++ object.}
+\item{\code{tree_pointer}}{External pointer to the fixed-tree C++ object.}
+
+\item{\code{mode}}{Fixed alignment mode.}
 
 \item{\code{max_distance}}{Fixed distance threshold.}
 
@@ -67,6 +74,7 @@ Create a new StarTree object.
 \if{html}{\out{<div class="r">}}\preformatted{StarTree$new(
   sequences,
   max_distance,
+  mode = "levenshtein",
   mismatch_cost = 1L,
   gap_cost = 1L,
   nthreads = 1L,
@@ -80,6 +88,8 @@ Create a new StarTree object.
 \item{\code{sequences}}{A required character vector of DNA sequences.}
 
 \item{\code{max_distance}}{A single non-negative integer distance threshold.}
+
+\item{\code{mode}}{Alignment mode: global/Levenshtein, anchored, or hamming.}
 
 \item{\code{mismatch_cost}}{A single positive integer mismatch cost.}
 
@@ -129,6 +139,7 @@ Return the construction-time self-similarity join.
 
 \subsection{Returns}{
 A data frame with columns \code{query}, \code{target}, and \code{distance}.
+Anchored mode also includes \code{query_size} and \code{target_size}.
 }
 }
 \if{html}{\out{<hr>}}
@@ -137,18 +148,27 @@ A data frame with columns \code{query}, \code{target}, and \code{distance}.
 \subsection{Method \code{search()}}{
 Search additional query sequences against the fixed tree.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{StarTree$search(query)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{StarTree$search(
+  query,
+  nthreads = self$nthreads,
+  show_progress = self$show_progress
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{query}}{A character vector of query sequences.}
+
+\item{\code{nthreads}}{The number of threads to use for parallel computation.}
+
+\item{\code{show_progress}}{Whether to show a progress bar.}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
 A data frame with columns \code{query}, \code{target}, and \code{distance}.
+Anchored mode also includes \code{query_size} and \code{target_size}.
 }
 }
 \if{html}{\out{<hr>}}
@@ -157,18 +177,27 @@ A data frame with columns \code{query}, \code{target}, and \code{distance}.
 \subsection{Method \code{align_search()}}{
 Search additional query sequences against the fixed tree.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{StarTree$align_search(query)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{StarTree$align_search(
+  query,
+  nthreads = self$nthreads,
+  show_progress = self$show_progress
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{query}}{A character vector of query sequences.}
+
+\item{\code{nthreads}}{The number of threads to use for parallel computation.}
+
+\item{\code{show_progress}}{Whether to show a progress bar.}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
 A data frame with columns \code{query}, \code{target}, and \code{distance}.
+Anchored mode also includes \code{query_size} and \code{target_size}.
 }
 }
 }
